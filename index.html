@@ -1688,10 +1688,51 @@ function resetAllData() {
     }
 }
 
-// === СТАРТ ===
-renderNutritionAll();
-renderTrainAll();
-</script>
+// === СТАРТ: МИГРАЦИЯ СТАРЫХ ДАННЫХ ===
+// Проверяем, есть ли старые данные в localStorage
+const oldNutrition = localStorage.getItem('nutrition-data');
+const oldWorkouts = localStorage.getItem('workouts-data');
+const oldProgress = localStorage.getItem('exercise-progress');
 
-</body>
-</html>
+if (oldNutrition || oldWorkouts || oldProgress) {
+    console.log('🔄 Найдены старые данные в localStorage, переносим в облако...');
+    
+    // Загружаем старые данные
+    if (oldNutrition) {
+        try { nutritionData = JSON.parse(oldNutrition); } catch(e) {}
+    }
+    if (oldWorkouts) {
+        try { 
+            const data = JSON.parse(oldWorkouts);
+            workouts = data.workouts || [];
+        } catch(e) {}
+    }
+    
+    // Сохраняем в Firebase
+    const allData = {
+        nutrition: nutritionData,
+        workouts: workouts,
+        exerciseProgress: oldProgress ? JSON.parse(oldProgress) : {},
+        migratedAt: new Date().toISOString()
+    };
+    
+    diaryRef.set(allData).then(() => {
+        console.log('✅ Данные успешно перенесены в облако!');
+        // Очищаем localStorage после успешного переноса
+        localStorage.removeItem('nutrition-data');
+        localStorage.removeItem('workouts-data');
+        localStorage.removeItem('exercise-progress');
+        alert('✅ Ваши данные успешно перенесены в облако! Теперь они синхронизируются между всеми устройствами.');
+        renderNutritionAll();
+        renderTrainAll();
+    }).catch(err => {
+        console.error('❌ Ошибка переноса:', err);
+        alert('❌ Не удалось перенести данные. Проверьте настройки Firebase.');
+        renderNutritionAll();
+        renderTrainAll();
+    });
+} else {
+    // Старых данных нет - просто рендерим
+    renderNutritionAll();
+    renderTrainAll();
+}
