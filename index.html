@@ -1865,65 +1865,63 @@ function processFatSecretData(csvText) {
             }
         }
     }
-
     if (!targetDate) { alert('❌ Не удалось найти дату.'); return; }
 
-    // 2. Разбиваем текст на блоки по заголовкам
-    // Мы используем регулярное выражение, чтобы найти все места, где начинается прием пищи
+    // 2. БЛОЧНАЯ ЛОГИКА: Разрезаем файл на части по заголовкам
     const mealHeaders = ['Завтрак', 'Обед', 'Ужин', 'Перекус/Другое'];
-    const blocks = {};
+    const blocks = {}; // Здесь будем хранить сырые строки для каждого приема
     
     let currentBlockName = null;
-    let currentBlockContent = [];
+    let currentBlockLines = [];
 
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
-        
-        // Проверяем, является ли строка заголовком
         let isHeader = false;
+
+        // Проверяем, является ли строка заголовком приема пищи
         for (const header of mealHeaders) {
             if (line.startsWith(header + ',')) {
                 // Если был предыдущий блок, сохраняем его
                 if (currentBlockName) {
-                    blocks[currentBlockName] = currentBlockContent;
+                    blocks[currentBlockName] = currentBlockLines;
                 }
                 currentBlockName = header;
-                currentBlockContent = [];
+                currentBlockLines = [];
                 isHeader = true;
                 break;
             }
         }
-        
-        // Если это не заголовок и не конец файла, добавляем в текущий блок
-        if (!isHeader && currentBlockName && !line.startsWith('Всего') && line !== '') {
-            currentBlockContent.push(line);
+
+        // Если это не заголовок и мы уже начали какой-то блок, добавляем строку в него
+        if (!isHeader && currentBlockName) {
+            // Игнорируем строку "Всего" и пустые строки
+            if (!line.startsWith('Всего') && line !== '') {
+                currentBlockLines.push(line);
+            }
         }
     }
-    // Сохраняем последний блок
+    // Сохраняем самый последний блок
     if (currentBlockName) {
-        blocks[currentBlockName] = currentBlockContent;
+        blocks[currentBlockName] = currentBlockLines;
     }
 
-    // 3. Парсим каждый блок
+    // 3. Парсим каждый блок отдельно в "Внутренний JSON"
     const mealsData = {};
     const mealItems = {};
     const mealMap = { 'Завтрак': 'breakfast', 'Обед': 'lunch', 'Ужин': 'dinner', 'Перекус/Другое': 'snack' };
 
-    for (const [headerName, itemsLines] of Object.entries(blocks)) {
+    for (const [headerName, itemLines] of Object.entries(blocks)) {
         const appType = mealMap[headerName];
         if (!appType) continue;
 
         mealItems[appType] = [];
         let blockCal = 0, blockProt = 0, blockFat = 0, blockCarb = 0;
 
-        // Первая строка в блоке продуктов часто содержит сумму, если она там есть
-        // Но в твоем файле суммы идут в заголовке. Поэтому просто парсим продукты.
-        
-        for (let j = 0; j < itemsLines.length; j++) {
-            const line = itemsLines[j];
+        for (let j = 0; j < itemLines.length; j++) {
+            const line = itemLines[j];
             const parts = line.split(',');
             
-            // Пропускаем строки, которые не похожи на продукты (например, пустые или технические)
+            // Пропускаем мусор: строки должны иметь название и число во 2-м столбце
             if (parts.length < 2 || isNaN(parseFloat(parts[1]))) continue;
 
             const name = parts[0].replace(/"/g, '').trim();
@@ -1932,13 +1930,13 @@ function processFatSecretData(csvText) {
             const carb = parseFloat((parts[4] || '').replace(/["\s]/g, '')) || 0;
             const prot = parseFloat((parts[7] || '').replace(/["\s]/g, '')) || 0;
 
-            // Суммируем для итогов блока
+            // Суммируем для итогов
             blockCal += cal; blockProt += prot; blockFat += fat; blockCarb += carb;
 
             let weight = '';
-            // Вес в следующей строке массива itemsLines
-            if (itemsLines[j+1] && itemsLines[j+1].match(/\d+\s*г/)) {
-                weight = itemsLines[j+1].trim();
+            // Вес обычно в следующей строке (паттерн "число г")
+            if (itemLines[j+1] && itemLines[j+1].match(/\d+\s*г/)) {
+                weight = itemLines[j+1].trim();
             }
 
             mealItems[appType].push({ name, cal, fat, carb, prot, weight });
@@ -1947,7 +1945,7 @@ function processFatSecretData(csvText) {
         mealsData[appType] = { cal: blockCal, prot: blockProt, fat: blockFat, carb: blockCarb };
     }
 
-    // 4. Сохранение в неделю (код тот же)
+    // 4. Сохранение "Внутреннего JSON" в неделю
     const week = nutritionData.weeks.find(w => {
         const start = new Date(w.startDate);
         const end = new Date(w.endDate);
