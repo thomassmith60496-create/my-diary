@@ -1188,7 +1188,7 @@ function renderMeal(m, di, mi, weekId) {
     const starsVal = parseInt(getWeekData(weekId, `stars-${di}-${mi}`) || 0);
     const commentVal = getWeekData(weekId, `comment-${di}-${mi}`) || '';
     
-    // === ТАБЛИЦА ПРОДУКТОВ С РЕДАКТИРОВАНИЕМ ===
+    // === ТАБЛИЦА ПРОДУКТОВ ===
     const itemsJson = getWeekData(weekId, `items-${di}-${mi}`);
     let itemsTableHtml = '';
     
@@ -1196,47 +1196,49 @@ function renderMeal(m, di, mi, weekId) {
         try {
             const items = JSON.parse(itemsJson);
             if (items.length > 0) {
-                // Генерируем уникальные ID для инпутов, чтобы они не конфликтовали
                 const tableId = `table-${weekId}-${di}-${mi}`;
                 
                 itemsTableHtml = `
                     <div style="margin-top:8px;">
                         <button onclick="document.getElementById('${tableId}').classList.toggle('hidden')" 
                                 style="font-size:11px; padding:2px 6px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:4px; cursor:pointer; color:#1e3a8a;">
-                            📋 Показать список (${items.length})
+                            📋 Список (${items.length})
                         </button>
-                        <div id="${tableId}" class="hidden" style="margin-top:5px; font-size:11px; background:#f8fafc; padding:8px; border-radius:6px; border:1px solid #e2e8f0; overflow-x:auto;">
+                        <div id="${tableId}" class="hidden" style="margin-top:5px; font-size:11px; background:#f8fafc; padding:8px; border-radius:6px; border:1px solid #e2e8f0;">
                             <table style="width:100%; border-collapse:collapse; text-align:left;">
                                 <thead>
                                     <tr style="border-bottom:2px solid #bfdbfe; color:#1e40af;">
-                                        <th style="padding:2px;">Продукт</th>
-                                        <th style="padding:2px;">Вес</th>
-                                        <th style="padding:2px;">К</th>
-                                        <th style="padding:2px;">Б</th>
-                                        <th style="padding:2px;">Ж</th>
-                                        <th style="padding:2px;">У</th>
+                                        <th style="padding:2px; width:40%;">Продукт</th>
+                                        <th style="padding:2px; width:15%;">Вес</th>
+                                        <th style="padding:2px; width:10%;">К</th>
+                                        <th style="padding:2px; width:10%;">Б</th>
+                                        <th style="padding:2px; width:10%;">Ж</th>
+                                        <th style="padding:2px; width:10%;">У</th>
+                                        <th style="padding:2px; width:5%;"></th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     ${items.map((item, idx) => `
                                         <tr style="border-bottom:1px solid #e2e8f0;">
                                             <td style="padding:2px;">${item.name}</td>
-                                            <td style="padding:2px;"><input type="text" value="${item.weight}" style="width:50px; border:none; background:transparent; font-size:11px;" onchange="updateItemWeight('${weekId}', ${di}, ${mi}, ${idx}, this.value)"></td>
-                                            <td style="padding:2px;"><input type="number" value="${Math.round(item.cal)}" style="width:35px; border:none; background:transparent; font-size:11px; text-align:right;" onchange="updateItemMacro('${weekId}', ${di}, ${mi}, ${idx}, 'cal', this.value)"></td>
-                                            <td style="padding:2px;"><input type="number" value="${Math.round(item.prot)}" style="width:30px; border:none; background:transparent; font-size:11px; text-align:right;" onchange="updateItemMacro('${weekId}', ${di}, ${mi}, ${idx}, 'prot', this.value)"></td>
-                                            <td style="padding:2px;"><input type="number" value="${Math.round(item.fat)}" style="width:30px; border:none; background:transparent; font-size:11px; text-align:right;" onchange="updateItemMacro('${weekId}', ${di}, ${mi}, ${idx}, 'fat', this.value)"></td>
-                                            <td style="padding:2px;"><input type="number" value="${Math.round(item.carb)}" style="width:30px; border:none; background:transparent; font-size:11px; text-align:right;" onchange="updateItemMacro('${weekId}', ${di}, ${mi}, ${idx}, 'carb', this.value)"></td>
+                                            <td style="padding:2px;"><input type="text" value="${item.weight}" style="width:100%; border:none; background:transparent; font-size:11px;" onchange="updateItemWeight('${weekId}', ${di}, ${mi}, ${idx}, this.value)"></td>
+                                            <td style="padding:2px;"><input type="number" value="${Math.round(item.cal)}" style="width:100%; border:none; background:transparent; font-size:11px; text-align:right;" onchange="updateItemMacro('${weekId}', ${di}, ${mi}, ${idx}, 'cal', this.value)"></td>
+                                            <td style="padding:2px;"><input type="number" value="${Math.round(item.prot)}" style="width:100%; border:none; background:transparent; font-size:11px; text-align:right;" onchange="updateItemMacro('${weekId}', ${di}, ${mi}, ${idx}, 'prot', this.value)"></td>
+                                            <td style="padding:2px;"><input type="number" value="${Math.round(item.fat)}" style="width:100%; border:none; background:transparent; font-size:11px; text-align:right;" onchange="updateItemMacro('${weekId}', ${di}, ${mi}, ${idx}, 'fat', this.value)"></td>
+                                            <td style="padding:2px;"><input type="number" value="${Math.round(item.carb)}" style="width:100%; border:none; background:transparent; font-size:11px; text-align:right;" onchange="updateItemMacro('${weekId}', ${di}, ${mi}, ${idx}, 'carb', this.value)"></td>
+                                            <td style="padding:2px; text-align:center;"><button onclick="deleteItem('${weekId}', ${di}, ${mi}, ${idx})" style="background:none; border:none; cursor:pointer; color:#ef4444;">🗑</button></td>
                                         </tr>
                                     `).join('')}
                                 </tbody>
                             </table>
+                            <button onclick="addItem('${weekId}', ${di}, ${mi})" style="margin-top:5px; font-size:10px; background:#ecfdf5; border:1px solid #a7f3d0; border-radius:4px; cursor:pointer; color:#065f46; width:100%;">➕ Добавить продукт</button>
                         </div>
                     </div>
                 `;
             }
         } catch(e) {}
     }
-    // ==========================================
+    // ================================
 
     const trackerHtml = isPrep ? '' : `
         <div class="meal-tracker">
@@ -1855,6 +1857,7 @@ function processFatSecretData(csvText) {
     };
 
     let currentMealType = null;
+    let isParsingItems = false;
 
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
@@ -1874,6 +1877,7 @@ function processFatSecretData(csvText) {
             if (line.startsWith(csvName + ',')) {
                 currentMealType = appType;
                 isMealHeader = true;
+                isParsingItems = true;
                 
                 const parts = line.split(',');
                 mealsData[appType] = { 
@@ -1887,11 +1891,17 @@ function processFatSecretData(csvText) {
             }
         }
 
-        // 3. Собираем продукты (если мы внутри блока и это не заголовок и не "Всего")
-        if (currentMealType && !isMealHeader && !line.startsWith('Всего') && line !== '') {
+        // Если дошли до "Всего" или конца отчета, прекращаем сбор
+        if (line.startsWith('Всего') || line.includes('Report Details')) {
+            isParsingItems = false;
+            currentMealType = null;
+        }
+
+        // 3. Собираем продукты
+        if (isParsingItems && currentMealType && !isMealHeader && line !== '') {
             const parts = line.split(',');
-            // Продукт должен иметь название и калории
-            if (parts.length > 1 && parseFloat(parts[1])) {
+            // Продукт должен иметь название и калории (число во втором столбце)
+            if (parts.length > 1 && !isNaN(parseFloat(parts[1]))) {
                 const name = parts[0].replace(/"/g, '').trim();
                 const cal = parseFloat(parts[1]) || 0;
                 const fat = parseFloat((parts[2] || '').replace(/["\s]/g, '')) || 0;
@@ -1899,7 +1909,7 @@ function processFatSecretData(csvText) {
                 const prot = parseFloat((parts[7] || '').replace(/["\s]/g, '')) || 0;
                 
                 let weight = '';
-                // Ищем вес в следующей строке
+                // Ищем вес в следующей строке (паттерн "число г")
                 if (lines[i+1] && lines[i+1].match(/\d+\s*г/)) {
                     weight = lines[i+1].trim();
                 }
@@ -1997,6 +2007,94 @@ function updateItemMacro(weekId, di, mi, idx, field, value) {
             week.data[key] = JSON.stringify(items);
             
             // Пересчитываем итоги приема пищи
+            recalcMealTotals(week, di, mi);
+            saveNutrition();
+        }
+    }
+}
+
+function recalcMealTotals(week, di, mi) {
+    const key = `items-${di}-${mi}`;
+    if (week.data[key]) {
+        const items = JSON.parse(week.data[key]);
+        let s = { cal: 0, prot: 0, fat: 0, carb: 0 };
+        items.forEach(item => {
+            s.cal += item.cal || 0;
+            s.prot += item.prot || 0;
+            s.fat += item.fat || 0;
+            s.carb += item.carb || 0;
+        });
+        
+        week.data[`m-${di}-${mi}-cal`] = Math.round(s.cal);
+        week.data[`m-${di}-${mi}-prot`] = Math.round(s.prot);
+        week.data[`m-${di}-${mi}-fat`] = Math.round(s.fat);
+        week.data[`m-${di}-${mi}-carb`] = Math.round(s.carb);
+        
+        // Обновляем отображение итогов без полной перерисовки
+        ['cal','prot','fat','carb'].forEach(f => {
+            const el = document.getElementById(`sum-${f}-${week.id}-${di}`);
+            if(el) el.textContent = Math.round(s[f]);
+        });
+    }
+}
+
+// === УПРАВЛЕНИЕ СПИСКОМ ПРОДУКТОВ ===
+function deleteItem(weekId, di, mi, idx) {
+    const week = nutritionData.weeks.find(w => w.id === weekId);
+    if (!week) return;
+    
+    const key = `items-${di}-${mi}`;
+    if (week.data[key]) {
+        const items = JSON.parse(week.data[key]);
+        items.splice(idx, 1); // Удаляем элемент
+        week.data[key] = JSON.stringify(items);
+        recalcMealTotals(week, di, mi);
+        saveNutrition();
+        renderDays(); // Перерисовываем, чтобы таблица обновилась
+    }
+}
+
+function addItem(weekId, di, mi) {
+    const week = nutritionData.weeks.find(w => w.id === weekId);
+    if (!week) return;
+    
+    const key = `items-${di}-${mi}`;
+    let items = [];
+    if (week.data[key]) items = JSON.parse(week.data[key]);
+    
+    items.push({ name: "Новый продукт", cal: 0, prot: 0, fat: 0, carb: 0, weight: "" });
+    week.data[key] = JSON.stringify(items);
+    
+    recalcMealTotals(week, di, mi);
+    saveNutrition();
+    renderDays();
+}
+
+function updateItemWeight(weekId, di, mi, idx, value) {
+    const week = nutritionData.weeks.find(w => w.id === weekId);
+    if (!week) return;
+    
+    const key = `items-${di}-${mi}`;
+    if (week.data[key]) {
+        const items = JSON.parse(week.data[key]);
+        if (items[idx]) {
+            items[idx].weight = value;
+            week.data[key] = JSON.stringify(items);
+            saveNutrition();
+        }
+    }
+}
+
+function updateItemMacro(weekId, di, mi, idx, field, value) {
+    const week = nutritionData.weeks.find(w => w.id === weekId);
+    if (!week) return;
+    
+    const key = `items-${di}-${mi}`;
+    if (week.data[key]) {
+        const items = JSON.parse(week.data[key]);
+        if (items[idx]) {
+            items[idx][field] = parseFloat(value) || 0;
+            week.data[key] = JSON.stringify(items);
             recalcMealTotals(week, di, mi);
             saveNutrition();
         }
