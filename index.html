@@ -495,8 +495,8 @@
                 <button class="btn" onclick="document.getElementById('import-all-file').click()">📂 Импорт всего</button>
                 <button class="btn danger" onclick="resetAllData()">🗑 Очистить всё</button>
                 <input type="file" id="import-all-file" accept=".json" style="display:none;" onchange="importAllData(this)">
-                <button class="btn primary" onclick="document.getElementById('import-fatsecret-file').click()">📥 Импорт из FatSecret</button>
-                <input type="file" id="import-fatsecret-file" accept=".csv" style="display:none;" onchange="importFatSecretCSV(this)">
+                <button class="btn primary" onclick="document.getElementById('import-fatsecret-pdf').click()">📥 Импорт PDF</button>
+                <input type="file" id="import-fatsecret-pdf" accept=".pdf" style="display:none;" onchange="importFatSecretPDF(this)">
             </div>
             <div class="rule-box">
                 <b>🔄 Правило перекусов:</b><br>
@@ -1836,116 +1836,157 @@ function resetAllData() {
     }
 }
 
-// === ИМПОРТ ИЗ FATSECRET CSV (ФИНАЛЬНАЯ ВЕРСИЯ) ===
-function importFatSecretCSV(input) {
+// === ИМПОРТ ИЗ FATSECRET PDF ===
+async function importFatSecretPDF(input) {
     const file = input.files[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const text = e.target.result;
-        processFatSecretData(text);
-    };
-    reader.readAsText(file);
-    input.value = ''; 
+    // Подключаем pdf.js динамически, если еще не подключен
+    if (typeof pdfjsLib === 'undefined') {
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+        script.onload = () => {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+            processPDF(file);
+        };
+        document.head.appendChild(script);
+    } else {
+        processPDF(file);
+    }
+    input.value = '';
 }
 
-function processFatSecretData(csvText) {
-    // 1. Предварительная очистка: убираем кавычки и лишние пробелы, чтобы split работал корректно
-    // Заменяем запятые внутри кавычек на точки (для дробных чисел)
-    let cleanText = csvText.replace(/"([^"]*)"/g, (match, p1) => {
-        return p1.replace(/,/g, '.').trim();
-    });
-
-    const lines = cleanText.split('\n');
-    let targetDate = null;
-    
-    // 2. Ищем дату
-    for (let line of lines) {
-        if (line.includes('Food Diary Report')) {
-            // Формат: Food Diary Report - Detailed Report,понедельник, июля 20, 2026
-            const parts = line.split(',');
-            // Ищем часть с годом
-            for (let part of parts) {
-                if (part.match(/\d{4}/)) {
-                    const dateMatch = part.match(/([а-яё]+)\s+(\d+)\s+(\d{4})/i);
-                    if (dateMatch) {
-                        const months = {'января':'01','февраля':'02','марта':'03','апреля':'04','мая':'05','июня':'06','июля':'07','августа':'08','сентября':'09','октября':'10','ноября':'11','декабря':'12'};
-                        const m = months[dateMatch[1].toLowerCase()];
-                        if (m) targetDate = `${dateMatch[3]}-${m}-${dateMatch[2].padStart(2,'0')}`;
-                    }
-                }
-            }
+async function processPDF(file) {
+    try {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        
+        let fullText = '';
+        for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const textContent = await page.getTextContent();
+            const pageText = textContent.items.map(item => item.str).join(' ');
+            fullText += pageText + '\n';
         }
-    }
-    if (!targetDate) { alert('❌ Не удалось найти дату.'); return; }
 
-    // 3. БЛОЧНАЯ ЛОГИКА
+        parseFatSecretText(fullText);
+    } catch (e) {
+        console.error('PDF Error:', e);
+        alert('❌ Ошибка чтения PDF: ' + e.message);
+    }
+}
+
+function parseFatSecretText(text) {
+    // 1. Ищем дату
+    const dateMatch = text.match(/([а-яё]+),\s*([а-яё]+)\s+(\d+),\s*(\d{4})/i);
+    if (!dateMatch) { alert('❌ Не удалось найти дату в PDF.'); return; }
+    
+    const months = {'января':'01','февраля':'02','марта':'03','апреля':'04','мая':'05','июня':'06','июля':'07','августа':'08','сентября':'09','октября':'10','ноября':'11','декабря':'12'};
+    const m = months[dateMatch[2].toLowerCase()];
+    if (!m) { alert('❌ Неизвестный месяц.'); return; }
+    const targetDate = `${dateMatch[4]}-${m}-${dateMatch[3].padStart(2,'0')}`;
+
+    // 2. Блочная логика для PDF
     const mealHeaders = ['Завтрак', 'Обед', 'Ужин', 'Перекус/Другое'];
     const blocks = {};
-    let currentBlockName = null;
-    let currentBlockLines = [];
-
-    for (let i = 0; i < lines.length; i++) {
-        const line = lines[i].trim();
-        let isHeader = false;
-
-        for (const header of mealHeaders) {
-            if (line.startsWith(header + ',')) {
-                if (currentBlockName) blocks[currentBlockName] = currentBlockLines;
-                currentBlockName = header;
-                currentBlockLines = [];
-                isHeader = true;
-                break;
-            }
-        }
-
-        if (!isHeader && currentBlockName && !line.startsWith('Всего') && line !== '' && !line.startsWith('#') && !line.startsWith('Дата')) {
-            currentBlockLines.push(line);
-        }
+    let currentBlock = null;
+    
+    // Разбиваем текст на слова/токены, но сохраняем порядок
+    // В PDF текст идет потоком: "Завтрак мой кофе 51 1,55 ..."
+    // Нам нужно найти позиции заголовков
+    const headerPositions = [];
+    mealHeaders.forEach(h => {
+        const idx = text.indexOf(h);
+        if (idx !== -1) headerPositions.push({ name: h, pos: idx });
+    });
+    
+    // Сортируем по позиции в тексте
+    headerPositions.sort((a, b) => a.pos - b.pos);
+    
+    // Извлекаем блоки
+    for (let i = 0; i < headerPositions.length; i++) {
+        const start = headerPositions[i].pos + headerPositions[i].name.length;
+        const end = (i + 1 < headerPositions.length) ? headerPositions[i+1].pos : text.indexOf('Всего', start);
+        const blockText = text.substring(start, end > start ? end : undefined);
+        blocks[headerPositions[i].name] = blockText;
     }
-    if (currentBlockName) blocks[currentBlockName] = currentBlockLines;
 
-    // 4. Парсинг блоков
+    // 3. Парсим каждый блок
     const mealsData = {};
     const mealItems = {};
     const mealMap = { 'Завтрак': 'breakfast', 'Обед': 'lunch', 'Ужин': 'dinner', 'Перекус/Другое': 'snack' };
 
-    for (const [headerName, itemLines] of Object.entries(blocks)) {
+    for (const [headerName, blockText] of Object.entries(blocks)) {
         const appType = mealMap[headerName];
         if (!appType) continue;
 
         mealItems[appType] = [];
         let blockCal = 0, blockProt = 0, blockFat = 0, blockCarb = 0;
 
-        for (let j = 0; j < itemLines.length; j++) {
-            const line = itemLines[j];
-            const parts = line.split(',');
+        // В PDF числа идут через пробелы или запятые
+        // Паттерн продукта: Название ... Число(Кал) Число(Жир) ... Число(Угл) ... Число(Белк)
+        // Это сложно парсить регексом из-за названий с цифрами. 
+        // Используем эвристику: ищем последовательности чисел
+        
+        // Упрощенный подход: разбиваем по словам и ищем паттерны
+        const tokens = blockText.split(/\s+/);
+        let currentProduct = { name: '', cal: 0, fat: 0, carb: 0, prot: 0, weight: '' };
+        let numberBuffer = [];
+        
+        for (let t of tokens) {
+            // Очищаем токен от мусора
+            t = t.replace(/[(),]/g, '').trim();
+            if (!t) continue;
             
-            // Пропускаем строки без названия или без калорий
-            if (parts.length < 2 || isNaN(parseFloat(parts[1]))) continue;
-
-            const name = parts[0].trim();
-            const cal = parseFloat(parts[1]) || 0;
-            const fat = parseFloat(parts[2]) || 0;
-            const carb = parseFloat(parts[4]) || 0; // Углеводы в 5-й колонке (индекс 4)
-            const prot = parseFloat(parts[7]) || 0; // Белки в 8-й колонке (индекс 7)
-
-            blockCal += cal; blockProt += prot; blockFat += fat; blockCarb += carb;
-
-            let weight = '';
-            // Вес в следующей строке
-            if (itemLines[j+1] && itemLines[j+1].match(/\d+\s*г/)) {
-                weight = itemLines[j+1].trim();
+            // Если это число
+            if (/^\d+[.,]?\d*$/.test(t)) {
+                numberBuffer.push(parseFloat(t.replace(',', '.')));
+            } else if (t.match(/^\d+г$/)) {
+                // Это вес
+                currentProduct.weight = t;
+            } else if (t === 'порция' || t === 'шт') {
+                // Единица измерения, пропускаем
+                continue;
+            } else {
+                // Это слово названия
+                if (numberBuffer.length >= 4 && currentProduct.name) {
+                    // Сохраняем предыдущий продукт
+                    currentProduct.cal = numberBuffer[0] || 0;
+                    currentProduct.fat = numberBuffer[1] || 0;
+                    currentProduct.carb = numberBuffer[3] || 0; // Индекс 3 = Углеводы (после Кал, Жир, Н/жир)
+                    currentProduct.prot = numberBuffer[6] || 0; // Индекс 6 = Белки
+                    
+                    blockCal += currentProduct.cal;
+                    blockProt += currentProduct.prot;
+                    blockFat += currentProduct.fat;
+                    blockCarb += currentProduct.carb;
+                    
+                    mealItems[appType].push({...currentProduct});
+                    numberBuffer = [];
+                }
+                currentProduct.name += (currentProduct.name ? ' ' : '') + t;
             }
-
-            mealItems[appType].push({ name, cal, fat, carb, prot, weight });
+        }
+        
+        // Сохраняем последний продукт в блоке
+        if (numberBuffer.length >= 4 && currentProduct.name) {
+            currentProduct.cal = numberBuffer[0] || 0;
+            currentProduct.fat = numberBuffer[1] || 0;
+            currentProduct.carb = numberBuffer[3] || 0;
+            currentProduct.prot = numberBuffer[6] || 0;
+            
+            blockCal += currentProduct.cal;
+            blockProt += currentProduct.prot;
+            blockFat += currentProduct.fat;
+            blockCarb += currentProduct.carb;
+            
+            mealItems[appType].push({...currentProduct});
         }
 
         mealsData[appType] = { cal: blockCal, prot: blockProt, fat: blockFat, carb: blockCarb };
     }
 
-    // 5. Сохранение
+    // 4. Сохранение в неделю
     const week = nutritionData.weeks.find(w => {
         const start = new Date(w.startDate);
         const end = new Date(w.endDate);
@@ -1976,7 +2017,7 @@ function processFatSecretData(csvText) {
 
     saveNutrition();
     renderDays(); 
-    alert(`✅ Данные за ${targetDate} успешно импортированы!`);
+    alert(`✅ Данные за ${targetDate} успешно импортированы из PDF!`);
 }
    
 function convertFatSecretDate(day, monthWord, year) {
