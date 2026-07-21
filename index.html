@@ -451,6 +451,7 @@
         .days-nav { top: 5px; }
         .nav-actions { margin-left: 0; width: 100%; }
     }
+   .hidden { display: none; }
 </style>
 </head>
 <body>
@@ -1187,6 +1188,38 @@ function renderMeal(m, di, mi, weekId) {
     const starsVal = parseInt(getWeekData(weekId, `stars-${di}-${mi}`) || 0);
     const commentVal = getWeekData(weekId, `comment-${di}-${mi}`) || '';
     
+    // === НОВАЯ ЧАСТЬ: ПРОВЕРКА СПИСКА ПРОДУКТОВ ===
+    const itemsJson = getWeekData(weekId, `items-${di}-${mi}`);
+    let itemsTableHtml = '';
+    
+    if (itemsJson) {
+        try {
+            const items = JSON.parse(itemsJson);
+            if (items.length > 0) {
+                itemsTableHtml = `
+                    <div style="margin-top:8px;">
+                        <button onclick="this.nextElementSibling.classList.toggle('hidden')" 
+                                style="font-size:11px; padding:2px 6px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:4px; cursor:pointer; color:#1e3a8a;">
+                            📋 Показать список (${items.length})
+                        </button>
+                        <div class="hidden" style="margin-top:5px; font-size:12px; background:#f8fafc; padding:8px; border-radius:6px; border:1px solid #e2e8f0;">
+                            <table style="width:100%; border-collapse:collapse;">
+                                ${items.map(item => `
+                                    <tr style="border-bottom:1px solid #e2e8f0;">
+                                        <td style="padding:2px 0;">${item.name}</td>
+                                        <td style="text-align:right; color:#64748b; white-space:nowrap;">${item.weight ? item.weight : ''}</td>
+                                        <td style="text-align:right; font-weight:600; width:50px;">${Math.round(item.cal)}</td>
+                                    </tr>
+                                `).join('')}
+                            </table>
+                        </div>
+                    </div>
+                `;
+            }
+        } catch(e) {}
+    }
+    // ==========================================
+
     const trackerHtml = isPrep ? '' : `
         <div class="meal-tracker">
             <div class="tracker-row">
@@ -1200,6 +1233,7 @@ function renderMeal(m, di, mi, weekId) {
             </div>
             <textarea class="meal-comment" data-week="${weekId}" data-key="comment-${di}-${mi}" oninput="saveNutrition()" placeholder="💬 Комментарий...">${commentVal}</textarea>
         </div>
+        ${itemsTableHtml} 
     `;
     
     return `
@@ -1775,24 +1809,12 @@ function resetAllData() {
     }
 }
 
-// === ИМПОРТ ИЗ FATSECRET CSV ===
-function importFatSecretCSV(input) {
-    const file = input.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const text = e.target.result;
-        processFatSecretData(text);
-    };
-    reader.readAsText(file);
-    input.value = ''; 
-}
-
+// === ИМПОРТ ИЗ FATSECRET CSV (С ПОДДЕРЖКОЙ СПИСКА ПРОДУКТОВ) ===
 function processFatSecretData(csvText) {
     const lines = csvText.split('\n');
     let targetDate = null;
     const mealsData = {}; 
+    const mealItems = {}; // Здесь будем хранить списки продуктов
     
     const mealMap = {
         'Завтрак': 'breakfast',
@@ -1801,91 +1823,101 @@ function processFatSecretData(csvText) {
         'Перекус/Другое': 'snack' 
     };
 
+    let currentMealType = null;
+
     // 1. Парсим файл
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
         
-        // Ищем дату. В твоем файле она во второй строке: Food Diary Report - Detailed Report,"понедельник, июля 20, 2026"
+        // Ищем дату
         if (line.includes('Food Diary Report')) {
-            // Убираем все кавычки, чтобы regex сработал чище
             const cleanLine = line.replace(/"/g, '');
-            // Ищем паттерн: русская буква, запятая, русская буква, число, запятая, 4 цифры
             const dateMatch = cleanLine.match(/([а-яё]+),\s*([а-яё]+)\s+(\d+),\s*(\d{4})/i);
-            
             if (dateMatch) {
-                // Собираем дату обратно: день месяц год
-                const day = dateMatch[3];
-                const monthWord = dateMatch[2];
-                const year = dateMatch[4];
-                targetDate = convertFatSecretDate(day, monthWord, year);
+                targetDate = convertFatSecretDate(dateMatch[3], dateMatch[2], dateMatch[4]);
             }
         }
 
-        // Ищем строки с суммами по приемам пищи
+        // Проверяем, не начался ли новый прием пищи
+        let isMealHeader = false;
         for (const [csvName, appType] of Object.entries(mealMap)) {
-            // Проверяем, начинается ли строка с названия приема пищи
             if (line.startsWith(csvName + ',')) {
+                currentMealType = appType;
+                isMealHeader = true;
+                
+                // Парсим суммы КБЖУ
                 const parts = line.split(',');
-                // Индексы из твоего файла: 1-Кал, 2-Жир, 4-Угл, 7-Белк
-                // Важно: убираем кавычки и пробелы перед конвертацией в число
                 const cal = parseFloat(parts[1]) || 0;
                 const fat = parseFloat((parts[2] || '').replace(/["\s]/g, '')) || 0;
                 const carb = parseFloat((parts[4] || '').replace(/["\s]/g, '')) || 0;
                 const prot = parseFloat((parts[7] || '').replace(/["\s]/g, '')) || 0;
-
+                
                 mealsData[appType] = { cal, fat, carb, prot };
+                mealItems[appType] = []; // Очищаем список для этого приема
+                break;
             }
         }
+
+        // Если мы внутри блока приема пищи и это не заголовок и не "Всего", то это продукт
+        if (currentMealType && !isMealHeader && !line.startsWith('Всего') && line !== '') {
+            // Пропускаем строки, которые не похожи на продукты (например, пустые или технические)
+            // Продукты обычно имеют название и хотя бы одно число (калории)
+            const parts = line.split(',');
+            if (parts.length > 1 && parseFloat(parts[1])) {
+                const name = parts[0].replace(/"/g, '').trim();
+                const cal = parseFloat(parts[1]) || 0;
+                // Пытаемся найти вес (часто он в следующей строке или в названии, но в CSV FatSecret вес часто в отдельной строке "X г")
+                // Для простоты пока берем только название и калории, если вес в той же строке - отлично
+                let weight = '';
+                if (parts.length > 9) { // Иногда вес есть в последних колонках, но чаще его нет в сумме
+                     // В твоем файле веса в строке продукта нет, он идет следующей строкой "120 г"
+                }
+                
+                // Проверим следующую строку на наличие веса (паттерн "число г")
+                if (lines[i+1] && lines[i+1].match(/\d+\s*г/)) {
+                    weight = lines[i+1].trim();
+                }
+
+                mealItems[currentMealType].push({ name, cal, weight });
+            }
+        }
+        
+        // Сброс типа, если дошли до конца или до "Всего"
+        if (line.startsWith('Всего')) currentMealType = null;
     }
 
-    if (!targetDate) {
-        alert('❌ Не удалось найти дату в файле. Проверьте, что это "Подробный отчет" (Detailed Report).');
-        return;
-    }
+    if (!targetDate) { alert('❌ Не удалось найти дату.'); return; }
 
-    // 2. Ищем неделю с этой датой
+    // 2. Ищем неделю и день (код тот же, что и раньше)
     const week = nutritionData.weeks.find(w => {
         const start = new Date(w.startDate);
         const end = new Date(w.endDate);
         const current = new Date(targetDate);
-        // Сбрасываем время для точного сравнения
-        start.setHours(0,0,0,0);
-        end.setHours(23,59,59,999);
-        current.setHours(12,0,0,0);
+        start.setHours(0,0,0,0); end.setHours(23,59,59,999); current.setHours(12,0,0,0);
         return current >= start && current <= end;
     });
 
-    if (!week) {
-        alert(`⚠️ Неделя для даты ${targetDate} не найдена в приложении.`);
-        return;
-    }
-
+    if (!week) { alert(`⚠️ Неделя для ${targetDate} не найдена.`); return; }
     const dayIndex = getDayIndexInWeek(week, targetDate);
     if (dayIndex === -1) return;
 
-    // 3. Проверка на перезапись
-    let hasExistingData = false;
-    ['m-' + dayIndex + '-0-cal', 'm-' + dayIndex + '-1-cal', 'm-' + dayIndex + '-2-cal'].forEach(key => {
-        if (week.data[key] && week.data[key] !== '' && week.data[key] != 0) hasExistingData = true;
-    });
-
-    if (hasExistingData) {
-        if (!confirm(`⚠️ Данные за ${targetDate} уже заполнены. Обновить их?`)) {
-            return;
-        }
-    }
-
-    // 4. Заполняем данные
+    // 3. Заполняем данные и СОХРАНЯЕМ СПИСКИ ПРОДУКТОВ
     const typeToIndex = { 'breakfast': 0, 'lunch': 1, 'dinner': 2, 'snack': 3 };
     
     Object.keys(mealsData).forEach(type => {
         const data = mealsData[type];
         const idx = typeToIndex[type];
         
+        // Сохраняем КБЖУ
         week.data[`m-${dayIndex}-${idx}-cal`] = Math.round(data.cal);
         week.data[`m-${dayIndex}-${idx}-prot`] = Math.round(data.prot);
         week.data[`m-${dayIndex}-${idx}-fat`] = Math.round(data.fat);
         week.data[`m-${dayIndex}-${idx}-carb`] = Math.round(data.carb);
+        
+        // Сохраняем список продуктов в формате JSON-строки
+        if (mealItems[type] && mealItems[type].length > 0) {
+            week.data[`items-${dayIndex}-${idx}`] = JSON.stringify(mealItems[type]);
+        }
     });
 
     saveNutrition();
