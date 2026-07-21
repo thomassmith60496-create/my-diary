@@ -782,7 +782,7 @@ function syncToCloud() {
                 console.error('❌ Firebase error:', error);
                 showSyncStatus('❌ Ошибка сохранения', 'error');
             });
-    }, 3000); // Увеличили задержку до 3 секунд (было 1000)
+    }, 5000); // Увеличили задержку до 3 секунд (было 1000)
 }
 
 function loadFromCloud() {
@@ -1237,27 +1237,26 @@ function setStars(el, rating) {
 function updateTotals(weekId, di) {
     let s = { cal: 0, prot: 0, fat: 0, carb: 0 };
     
-    // Сначала собираем данные из полей в переменную week.data, 
-    // но НЕ вызываем syncToCloud прямо здесь
+    // Проходим по всем полям КБЖУ этого дня и считаем сумму
     document.querySelectorAll(`input[data-week="${weekId}"][data-day="${di}"][data-field]`).forEach(inp => {
         const f = inp.dataset.field;
         const v = parseFloat(inp.value) || 0;
         if(s[f] !== undefined) s[f] += v;
         
-        // Обновляем данные в объекте nutritionData, чтобы они не потерялись
+        // Сразу обновляем данные в объекте nutritionData, чтобы они были актуальны
         const week = nutritionData.weeks.find(w => w.id === weekId);
         if(week && week.data) {
             week.data[`m-${inp.dataset.day}-${inp.dataset.meal}-${inp.dataset.field}`] = inp.value;
         }
     });
 
-    // Обновляем только текст на экране (итоги)
+    // Обновляем только текст итогов на экране
     ['cal','prot','fat','carb'].forEach(f => {
         const el = document.getElementById(`sum-${f}-${weekId}-${di}`);
         if(el) el.textContent = Math.round(s[f]);
     });
     
-    // Вызываем сохранение в облако (оно само подождет 3 секунды)
+    // Запускаем отложенное сохранение (оно само подождет 5 секунд)
     syncToCloud();
 }
 
@@ -1681,9 +1680,10 @@ function saveNutrition() {
     const week = nutritionData.weeks.find(w => w.id === nutritionData.currentWeekId);
     if(!week) return;
     
+    // Если объекта data еще нет, создаем его
     if(!week.data) week.data = {};
     
-    // Собираем данные из полей
+    // Собираем все данные из полей ввода
     document.querySelectorAll(`[data-week="${week.id}"]`).forEach(el => {
         const key = el.dataset.key;
         if(!key) return;
@@ -1691,18 +1691,15 @@ function saveNutrition() {
         if(value !== undefined && value !== '') week.data[key] = value;
     });
     
+    // Дополнительно собираем данные из полей КБЖУ (на всякий случай)
     document.querySelectorAll(`input[data-week="${week.id}"][data-field]`).forEach(inp => {
         if(inp.value) week.data[`m-${inp.dataset.day}-${inp.dataset.meal}-${inp.dataset.field}`] = inp.value;
     });
     
-    // Вызываем сохранение в облако (с задержкой 3 сек)
+    // Запускаем отложенное сохранение
     syncToCloud();
 }
-
-function saveTrainings() {
-    syncToCloud();
-}
-
+   
 function exportAllData() {
     const data = { nutrition: nutritionData, workouts, progress: JSON.parse(localStorage.getItem('exercise-progress') || '{}'), exportedAt: new Date().toISOString() };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
