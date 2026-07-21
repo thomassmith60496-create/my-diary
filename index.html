@@ -494,6 +494,8 @@
                 <button class="btn" onclick="document.getElementById('import-all-file').click()">📂 Импорт всего</button>
                 <button class="btn danger" onclick="resetAllData()">🗑 Очистить всё</button>
                 <input type="file" id="import-all-file" accept=".json" style="display:none;" onchange="importAllData(this)">
+                <button class="btn primary" onclick="document.getElementById('import-fatsecret-file').click()">📥 Импорт из FatSecret</button>
+                <input type="file" id="import-fatsecret-file" accept=".csv" style="display:none;" onchange="importFatSecretCSV(this)">
             </div>
             <div class="rule-box">
                 <b>🔄 Правило перекусов:</b><br>
@@ -1771,6 +1773,149 @@ function resetAllData() {
         renderNutritionAll();
         renderTrainAll();
     }
+}
+
+// === ИМПОРТ ИЗ FATSECRET CSV ===
+function importFatSecretCSV(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const text = e.target.result;
+        processFatSecretData(text);
+    };
+    reader.readAsText(file);
+    input.value = ''; // Сброс инпута
+}
+
+function processFatSecretData(csvText) {
+    const lines = csvText.split('\n');
+    let targetDate = null;
+    const mealsData = {}; // Храним данные: { 'Завтрак': {cal:..., prot:...}, ... }
+    
+    // Маппинг названий приемов пищи из CSV на наши типы
+    const mealMap = {
+        'Завтрак': 'breakfast',
+        'Обед': 'lunch',
+        'Ужин': 'dinner',
+        'Перекус/Другое': 'snack' // Будем класть в snack1
+    };
+
+    // 1. Парсим файл
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        
+        // Ищем дату (она обычно во второй строке или в строке с итогами)
+        if (line.includes('Food Diary Report') || line.match(/[а-я]+,\s[а-я]+\s\d+/i)) {
+            const dateMatch = line.match(/([а-я]+,\s[а-я]+\s\d+,\s\d{4})/i);
+            if (dateMatch) {
+                // Преобразуем "понедельник, июля 20, 2026" в формат YYYY-MM-DD
+                const rawDate = dateMatch[1];
+                targetDate = convertFatSecretDate(rawDate);
+            }
+        }
+
+        // Ищем строки с суммами по приемам пищи
+        // Они выглядят так: Завтрак,346, "19,74 ", ...
+        for (const [csvName, appType] of Object.entries(mealMap)) {
+            if (line.startsWith(csvName + ',')) {
+                const parts = line.split(',');
+                // parts[1] - калории, parts[2] - жиры, parts[7] - белки, parts[3] - углеводы (порядок может меняться, проверим по заголовку)
+                // В твоем файле порядок: Кал, Жир, Н/жир, Углев, ... Белк
+                // Индексы: 1, 2, 3, 7
+                
+                const cal = parseFloat(parts[1]) || 0;
+                const fat = parseFloat(parts[2].replace(/"/g, '').replace(/,/g, '.')) || 0;
+                const carb = parseFloat(parts[3].replace(/"/g, '').replace(/,/g, '.')) || 0;
+                const prot = parseFloat(parts[7].replace(/"/g, '').replace(/,/g, '.')) || 0;
+
+                mealsData[appType] = { cal, fat, carb, prot };
+            }
+        }
+    }
+
+    if (!targetDate) {
+        alert('❌ Не удалось найти дату в файле. Проверьте формат экспорта.');
+        return;
+    }
+
+    // 2. Ищем неделю с этой датой
+    const week = nutritionData.weeks.find(w => {
+        const start = new Date(w.startDate);
+        const end = new Date(w.endDate);
+        const current = new Date(targetDate);
+        return current >= start && current <= end;
+    });
+
+    if (!week) {
+        alert(`⚠️ Неделя для даты ${targetDate} не найдена. Создайте её вручную и попробуйте снова.`);
+        return;
+    }
+
+    // Находим индекс дня в неделе (0 - Пн, 6 - Вс)
+    const dayIndex = getDayIndexInWeek(week, targetDate);
+    if (dayIndex === -1) return;
+
+    // 3. Проверка на перезапись
+    const existingCal = week.data[`m-${dayIndex}-0-cal`]; // Проверяем завтрак
+    if (existingCal && existingCal !== '0' && existingCal !== '') {
+        if (!confirm(`⚠️ Данные за ${targetDate} уже заполнены. Хотите обновить их данными из FatSecret?`)) {
+            return;
+        }
+    }
+
+    // 4. Заполняем данные
+    const mealTypes = ['breakfast', 'lunch', 'dinner', 'snack'];
+    mealTypes.forEach((type, index) => {
+        if (mealsData[type]) {
+            const data = mealsData[type];
+            // Для перекуса используем индекс 3 (snack1), остальные по порядку 0, 1, 2
+            const mealIndex = type === 'snack' ? 3 : index; 
+            
+            week.data[`m-${dayIndex}-${mealIndex}-cal`] = Math.round(data.cal);
+            week.data[`m-${dayIndex}-${mealIndex}-prot`] = Math.round(data.prot);
+            week.data[`m-${dayIndex}-${mealIndex}-fat`] = Math.round(data.fat);
+            week.data[`m-${dayIndex}-${mealIndex}-carb`] = Math.round(data.carb);
+        }
+    });
+
+    saveNutrition();
+    renderDays(); // Перерисовываем интерфейс
+    alert(`✅ Данные за ${targetDate} успешно импортированы!`);
+}
+
+// Вспомогательная функция для конвертации даты из CSV
+function convertFatSecretDate(dateStr) {
+    // Пример: "понедельник, июля 20, 2026"
+    const months = {
+        'января': '01', 'февраля': '02', 'марта': '03', 'апреля': '04',
+        'мая': '05', 'июня': '06', 'июля': '07', 'августа': '08',
+        'сентября': '09', 'октября': '10', 'ноября': '11', 'декабря': '12'
+    };
+    
+    const match = dateStr.match(/(\d+)\s*,\s*(\d{4})/); // Ищем число и год
+    const monthMatch = dateStr.match(/([а-я]+)/i); // Ищем месяц
+    
+    if (match && monthMatch) {
+        const day = match[1].padStart(2, '0');
+        const year = match[2];
+        const monthNum = months[monthMatch[1].toLowerCase()];
+        if (monthNum) {
+            return `${year}-${monthNum}-${day}`;
+        }
+    }
+    return null;
+}
+
+// Вспомогательная функция для поиска индекса дня
+function getDayIndexInWeek(week, dateStr) {
+    const start = new Date(week.startDate);
+    const target = new Date(dateStr);
+    const diffTime = Math.abs(target - start);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+    // Важно: если дата совпадает с началом недели, diffDays будет 0
+    return (target >= start && target <= new Date(week.endDate)) ? diffDays : -1;
 }
 
 // === СТАРТ ===
