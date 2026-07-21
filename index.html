@@ -1196,25 +1196,26 @@ function renderMeal(m, di, mi, weekId) {
         try {
             const items = JSON.parse(itemsJson);
             if (items.length > 0) {
-                const tableId = `table-${weekId}-${di}-${mi}`;
+                // Уникальный ID для контейнера таблицы, чтобы он не сбивался
+                const containerId = `items-container-${weekId}-${di}-${mi}`;
                 
                 itemsTableHtml = `
                     <div style="margin-top:8px;">
-                        <button onclick="document.getElementById('${tableId}').classList.toggle('hidden')" 
+                        <button onclick="toggleItems('${containerId}')" 
                                 style="font-size:11px; padding:2px 6px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:4px; cursor:pointer; color:#1e3a8a;">
-                            📋 Список (${items.length})
+                            📋 Список продуктов (${items.length})
                         </button>
-                        <div id="${tableId}" class="hidden" style="margin-top:5px; font-size:11px; background:#f8fafc; padding:8px; border-radius:6px; border:1px solid #e2e8f0;">
+                        <div id="${containerId}" class="hidden" style="margin-top:5px; font-size:11px; background:#f8fafc; padding:8px; border-radius:6px; border:1px solid #e2e8f0;">
                             <table style="width:100%; border-collapse:collapse; text-align:left;">
                                 <thead>
                                     <tr style="border-bottom:2px solid #bfdbfe; color:#1e40af;">
-                                        <th style="padding:2px; width:40%;">Продукт</th>
+                                        <th style="padding:2px; width:35%;">Продукт</th>
                                         <th style="padding:2px; width:15%;">Вес</th>
                                         <th style="padding:2px; width:10%;">К</th>
                                         <th style="padding:2px; width:10%;">Б</th>
                                         <th style="padding:2px; width:10%;">Ж</th>
                                         <th style="padding:2px; width:10%;">У</th>
-                                        <th style="padding:2px; width:5%;"></th>
+                                        <th style="padding:2px; width:10%;"></th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -1265,6 +1266,12 @@ function renderMeal(m, di, mi, weekId) {
             </div>
             <div class="meal-content">${content}${trackerHtml}</div>
         </div>`;
+}
+
+// Функция переключения видимости без перерисовки всего дня
+function toggleItems(id) {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('hidden');
 }
 
 function getWeekData(weekId, key) {
@@ -1849,6 +1856,8 @@ function processFatSecretData(csvText) {
     const mealsData = {}; 
     const mealItems = {}; 
     
+    // Точные названия из твоего CSV
+    const mealHeaders = ['Завтрак', 'Обед', 'Ужин', 'Перекус/Другое'];
     const mealMap = {
         'Завтрак': 'breakfast',
         'Обед': 'lunch',
@@ -1856,14 +1865,14 @@ function processFatSecretData(csvText) {
         'Перекус/Другое': 'snack' 
     };
 
-    let currentMealType = null;
-    let isParsingItems = false;
+    let currentMealKey = null; // Ключ текущего блока (breakfast, lunch...)
 
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
-        
-        // 1. Ищем дату
-        if (line.includes('Food Diary Report')) {
+        if (!line) continue;
+
+        // 1. Ищем дату (только один раз)
+        if (!targetDate && line.includes('Food Diary Report')) {
             const cleanLine = line.replace(/"/g, '');
             const dateMatch = cleanLine.match(/([а-яё]+),\s*([а-яё]+)\s+(\d+),\s*(\d{4})/i);
             if (dateMatch) {
@@ -1871,36 +1880,39 @@ function processFatSecretData(csvText) {
             }
         }
 
-        // 2. Проверяем начало нового приема пищи
-        let isMealHeader = false;
-        for (const [csvName, appType] of Object.entries(mealMap)) {
-            if (line.startsWith(csvName + ',')) {
-                currentMealType = appType;
-                isMealHeader = true;
-                isParsingItems = true;
+        // 2. Проверяем, является ли строка ЗАГОЛОВКОМ приема пищи
+        let isHeader = false;
+        for (const headerName of mealHeaders) {
+            // Строгое сравнение: строка должна начинаться с "Завтрак," или "Обед,"
+            if (line.startsWith(headerName + ',')) {
+                currentMealKey = mealMap[headerName];
+                isHeader = true;
                 
+                // Парсим суммы для этого приема
                 const parts = line.split(',');
-                mealsData[appType] = { 
+                mealsData[currentMealKey] = { 
                     cal: parseFloat(parts[1]) || 0,
                     fat: parseFloat((parts[2] || '').replace(/["\s]/g, '')) || 0,
                     carb: parseFloat((parts[4] || '').replace(/["\s]/g, '')) || 0,
                     prot: parseFloat((parts[7] || '').replace(/["\s]/g, '')) || 0
                 };
-                mealItems[appType] = []; 
+                mealItems[currentMealKey] = []; // Создаем пустой список для продуктов
                 break;
             }
         }
 
-        // Если дошли до "Всего" или конца отчета, прекращаем сбор
-        if (line.startsWith('Всего') || line.includes('Report Details')) {
-            isParsingItems = false;
-            currentMealType = null;
-        }
+        // Если это заголовок, переходим к следующей строке
+        if (isHeader) continue;
 
-        // 3. Собираем продукты
-        if (isParsingItems && currentMealType && !isMealHeader && line !== '') {
+        // 3. Если мы внутри какого-то блока (currentMealKey не null), собираем продукты
+        if (currentMealKey) {
+            // Игнорируем строку "Всего" и технические разделители
+            if (line.startsWith('Всего') || line.startsWith('#') || line.includes('Report Details')) {
+                continue;
+            }
+
             const parts = line.split(',');
-            // Продукт должен иметь название и калории (число во втором столбце)
+            // Продукт должен иметь название и число во втором столбце (калории)
             if (parts.length > 1 && !isNaN(parseFloat(parts[1]))) {
                 const name = parts[0].replace(/"/g, '').trim();
                 const cal = parseFloat(parts[1]) || 0;
@@ -1909,19 +1921,19 @@ function processFatSecretData(csvText) {
                 const prot = parseFloat((parts[7] || '').replace(/["\s]/g, '')) || 0;
                 
                 let weight = '';
-                // Ищем вес в следующей строке (паттерн "число г")
-                if (lines[i+1] && lines[i+1].match(/\d+\s*г/)) {
+                // Вес часто идет в СЛЕДУЮЩЕЙ строке (паттерн "120 г")
+                if (lines[i+1] && lines[i+1].trim().match(/\d+\s*г/)) {
                     weight = lines[i+1].trim();
                 }
 
-                mealItems[currentMealType].push({ name, cal, fat, carb, prot, weight });
+                mealItems[currentMealKey].push({ name, cal, fat, carb, prot, weight });
             }
         }
     }
 
     if (!targetDate) { alert('❌ Не удалось найти дату.'); return; }
 
-    // 4. Ищем неделю и день
+    // 4. Сохранение в неделю
     const week = nutritionData.weeks.find(w => {
         const start = new Date(w.startDate);
         const end = new Date(w.endDate);
@@ -1934,7 +1946,6 @@ function processFatSecretData(csvText) {
     const dayIndex = getDayIndexInWeek(week, targetDate);
     if (dayIndex === -1) return;
 
-    // 5. Сохраняем данные
     const typeToIndex = { 'breakfast': 0, 'lunch': 1, 'dinner': 2, 'snack': 3 };
     
     Object.keys(mealsData).forEach(type => {
@@ -2042,29 +2053,25 @@ function recalcMealTotals(week, di, mi) {
 function deleteItem(weekId, di, mi, idx) {
     const week = nutritionData.weeks.find(w => w.id === weekId);
     if (!week) return;
-    
     const key = `items-${di}-${mi}`;
     if (week.data[key]) {
         const items = JSON.parse(week.data[key]);
-        items.splice(idx, 1); // Удаляем элемент
+        items.splice(idx, 1);
         week.data[key] = JSON.stringify(items);
         recalcMealTotals(week, di, mi);
         saveNutrition();
-        renderDays(); // Перерисовываем, чтобы таблица обновилась
+        renderDays(); // Здесь перерисовка нужна, так как количество строк изменилось
     }
 }
 
 function addItem(weekId, di, mi) {
     const week = nutritionData.weeks.find(w => w.id === weekId);
     if (!week) return;
-    
     const key = `items-${di}-${mi}`;
     let items = [];
     if (week.data[key]) items = JSON.parse(week.data[key]);
-    
     items.push({ name: "Новый продукт", cal: 0, prot: 0, fat: 0, carb: 0, weight: "" });
     week.data[key] = JSON.stringify(items);
-    
     recalcMealTotals(week, di, mi);
     saveNutrition();
     renderDays();
@@ -2073,7 +2080,6 @@ function addItem(weekId, di, mi) {
 function updateItemWeight(weekId, di, mi, idx, value) {
     const week = nutritionData.weeks.find(w => w.id === weekId);
     if (!week) return;
-    
     const key = `items-${di}-${mi}`;
     if (week.data[key]) {
         const items = JSON.parse(week.data[key]);
@@ -2088,7 +2094,6 @@ function updateItemWeight(weekId, di, mi, idx, value) {
 function updateItemMacro(weekId, di, mi, idx, field, value) {
     const week = nutritionData.weeks.find(w => w.id === weekId);
     if (!week) return;
-    
     const key = `items-${di}-${mi}`;
     if (week.data[key]) {
         const items = JSON.parse(week.data[key]);
@@ -2112,13 +2117,12 @@ function recalcMealTotals(week, di, mi) {
             s.fat += item.fat || 0;
             s.carb += item.carb || 0;
         });
-        
         week.data[`m-${di}-${mi}-cal`] = Math.round(s.cal);
         week.data[`m-${di}-${mi}-prot`] = Math.round(s.prot);
         week.data[`m-${di}-${mi}-fat`] = Math.round(s.fat);
         week.data[`m-${di}-${mi}-carb`] = Math.round(s.carb);
         
-        // Обновляем отображение итогов без полной перерисовки
+        // Обновляем только цифры итогов, не трогая таблицу
         ['cal','prot','fat','carb'].forEach(f => {
             const el = document.getElementById(`sum-${f}-${week.id}-${di}`);
             if(el) el.textContent = Math.round(s[f]);
