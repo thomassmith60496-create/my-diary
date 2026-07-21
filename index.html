@@ -1851,26 +1851,38 @@ function importFatSecretCSV(input) {
 }
 
 function processFatSecretData(csvText) {
-    const lines = csvText.split('\n');
+    // 1. Предварительная очистка: убираем кавычки и лишние пробелы, чтобы split работал корректно
+    // Заменяем запятые внутри кавычек на точки (для дробных чисел)
+    let cleanText = csvText.replace(/"([^"]*)"/g, (match, p1) => {
+        return p1.replace(/,/g, '.').trim();
+    });
+
+    const lines = cleanText.split('\n');
     let targetDate = null;
     
-    // 1. Ищем дату
+    // 2. Ищем дату
     for (let line of lines) {
         if (line.includes('Food Diary Report')) {
-            const cleanLine = line.replace(/"/g, '');
-            const dateMatch = cleanLine.match(/([а-яё]+),\s*([а-яё]+)\s+(\d+),\s*(\d{4})/i);
-            if (dateMatch) {
-                targetDate = convertFatSecretDate(dateMatch[3], dateMatch[2], dateMatch[4]);
-                break;
+            // Формат: Food Diary Report - Detailed Report,понедельник, июля 20, 2026
+            const parts = line.split(',');
+            // Ищем часть с годом
+            for (let part of parts) {
+                if (part.match(/\d{4}/)) {
+                    const dateMatch = part.match(/([а-яё]+)\s+(\d+)\s+(\d{4})/i);
+                    if (dateMatch) {
+                        const months = {'января':'01','февраля':'02','марта':'03','апреля':'04','мая':'05','июня':'06','июля':'07','августа':'08','сентября':'09','октября':'10','ноября':'11','декабря':'12'};
+                        const m = months[dateMatch[1].toLowerCase()];
+                        if (m) targetDate = `${dateMatch[3]}-${m}-${dateMatch[2].padStart(2,'0')}`;
+                    }
+                }
             }
         }
     }
     if (!targetDate) { alert('❌ Не удалось найти дату.'); return; }
 
-    // 2. БЛОЧНАЯ ЛОГИКА: Разрезаем файл на части по заголовкам
+    // 3. БЛОЧНАЯ ЛОГИКА
     const mealHeaders = ['Завтрак', 'Обед', 'Ужин', 'Перекус/Другое'];
-    const blocks = {}; // Здесь будем хранить сырые строки для каждого приема
-    
+    const blocks = {};
     let currentBlockName = null;
     let currentBlockLines = [];
 
@@ -1878,13 +1890,9 @@ function processFatSecretData(csvText) {
         const line = lines[i].trim();
         let isHeader = false;
 
-        // Проверяем, является ли строка заголовком приема пищи
         for (const header of mealHeaders) {
             if (line.startsWith(header + ',')) {
-                // Если был предыдущий блок, сохраняем его
-                if (currentBlockName) {
-                    blocks[currentBlockName] = currentBlockLines;
-                }
+                if (currentBlockName) blocks[currentBlockName] = currentBlockLines;
                 currentBlockName = header;
                 currentBlockLines = [];
                 isHeader = true;
@@ -1892,20 +1900,13 @@ function processFatSecretData(csvText) {
             }
         }
 
-        // Если это не заголовок и мы уже начали какой-то блок, добавляем строку в него
-        if (!isHeader && currentBlockName) {
-            // Игнорируем строку "Всего" и пустые строки
-            if (!line.startsWith('Всего') && line !== '') {
-                currentBlockLines.push(line);
-            }
+        if (!isHeader && currentBlockName && !line.startsWith('Всего') && line !== '' && !line.startsWith('#') && !line.startsWith('Дата')) {
+            currentBlockLines.push(line);
         }
     }
-    // Сохраняем самый последний блок
-    if (currentBlockName) {
-        blocks[currentBlockName] = currentBlockLines;
-    }
+    if (currentBlockName) blocks[currentBlockName] = currentBlockLines;
 
-    // 3. Парсим каждый блок отдельно в "Внутренний JSON"
+    // 4. Парсинг блоков
     const mealsData = {};
     const mealItems = {};
     const mealMap = { 'Завтрак': 'breakfast', 'Обед': 'lunch', 'Ужин': 'dinner', 'Перекус/Другое': 'snack' };
@@ -1921,20 +1922,19 @@ function processFatSecretData(csvText) {
             const line = itemLines[j];
             const parts = line.split(',');
             
-            // Пропускаем мусор: строки должны иметь название и число во 2-м столбце
+            // Пропускаем строки без названия или без калорий
             if (parts.length < 2 || isNaN(parseFloat(parts[1]))) continue;
 
-            const name = parts[0].replace(/"/g, '').trim();
+            const name = parts[0].trim();
             const cal = parseFloat(parts[1]) || 0;
-            const fat = parseFloat((parts[2] || '').replace(/["\s]/g, '')) || 0;
-            const carb = parseFloat((parts[4] || '').replace(/["\s]/g, '')) || 0;
-            const prot = parseFloat((parts[7] || '').replace(/["\s]/g, '')) || 0;
+            const fat = parseFloat(parts[2]) || 0;
+            const carb = parseFloat(parts[4]) || 0; // Углеводы в 5-й колонке (индекс 4)
+            const prot = parseFloat(parts[7]) || 0; // Белки в 8-й колонке (индекс 7)
 
-            // Суммируем для итогов
             blockCal += cal; blockProt += prot; blockFat += fat; blockCarb += carb;
 
             let weight = '';
-            // Вес обычно в следующей строке (паттерн "число г")
+            // Вес в следующей строке
             if (itemLines[j+1] && itemLines[j+1].match(/\d+\s*г/)) {
                 weight = itemLines[j+1].trim();
             }
@@ -1945,7 +1945,7 @@ function processFatSecretData(csvText) {
         mealsData[appType] = { cal: blockCal, prot: blockProt, fat: blockFat, carb: blockCarb };
     }
 
-    // 4. Сохранение "Внутреннего JSON" в неделю
+    // 5. Сохранение
     const week = nutritionData.weeks.find(w => {
         const start = new Date(w.startDate);
         const end = new Date(w.endDate);
