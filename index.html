@@ -1188,7 +1188,7 @@ function renderMeal(m, di, mi, weekId) {
     const starsVal = parseInt(getWeekData(weekId, `stars-${di}-${mi}`) || 0);
     const commentVal = getWeekData(weekId, `comment-${di}-${mi}`) || '';
     
-    // === ЛОГИКА ТАБЛИЦЫ ПРОДУКТОВ ===
+    // === ТАБЛИЦА ПРОДУКТОВ С РЕДАКТИРОВАНИЕМ ===
     const itemsJson = getWeekData(weekId, `items-${di}-${mi}`);
     let itemsTableHtml = '';
     
@@ -1196,21 +1196,39 @@ function renderMeal(m, di, mi, weekId) {
         try {
             const items = JSON.parse(itemsJson);
             if (items.length > 0) {
+                // Генерируем уникальные ID для инпутов, чтобы они не конфликтовали
+                const tableId = `table-${weekId}-${di}-${mi}`;
+                
                 itemsTableHtml = `
                     <div style="margin-top:8px;">
-                        <button onclick="this.nextElementSibling.classList.toggle('hidden')" 
+                        <button onclick="document.getElementById('${tableId}').classList.toggle('hidden')" 
                                 style="font-size:11px; padding:2px 6px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:4px; cursor:pointer; color:#1e3a8a;">
                             📋 Показать список (${items.length})
                         </button>
-                        <div class="hidden" style="margin-top:5px; font-size:12px; background:#f8fafc; padding:8px; border-radius:6px; border:1px solid #e2e8f0;">
-                            <table style="width:100%; border-collapse:collapse;">
-                                ${items.map(item => `
-                                    <tr style="border-bottom:1px solid #e2e8f0;">
-                                        <td style="padding:2px 0;">${item.name}</td>
-                                        <td style="text-align:right; color:#64748b; white-space:nowrap;">${item.weight ? item.weight : ''}</td>
-                                        <td style="text-align:right; font-weight:600; width:50px;">${Math.round(item.cal)}</td>
+                        <div id="${tableId}" class="hidden" style="margin-top:5px; font-size:11px; background:#f8fafc; padding:8px; border-radius:6px; border:1px solid #e2e8f0; overflow-x:auto;">
+                            <table style="width:100%; border-collapse:collapse; text-align:left;">
+                                <thead>
+                                    <tr style="border-bottom:2px solid #bfdbfe; color:#1e40af;">
+                                        <th style="padding:2px;">Продукт</th>
+                                        <th style="padding:2px;">Вес</th>
+                                        <th style="padding:2px;">К</th>
+                                        <th style="padding:2px;">Б</th>
+                                        <th style="padding:2px;">Ж</th>
+                                        <th style="padding:2px;">У</th>
                                     </tr>
-                                `).join('')}
+                                </thead>
+                                <tbody>
+                                    ${items.map((item, idx) => `
+                                        <tr style="border-bottom:1px solid #e2e8f0;">
+                                            <td style="padding:2px;">${item.name}</td>
+                                            <td style="padding:2px;"><input type="text" value="${item.weight}" style="width:50px; border:none; background:transparent; font-size:11px;" onchange="updateItemWeight('${weekId}', ${di}, ${mi}, ${idx}, this.value)"></td>
+                                            <td style="padding:2px;"><input type="number" value="${Math.round(item.cal)}" style="width:35px; border:none; background:transparent; font-size:11px; text-align:right;" onchange="updateItemMacro('${weekId}', ${di}, ${mi}, ${idx}, 'cal', this.value)"></td>
+                                            <td style="padding:2px;"><input type="number" value="${Math.round(item.prot)}" style="width:30px; border:none; background:transparent; font-size:11px; text-align:right;" onchange="updateItemMacro('${weekId}', ${di}, ${mi}, ${idx}, 'prot', this.value)"></td>
+                                            <td style="padding:2px;"><input type="number" value="${Math.round(item.fat)}" style="width:30px; border:none; background:transparent; font-size:11px; text-align:right;" onchange="updateItemMacro('${weekId}', ${di}, ${mi}, ${idx}, 'fat', this.value)"></td>
+                                            <td style="padding:2px;"><input type="number" value="${Math.round(item.carb)}" style="width:30px; border:none; background:transparent; font-size:11px; text-align:right;" onchange="updateItemMacro('${weekId}', ${di}, ${mi}, ${idx}, 'carb', this.value)"></td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
                             </table>
                         </div>
                     </div>
@@ -1218,7 +1236,7 @@ function renderMeal(m, di, mi, weekId) {
             }
         } catch(e) {}
     }
-    // ================================
+    // ==========================================
 
     const trackerHtml = isPrep ? '' : `
         <div class="meal-tracker">
@@ -1838,11 +1856,10 @@ function processFatSecretData(csvText) {
 
     let currentMealType = null;
 
-    // 1. Парсим файл
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
         
-        // Ищем дату
+        // 1. Ищем дату
         if (line.includes('Food Diary Report')) {
             const cleanLine = line.replace(/"/g, '');
             const dateMatch = cleanLine.match(/([а-яё]+),\s*([а-яё]+)\s+(\d+),\s*(\d{4})/i);
@@ -1851,7 +1868,7 @@ function processFatSecretData(csvText) {
             }
         }
 
-        // Проверяем начало нового приема пищи
+        // 2. Проверяем начало нового приема пищи
         let isMealHeader = false;
         for (const [csvName, appType] of Object.entries(mealMap)) {
             if (line.startsWith(csvName + ',')) {
@@ -1859,41 +1876,42 @@ function processFatSecretData(csvText) {
                 isMealHeader = true;
                 
                 const parts = line.split(',');
-                const cal = parseFloat(parts[1]) || 0;
-                const fat = parseFloat((parts[2] || '').replace(/["\s]/g, '')) || 0;
-                const carb = parseFloat((parts[4] || '').replace(/["\s]/g, '')) || 0;
-                const prot = parseFloat((parts[7] || '').replace(/["\s]/g, '')) || 0;
-                
-                mealsData[appType] = { cal, fat, carb, prot };
+                mealsData[appType] = { 
+                    cal: parseFloat(parts[1]) || 0,
+                    fat: parseFloat((parts[2] || '').replace(/["\s]/g, '')) || 0,
+                    carb: parseFloat((parts[4] || '').replace(/["\s]/g, '')) || 0,
+                    prot: parseFloat((parts[7] || '').replace(/["\s]/g, '')) || 0
+                };
                 mealItems[appType] = []; 
                 break;
             }
         }
 
-        // Если мы внутри блока и это не заголовок, то это продукт
+        // 3. Собираем продукты (если мы внутри блока и это не заголовок и не "Всего")
         if (currentMealType && !isMealHeader && !line.startsWith('Всего') && line !== '') {
             const parts = line.split(',');
-            // Продукт должен иметь название и хотя бы калории
+            // Продукт должен иметь название и калории
             if (parts.length > 1 && parseFloat(parts[1])) {
                 const name = parts[0].replace(/"/g, '').trim();
                 const cal = parseFloat(parts[1]) || 0;
-                let weight = '';
+                const fat = parseFloat((parts[2] || '').replace(/["\s]/g, '')) || 0;
+                const carb = parseFloat((parts[4] || '').replace(/["\s]/g, '')) || 0;
+                const prot = parseFloat((parts[7] || '').replace(/["\s]/g, '')) || 0;
                 
-                // Проверяем следующую строку на вес (паттерн "число г")
+                let weight = '';
+                // Ищем вес в следующей строке
                 if (lines[i+1] && lines[i+1].match(/\d+\s*г/)) {
                     weight = lines[i+1].trim();
                 }
 
-                mealItems[currentMealType].push({ name, cal, weight });
+                mealItems[currentMealType].push({ name, cal, fat, carb, prot, weight });
             }
         }
-        
-        if (line.startsWith('Всего')) currentMealType = null;
     }
 
     if (!targetDate) { alert('❌ Не удалось найти дату.'); return; }
 
-    // 2. Ищем неделю
+    // 4. Ищем неделю и день
     const week = nutritionData.weeks.find(w => {
         const start = new Date(w.startDate);
         const end = new Date(w.endDate);
@@ -1906,7 +1924,7 @@ function processFatSecretData(csvText) {
     const dayIndex = getDayIndexInWeek(week, targetDate);
     if (dayIndex === -1) return;
 
-    // 3. Заполняем данные
+    // 5. Сохраняем данные
     const typeToIndex = { 'breakfast': 0, 'lunch': 1, 'dinner': 2, 'snack': 3 };
     
     Object.keys(mealsData).forEach(type => {
@@ -1927,7 +1945,7 @@ function processFatSecretData(csvText) {
     renderDays(); 
     alert(`✅ Данные за ${targetDate} успешно импортированы!`);
 }
-
+   
 function convertFatSecretDate(day, monthWord, year) {
     const months = {
         'января': '01', 'февраля': '02', 'марта': '03', 'апреля': '04',
@@ -1951,6 +1969,65 @@ function getDayIndexInWeek(week, dateStr) {
     return -1;
 }
 
+// === РЕДАКТИРОВАНИЕ СПИСКА ПРОДУКТОВ ===
+function updateItemWeight(weekId, di, mi, idx, value) {
+    const week = nutritionData.weeks.find(w => w.id === weekId);
+    if (!week) return;
+    
+    const key = `items-${di}-${mi}`;
+    if (week.data[key]) {
+        const items = JSON.parse(week.data[key]);
+        if (items[idx]) {
+            items[idx].weight = value;
+            week.data[key] = JSON.stringify(items);
+            saveNutrition();
+        }
+    }
+}
+
+function updateItemMacro(weekId, di, mi, idx, field, value) {
+    const week = nutritionData.weeks.find(w => w.id === weekId);
+    if (!week) return;
+    
+    const key = `items-${di}-${mi}`;
+    if (week.data[key]) {
+        const items = JSON.parse(week.data[key]);
+        if (items[idx]) {
+            items[idx][field] = parseFloat(value) || 0;
+            week.data[key] = JSON.stringify(items);
+            
+            // Пересчитываем итоги приема пищи
+            recalcMealTotals(week, di, mi);
+            saveNutrition();
+        }
+    }
+}
+
+function recalcMealTotals(week, di, mi) {
+    const key = `items-${di}-${mi}`;
+    if (week.data[key]) {
+        const items = JSON.parse(week.data[key]);
+        let s = { cal: 0, prot: 0, fat: 0, carb: 0 };
+        items.forEach(item => {
+            s.cal += item.cal || 0;
+            s.prot += item.prot || 0;
+            s.fat += item.fat || 0;
+            s.carb += item.carb || 0;
+        });
+        
+        week.data[`m-${di}-${mi}-cal`] = Math.round(s.cal);
+        week.data[`m-${di}-${mi}-prot`] = Math.round(s.prot);
+        week.data[`m-${di}-${mi}-fat`] = Math.round(s.fat);
+        week.data[`m-${di}-${mi}-carb`] = Math.round(s.carb);
+        
+        // Обновляем отображение итогов без полной перерисовки
+        ['cal','prot','fat','carb'].forEach(f => {
+            const el = document.getElementById(`sum-${f}-${week.id}-${di}`);
+            if(el) el.textContent = Math.round(s[f]);
+        });
+    }
+}
+   
 // === СТАРТ ===
 loadFromCloud();
 </script>
