@@ -1188,7 +1188,7 @@ function renderMeal(m, di, mi, weekId) {
     const starsVal = parseInt(getWeekData(weekId, `stars-${di}-${mi}`) || 0);
     const commentVal = getWeekData(weekId, `comment-${di}-${mi}`) || '';
     
-    // === НОВАЯ ЧАСТЬ: ПРОВЕРКА СПИСКА ПРОДУКТОВ ===
+    // === ЛОГИКА ТАБЛИЦЫ ПРОДУКТОВ ===
     const itemsJson = getWeekData(weekId, `items-${di}-${mi}`);
     let itemsTableHtml = '';
     
@@ -1218,7 +1218,7 @@ function renderMeal(m, di, mi, weekId) {
             }
         } catch(e) {}
     }
-    // ==========================================
+    // ================================
 
     const trackerHtml = isPrep ? '' : `
         <div class="meal-tracker">
@@ -1233,7 +1233,7 @@ function renderMeal(m, di, mi, weekId) {
             </div>
             <textarea class="meal-comment" data-week="${weekId}" data-key="comment-${di}-${mi}" oninput="saveNutrition()" placeholder="💬 Комментарий...">${commentVal}</textarea>
         </div>
-        ${itemsTableHtml} 
+        ${itemsTableHtml}
     `;
     
     return `
