@@ -1775,68 +1775,59 @@ function resetAllData() {
     }
 }
 
-// === ИМПОРТ ИЗ FATSECRET CSV ===
-function importFatSecretCSV(input) {
-    const file = input.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const text = e.target.result;
-        processFatSecretData(text);
-    };
-    reader.readAsText(file);
-    input.value = ''; // Сброс инпута
-}
-
+// === ИМПОРТ ИЗ FATSECRET CSV (ИСПРАВЛЕННАЯ ВЕРСИЯ) ===
 function processFatSecretData(csvText) {
     const lines = csvText.split('\n');
     let targetDate = null;
-    const mealsData = {}; // Храним данные: { 'Завтрак': {cal:..., prot:...}, ... }
+    const mealsData = {}; 
     
-    // Маппинг названий приемов пищи из CSV на наши типы
+    // Маппинг названий приемов пищи из CSV на внутренние ключи
+    // breakfast=0, lunch=1, dinner=2, snack=3 (Перекус 1)
     const mealMap = {
         'Завтрак': 'breakfast',
         'Обед': 'lunch',
         'Ужин': 'dinner',
-        'Перекус/Другое': 'snack' // Будем класть в snack1
+        'Перекус/Другое': 'snack' 
     };
 
     // 1. Парсим файл
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
         
-        // Ищем дату (она обычно во второй строке или в строке с итогами)
-        if (line.includes('Food Diary Report') || line.match(/[а-я]+,\s[а-я]+\s\d+/i)) {
-            const dateMatch = line.match(/([а-я]+,\s[а-я]+\s\d+,\s\d{4})/i);
+        // Ищем дату в заголовке отчета
+        // Формат: Food Diary Report - Detailed Report,"понедельник, июля 20, 2026"
+        if (line.includes('Food Diary Report')) {
+            // Убираем кавычки и лишние пробелы, чтобы найти чистую дату
+            const cleanLine = line.replace(/"/g, '');
+            const dateMatch = cleanLine.match(/([а-я]+,\s[а-я]+\s\d+,\s\d{4})/i);
             if (dateMatch) {
-                // Преобразуем "понедельник, июля 20, 2026" в формат YYYY-MM-DD
-                const rawDate = dateMatch[1];
-                targetDate = convertFatSecretDate(rawDate);
+                targetDate = convertFatSecretDate(dateMatch[1]);
+                console.log('📅 Найдена дата:', targetDate);
             }
         }
 
         // Ищем строки с суммами по приемам пищи
-        // Они выглядят так: Завтрак,346, "19,74 ", ...
+        // Важно: проверяем начало строки, чтобы не спутать с названием продукта
         for (const [csvName, appType] of Object.entries(mealMap)) {
-            if (line.startsWith(csvName + ',')) {
+            // Регулярка: строка начинается с названия приема пищи, затем запятая и число
+            const regex = new RegExp(`^${csvName},\\s*\\d+`, 'i');
+            if (regex.test(line)) {
                 const parts = line.split(',');
-                // parts[1] - калории, parts[2] - жиры, parts[7] - белки, parts[3] - углеводы (порядок может меняться, проверим по заголовку)
-                // В твоем файле порядок: Кал, Жир, Н/жир, Углев, ... Белк
-                // Индексы: 1, 2, 3, 7
-                
+                // Индексы согласно твоему CSV: 
+                // 0: Название, 1: Кал, 2: Жир, 3: Н/жир, 4: Углев, ... 7: Белк
                 const cal = parseFloat(parts[1]) || 0;
-                const fat = parseFloat(parts[2].replace(/"/g, '').replace(/,/g, '.')) || 0;
-                const carb = parseFloat(parts[3].replace(/"/g, '').replace(/,/g, '.')) || 0;
-                const prot = parseFloat(parts[7].replace(/"/g, '').replace(/,/g, '.')) || 0;
+                const fat = parseFloat((parts[2] || '').replace(/"/g, '').trim()) || 0;
+                const carb = parseFloat((parts[4] || '').replace(/"/g, '').trim()) || 0;
+                const prot = parseFloat((parts[7] || '').replace(/"/g, '').trim()) || 0;
 
                 mealsData[appType] = { cal, fat, carb, prot };
+                console.log(`✅ Найден ${csvName}: К-${cal} Б-${prot} Ж-${fat} У-${carb}`);
             }
         }
     }
 
     if (!targetDate) {
-        alert('❌ Не удалось найти дату в файле. Проверьте формат экспорта.');
+        alert('❌ Не удалось найти дату в файле.\n\nУбедитесь, что вы экспортировали "Подробный отчет" (Detailed Report), а не сводный.');
         return;
     }
 
@@ -1845,77 +1836,91 @@ function processFatSecretData(csvText) {
         const start = new Date(w.startDate);
         const end = new Date(w.endDate);
         const current = new Date(targetDate);
+        // Нормализуем время для корректного сравнения
+        start.setHours(0,0,0,0);
+        end.setHours(23,59,59,999);
+        current.setHours(12,0,0,0);
         return current >= start && current <= end;
     });
 
     if (!week) {
-        alert(`⚠️ Неделя для даты ${targetDate} не найдена. Создайте её вручную и попробуйте снова.`);
+        alert(`⚠️ Неделя для даты ${targetDate} не найдена.\n\nСоздайте пустую неделю или импортируйте меню, включающее эту дату.`);
         return;
     }
 
     // Находим индекс дня в неделе (0 - Пн, 6 - Вс)
     const dayIndex = getDayIndexInWeek(week, targetDate);
-    if (dayIndex === -1) return;
+    if (dayIndex === -1) {
+        alert('❌ Ошибка определения дня недели.');
+        return;
+    }
 
     // 3. Проверка на перезапись
-    const existingCal = week.data[`m-${dayIndex}-0-cal`]; // Проверяем завтрак
-    if (existingCal && existingCal !== '0' && existingCal !== '') {
-        if (!confirm(`⚠️ Данные за ${targetDate} уже заполнены. Хотите обновить их данными из FatSecret?`)) {
+    let hasExistingData = false;
+    ['m-' + dayIndex + '-0-cal', 'm-' + dayIndex + '-1-cal', 'm-' + dayIndex + '-2-cal'].forEach(key => {
+        if (week.data[key] && week.data[key] !== '' && week.data[key] != 0) hasExistingData = true;
+    });
+
+    if (hasExistingData) {
+        if (!confirm(`⚠️ Данные за ${targetDate} уже заполнены.\nХотите обновить их данными из FatSecret?`)) {
             return;
         }
     }
 
     // 4. Заполняем данные
-    const mealTypes = ['breakfast', 'lunch', 'dinner', 'snack'];
-    mealTypes.forEach((type, index) => {
-        if (mealsData[type]) {
-            const data = mealsData[type];
-            // Для перекуса используем индекс 3 (snack1), остальные по порядку 0, 1, 2
-            const mealIndex = type === 'snack' ? 3 : index; 
-            
-            week.data[`m-${dayIndex}-${mealIndex}-cal`] = Math.round(data.cal);
-            week.data[`m-${dayIndex}-${mealIndex}-prot`] = Math.round(data.prot);
-            week.data[`m-${dayIndex}-${mealIndex}-fat`] = Math.round(data.fat);
-            week.data[`m-${dayIndex}-${mealIndex}-carb`] = Math.round(data.carb);
-        }
+    // Порядок индексов в меню: 0-Завтрак, 1-Обед, 2-Ужин, 3-Перекус1, 4-Перекус2
+    const typeToIndex = { 'breakfast': 0, 'lunch': 1, 'dinner': 2, 'snack': 3 };
+    
+    Object.keys(mealsData).forEach(type => {
+        const data = mealsData[type];
+        const idx = typeToIndex[type];
+        
+        week.data[`m-${dayIndex}-${idx}-cal`] = Math.round(data.cal);
+        week.data[`m-${dayIndex}-${idx}-prot`] = Math.round(data.prot);
+        week.data[`m-${dayIndex}-${idx}-fat`] = Math.round(data.fat);
+        week.data[`m-${dayIndex}-${idx}-carb`] = Math.round(data.carb);
     });
 
     saveNutrition();
-    renderDays(); // Перерисовываем интерфейс
+    renderDays(); 
     alert(`✅ Данные за ${targetDate} успешно импортированы!`);
 }
 
-// Вспомогательная функция для конвертации даты из CSV
+// Конвертация русской даты в формат YYYY-MM-DD
 function convertFatSecretDate(dateStr) {
-    // Пример: "понедельник, июля 20, 2026"
     const months = {
         'января': '01', 'февраля': '02', 'марта': '03', 'апреля': '04',
         'мая': '05', 'июня': '06', 'июля': '07', 'августа': '08',
         'сентября': '09', 'октября': '10', 'ноября': '11', 'декабря': '12'
     };
     
-    const match = dateStr.match(/(\d+)\s*,\s*(\d{4})/); // Ищем число и год
-    const monthMatch = dateStr.match(/([а-я]+)/i); // Ищем месяц
+    // Ищем паттерн: "число, год" и "месяц"
+    const numMatch = dateStr.match(/(\d+)\s*,\s*(\d{4})/);
+    const monthWord = dateStr.match(/([а-яё]+)/i);
     
-    if (match && monthMatch) {
-        const day = match[1].padStart(2, '0');
-        const year = match[2];
-        const monthNum = months[monthMatch[1].toLowerCase()];
-        if (monthNum) {
-            return `${year}-${monthNum}-${day}`;
-        }
+    if (numMatch && monthWord) {
+        const day = numMatch[1].padStart(2, '0');
+        const year = numMatch[2];
+        const mKey = monthWord[1].toLowerCase();
+        const monthNum = months[mKey];
+        
+        if (monthNum) return `${year}-${monthNum}-${day}`;
     }
     return null;
 }
 
-// Вспомогательная функция для поиска индекса дня
+// Поиск индекса дня в массиве меню недели
 function getDayIndexInWeek(week, dateStr) {
     const start = new Date(week.startDate);
     const target = new Date(dateStr);
-    const diffTime = Math.abs(target - start);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-    // Важно: если дата совпадает с началом недели, diffDays будет 0
-    return (target >= start && target <= new Date(week.endDate)) ? diffDays : -1;
+    start.setHours(0,0,0,0);
+    target.setHours(0,0,0,0);
+    
+    const diffTime = target - start;
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays >= 0 && diffDays < week.menu.length) return diffDays;
+    return -1;
 }
 
 // === СТАРТ ===
