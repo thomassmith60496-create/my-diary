@@ -757,7 +757,13 @@ function showSyncStatus(message, type = 'success') {
 
 function syncToCloud() {
     if(syncTimeout) clearTimeout(syncTimeout);
-    showSyncStatus('💾 Сохранение...', 'syncing');
+    
+    // Показываем статус только если прошло больше 2 секунд с последнего ввода
+    // Это чтобы не мелькало "Сохранение..." каждую секунду
+    const statusEl = document.getElementById('sync-status');
+    if(statusEl && !statusEl.classList.contains('visible')) {
+        showSyncStatus('💾 Сохранение...', 'syncing');
+    }
     
     syncTimeout = setTimeout(() => {
         const data = {
@@ -776,7 +782,7 @@ function syncToCloud() {
                 console.error('❌ Firebase error:', error);
                 showSyncStatus('❌ Ошибка сохранения', 'error');
             });
-    }, 1000);
+    }, 3000); // Увеличили задержку до 3 секунд (было 1000)
 }
 
 function loadFromCloud() {
@@ -1239,7 +1245,8 @@ function updateTotals(weekId, di) {
         const el = document.getElementById(`sum-${f}-${weekId}-${di}`);
         if(el) el.textContent = Math.round(s[f]);
     });
-    saveNutrition();
+    // Тоже вызываем сохранение
+    syncToCloud();
 }
 
 // === ДАШБОРД ===
@@ -1662,18 +1669,21 @@ function saveNutrition() {
     const week = nutritionData.weeks.find(w => w.id === nutritionData.currentWeekId);
     if(!week) return;
     
-    // Инициализируем data если его нет
     if(!week.data) week.data = {};
     
+    // Собираем данные из полей
     document.querySelectorAll(`[data-week="${week.id}"]`).forEach(el => {
         const key = el.dataset.key;
         if(!key) return;
         let value = el.type === 'checkbox' ? el.checked : el.value;
         if(value !== undefined && value !== '') week.data[key] = value;
     });
+    
     document.querySelectorAll(`input[data-week="${week.id}"][data-field]`).forEach(inp => {
         if(inp.value) week.data[`m-${inp.dataset.day}-${inp.dataset.meal}-${inp.dataset.field}`] = inp.value;
     });
+    
+    // Вызываем сохранение в облако (с задержкой 3 сек)
     syncToCloud();
 }
 
