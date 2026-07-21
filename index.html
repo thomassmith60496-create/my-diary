@@ -734,6 +734,7 @@ let currentKbjuMetric = 'cal';
 let currentTrainMetric = 'weight';
 const formStarsData = {};
 let syncTimeout = null;
+let isInitialLoad = true; // Флаг первой загрузки
 
 const mealIcons = {
     breakfast:"З", lunch:"О", dinner:"У", snack:"П", snack1:"П1", snack2:"П2",
@@ -748,6 +749,7 @@ const typeLabels = {
 // ============================================
 function showSyncStatus(message, type = 'success') {
     const statusEl = document.getElementById('sync-status');
+    if(!statusEl) return;
     statusEl.textContent = message;
     statusEl.className = `sync-status visible ${type}`;
     setTimeout(() => { statusEl.classList.remove('visible'); }, 3000);
@@ -783,17 +785,21 @@ function loadFromCloud() {
     diaryRef.once('value')
         .then((snapshot) => {
             const data = snapshot.val();
-            if(data) {
-                if(data.nutrition && data.nutrition.weeks) nutritionData = data.nutrition;
+            if(data && data.nutrition && data.nutrition.weeks && data.nutrition.weeks.length > 0) {
+                // Данные есть в Firebase
+                nutritionData = data.nutrition;
                 if(data.workouts) workouts = data.workouts;
                 if(data.progress) localStorage.setItem('exercise-progress', JSON.stringify(data.progress));
                 console.log('✅ Data loaded from Firebase');
                 showSyncStatus('✅ Данные загружены!', 'success');
             } else {
-                console.log('ℹ️ No data in Firebase, using local');
-                showSyncStatus('ℹ️ Нет данных в облаке', 'syncing');
+                // Нет данных в Firebase - пробуем localStorage
+                console.log('ℹ️ No valid data in Firebase, checking localStorage');
                 loadLocalFallback();
+                showSyncStatus('ℹ️ Использованы локальные данные', 'syncing');
             }
+            
+            isInitialLoad = false;
             renderNutritionAll();
             renderTrainAll();
         })
@@ -801,6 +807,7 @@ function loadFromCloud() {
             console.error('❌ Firebase load error:', error);
             showSyncStatus('❌ Ошибка загрузки', 'error');
             loadLocalFallback();
+            isInitialLoad = false;
             renderNutritionAll();
             renderTrainAll();
         });
@@ -808,22 +815,39 @@ function loadFromCloud() {
 
 function loadLocalFallback() {
     const rawNutrition = localStorage.getItem('nutrition-data');
-    if(rawNutrition) { try { nutritionData = JSON.parse(rawNutrition); } catch(e) {} }
+    if(rawNutrition) { 
+        try { 
+            const parsed = JSON.parse(rawNutrition);
+            if(parsed && parsed.weeks && parsed.weeks.length > 0) {
+                nutritionData = parsed;
+            }
+        } catch(e) { 
+            console.error('Error parsing localStorage nutrition:', e);
+        } 
+    }
     const rawTrain = localStorage.getItem('workouts-data');
-    if(rawTrain) { try { workouts = JSON.parse(rawTrain).workouts || []; } catch(e) {} }
+    if(rawTrain) { 
+        try { 
+            const parsed = JSON.parse(rawTrain);
+            if(parsed && parsed.workouts) {
+                workouts = parsed.workouts;
+            }
+        } catch(e) {
+            console.error('Error parsing localStorage workouts:', e);
+        } 
+    }
 }
 
 // Слушатель изменений в реальном времени
 diaryRef.on('value', (snapshot) => {
+    if(isInitialLoad) return; // Пропускаем первую загрузку
+    
     const data = snapshot.val();
-    if(data && data.lastUpdated) {
-        // Простая проверка: если данные пришли не от нас (или просто обновляем)
-        // В реальном приложении можно сравнивать lastUpdated, но для простоты обновляем всегда при изменении
-        if(data.nutrition) nutritionData = data.nutrition;
+    if(data && data.nutrition && data.nutrition.weeks) {
+        nutritionData = data.nutrition;
         if(data.workouts) workouts = data.workouts;
         if(data.progress) localStorage.setItem('exercise-progress', JSON.stringify(data.progress));
         
-        // Перерисовываем только если мы не в процессе редактирования (упрощенно)
         renderNutritionAll();
         renderTrainAll();
     }
@@ -1066,6 +1090,12 @@ function renderDays() {
         container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📘</div><div class="empty-state-title">Нет недель</div><div class="empty-state-text">Импортируйте меню или создайте пустую неделю</div></div>`;
         return;
     }
+    
+    // Проверяем что currentWeekId валиден
+    if(!nutritionData.currentWeekId || !nutritionData.weeks.find(w => w.id === nutritionData.currentWeekId)) {
+        nutritionData.currentWeekId = nutritionData.weeks[0].id;
+    }
+    
     const week = nutritionData.weeks.find(w => w.id === nutritionData.currentWeekId);
     if(!week) return;
     
@@ -1177,7 +1207,8 @@ function renderMeal(m, di, mi, weekId) {
 
 function getWeekData(weekId, key) {
     const week = nutritionData.weeks.find(w => w.id === weekId);
-    return week ? (week.data[key] || '') : '';
+    if(!week || !week.data) return '';
+    return week.data[key] || '';
 }
 
 function setStars(el, rating) {
@@ -1187,7 +1218,10 @@ function setStars(el, rating) {
     const current = parseInt(getWeekData(weekId, key) || 0);
     const newVal = current === rating ? 0 : rating;
     const week = nutritionData.weeks.find(w => w.id === weekId);
-    if(week) week.data[key] = newVal;
+    if(week) {
+        if(!week.data) week.data = {};
+        week.data[key] = newVal;
+    }
     container.querySelectorAll('.star').forEach(s => {
         s.classList.toggle('active', parseInt(s.dataset.rating) <= newVal);
     });
@@ -1209,7 +1243,12 @@ function updateTotals(weekId, di) {
 }
 
 // === ДАШБОРД ===
-function renderDashboard() { renderWeightChart(); renderKbjuChart(); renderWeeklyAvg(); }
+function renderDashboard() { 
+    console.log('Rendering dashboard...');
+    renderWeightChart(); 
+    renderKbjuChart(); 
+    renderWeeklyAvg(); 
+}
 function setKbjuMetric(metric) {
     currentKbjuMetric = metric;
     document.querySelectorAll('#sub-tab-dashboard .metric-btn').forEach(b => { b.classList.toggle('active', b.dataset.metric === metric); });
@@ -1232,6 +1271,7 @@ function collectWeightData(period) {
     const weeks = getFilteredWeeks(period);
     const data = [];
     weeks.forEach(week => {
+        if(!week.data) week.data = {};
         const startDate = new Date(week.startDate);
         week.menu.forEach((day, di) => {
             const weight = week.data[`weight-${di}`];
@@ -1248,6 +1288,7 @@ function collectKbjuData(period, metric) {
     const weeks = getFilteredWeeks(period);
     const data = [];
     weeks.forEach(week => {
+        if(!week.data) week.data = {};
         const startDate = new Date(week.startDate);
         week.menu.forEach((day, di) => {
             let total = 0;
@@ -1332,6 +1373,7 @@ function renderWeeklyAvg() {
     const container = document.getElementById('weekly-avg-container');
     if(nutritionData.weeks.length === 0) { container.innerHTML = '<div class="chart-empty">Нет данных</div>'; return; }
     const weeklyData = nutritionData.weeks.map(week => {
+        if(!week.data) week.data = {};
         let cal = 0, prot = 0, fat = 0, carb = 0, days = 0;
         week.menu.forEach((day, di) => {
             let dayCal = 0;
@@ -1619,6 +1661,10 @@ function renderTrainHistoryBlock(entries, values, unit) {
 function saveNutrition() {
     const week = nutritionData.weeks.find(w => w.id === nutritionData.currentWeekId);
     if(!week) return;
+    
+    // Инициализируем data если его нет
+    if(!week.data) week.data = {};
+    
     document.querySelectorAll(`[data-week="${week.id}"]`).forEach(el => {
         const key = el.dataset.key;
         if(!key) return;
@@ -1711,5 +1757,6 @@ function resetAllData() {
 // === СТАРТ ===
 loadFromCloud();
 </script>
+
 </body>
 </html>
