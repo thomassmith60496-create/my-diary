@@ -2,7 +2,11 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Дневник питания и тренировок</title>
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 <style>
     * { box-sizing: border-box; }
     body {
@@ -11,8 +15,6 @@
         color: #1e293b; margin: 0; padding: 20px; line-height: 1.5;
     }
     .container { max-width: 900px; margin: 0 auto; }
-
-    /* ГЛАВНЫЕ ВКЛАДКИ */
     .main-tabs { display: flex; gap: 0; margin-bottom: 0; }
     .main-tab-btn {
         flex: 1; padding: 16px 20px; border: none;
@@ -31,8 +33,6 @@
     }
     .main-tab-content { display: none; }
     .main-tab-content.active { display: block; }
-
-    /* ПОДВКЛАДКИ ПИТАНИЯ */
     .sub-tabs { display: flex; gap: 0; margin-bottom: 0; background: #eff6ff; border-radius: 12px 12px 0 0; padding: 8px 8px 0; }
     .sub-tab-btn {
         flex: 1; padding: 10px 16px; border: none;
@@ -46,7 +46,6 @@
     }
     .sub-tab-content { display: none; }
     .sub-tab-content.active { display: block; }
-
     header {
         background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
         color: white; padding: 35px 30px; border-radius: 0 0 20px 20px;
@@ -69,7 +68,6 @@
         border-radius: 30px; font-size: 13px; font-weight: 600;
         border: 1px solid rgba(255,255,255,0.25);
     }
-
     .toolbar { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
     .btn {
         background: white; color: #1e3a8a; border: 2px solid #2563eb;
@@ -89,169 +87,79 @@
     .btn.green:hover { background: #10b981; color: white; }
     .btn.green.primary { background: #10b981; color: white; }
     .btn.green.primary:hover { background: #065f46; }
-
-    /* НАВИГАЦИЯ ПО ДНЯМ */
     .days-nav {
-        background: white;
-        border-radius: 12px;
-        padding: 12px 16px;
-        margin-bottom: 20px;
-        box-shadow: 0 4px 15px rgba(37, 99, 235, 0.08);
-        border: 1px solid #e0e7ff;
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-        align-items: center;
-        position: sticky;
-        top: 10px;
-        z-index: 50;
+        background: white; border-radius: 12px; padding: 12px 16px;
+        margin-bottom: 20px; box-shadow: 0 4px 15px rgba(37, 99, 235, 0.08);
+        border: 1px solid #e0e7ff; display: flex; gap: 8px; flex-wrap: wrap;
+        align-items: center; position: sticky; top: 10px; z-index: 50;
     }
-    .days-nav-label {
-        font-size: 12px;
-        font-weight: 700;
-        color: #1e40af;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        margin-right: 4px;
-    }
+    .days-nav-label { font-size: 12px; font-weight: 700; color: #1e40af; text-transform: uppercase; letter-spacing: 0.5px; margin-right: 4px; }
     .day-nav-btn {
-        padding: 6px 12px;
-        border: 1.5px solid #bfdbfe;
-        border-radius: 6px;
-        background: white;
-        color: #1e3a8a;
-        font-size: 13px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s;
-        font-family: inherit;
+        padding: 6px 12px; border: 1.5px solid #bfdbfe; border-radius: 6px;
+        background: white; color: #1e3a8a; font-size: 13px; font-weight: 600;
+        cursor: pointer; transition: all 0.2s; font-family: inherit;
     }
-    .day-nav-btn:hover {
-        background: #eff6ff;
-        border-color: #2563eb;
-    }
-    .day-nav-btn.training {
-        border-color: #fdba74;
-        color: #9a3412;
-    }
-    .day-nav-btn.training:hover {
-        background: #fff7ed;
-    }
-    .nav-actions {
-        margin-left: auto;
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-    }
+    .day-nav-btn:hover { background: #eff6ff; border-color: #2563eb; }
+    .day-nav-btn.training { border-color: #fdba74; color: #9a3412; }
+    .day-nav-btn.training:hover { background: #fff7ed; }
+    .nav-actions { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
     .nav-action-btn {
-        padding: 6px 12px;
-        background: #eff6ff;
-        color: #1e3a8a;
-        border: 1.5px solid #bfdbfe;
-        border-radius: 6px;
-        font-size: 12px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s;
-        font-family: inherit;
+        padding: 6px 12px; background: #eff6ff; color: #1e3a8a;
+        border: 1.5px solid #bfdbfe; border-radius: 6px; font-size: 12px;
+        font-weight: 600; cursor: pointer; transition: all 0.2s; font-family: inherit;
     }
-    .nav-action-btn:hover {
-        background: #2563eb;
-        color: white;
-        border-color: #2563eb;
-    }
-
-    /* СВORAЧИВАНИЕ ДНЕЙ */
-    .day-header-actions {
-        display: flex;
-        gap: 8px;
-        align-items: center;
-    }
+    .nav-action-btn:hover { background: #2563eb; color: white; border-color: #2563eb; }
+    .day-header-actions { display: flex; gap: 8px; align-items: center; }
     .day-toggle-btn {
-        background: rgba(255,255,255,0.2);
-        border: none;
-        color: white;
-        width: 32px;
-        height: 32px;
-        border-radius: 6px;
-        font-size: 14px;
-        cursor: pointer;
-        transition: transform 0.2s;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        background: rgba(255,255,255,0.2); border: none; color: white;
+        width: 32px; height: 32px; border-radius: 6px; font-size: 14px;
+        cursor: pointer; transition: transform 0.2s; display: flex;
+        align-items: center; justify-content: center;
     }
-    .day-toggle-btn:hover {
-        background: rgba(255,255,255,0.3);
-    }
-    .day-card.collapsed .day-body {
-        display: none;
-    }
-    .day-card.collapsed .day-toggle-btn {
-        transform: rotate(-90deg);
-    }
-
-    /* ПИТАНИЕ - СТИЛИ */
+    .day-toggle-btn:hover { background: rgba(255,255,255,0.3); }
+    .day-card.collapsed .day-body { display: none; }
+    .day-card.collapsed .day-toggle-btn { transform: rotate(-90deg); }
     .week-selector {
         background: white; border-radius: 12px; padding: 16px 20px;
-        margin-bottom: 20px; box-shadow: 0 4px 15px rgba(37, 99, 235, 0.08);
-        border: 1px solid #e0e7ff;
+        margin-bottom: 20px; box-shadow: 0 4px 15px rgba(37, 99, 235, 0.08); border: 1px solid #e0e7ff;
     }
-    .week-selector-label {
-        font-size: 12px; font-weight: 700; color: #1e40af;
-        margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;
-    }
+    .week-selector-label { font-size: 12px; font-weight: 700; color: #1e40af; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
     .week-selector-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
     .week-select {
-        flex: 1; min-width: 200px; padding: 9px 12px;
-        border: 1.5px solid #bfdbfe; border-radius: 8px;
-        background: #eff6ff; color: #1e293b; font-size: 14px;
-        font-family: inherit; cursor: pointer;
+        flex: 1; min-width: 200px; padding: 9px 12px; border: 1.5px solid #bfdbfe;
+        border-radius: 8px; background: #eff6ff; color: #1e293b; font-size: 14px; font-family: inherit; cursor: pointer;
     }
     .week-select:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,0.15); }
     .week-actions { display: flex; gap: 8px; }
     .week-action-btn {
         padding: 8px 14px; border-radius: 6px; font-size: 12px;
-        font-weight: 600; cursor: pointer; border: 1px solid;
-        font-family: inherit; transition: all 0.2s;
+        font-weight: 600; cursor: pointer; border: 1px solid; font-family: inherit; transition: all 0.2s;
     }
     .week-action-btn.delete { background: white; color: #dc2626; border-color: #fca5a5; }
     .week-action-btn.delete:hover { background: #fee2e2; }
-
     .rule-box {
-        background: white; border-left: 5px solid #2563eb;
-        padding: 18px 22px; margin-bottom: 25px; border-radius: 12px;
-        box-shadow: 0 4px 15px rgba(37, 99, 235, 0.08); font-size: 14px;
+        background: white; border-left: 5px solid #2563eb; padding: 18px 22px;
+        margin-bottom: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(37, 99, 235, 0.08); font-size: 14px;
     }
     .rule-box b { color: #1e3a8a; }
-
     .day-card {
-        background: white; border-radius: 18px; margin-bottom: 25px;
-        overflow: hidden; box-shadow: 0 6px 20px rgba(30, 58, 138, 0.08);
-        border: 1px solid #e0e7ff; page-break-inside: avoid;
-        transition: box-shadow 0.3s;
+        background: white; border-radius: 18px; margin-bottom: 25px; overflow: hidden;
+        box-shadow: 0 6px 20px rgba(30, 58, 138, 0.08); border: 1px solid #e0e7ff;
+        page-break-inside: avoid; transition: box-shadow 0.3s;
     }
     .day-header {
         background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
-        color: white; padding: 16px 24px;
-        display: flex; justify-content: space-between; align-items: center;
-        flex-wrap: wrap; gap: 10px;
+        color: white; padding: 16px 24px; display: flex; justify-content: space-between;
+        align-items: center; flex-wrap: wrap; gap: 10px;
     }
-    .day-header.training {
-        background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 50%, #ea580c 100%);
-    }
+    .day-header.training { background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 50%, #ea580c 100%); }
     .day-title { font-size: 22px; font-weight: 700; }
-    .day-tag {
-        background: rgba(255,255,255,0.2); padding: 5px 14px;
-        border-radius: 20px; font-size: 13px; font-weight: 600;
-    }
+    .day-tag { background: rgba(255,255,255,0.2); padding: 5px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; }
     .day-tag.training { background: #fbbf24; color: #7c2d12; }
     .day-body { padding: 22px; }
-
     .morning-block {
         background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-        border: 1px solid #bae6fd; border-radius: 12px;
-        padding: 16px 18px; margin-bottom: 20px;
+        border: 1px solid #bae6fd; border-radius: 12px; padding: 16px 18px; margin-bottom: 20px;
     }
     .morning-title { font-weight: 700; color: #0369a1; margin-bottom: 10px; font-size: 15px; }
     .morning-field { display: flex; align-items: center; gap: 10px; }
@@ -261,14 +169,11 @@
         border-radius: 6px; font-size: 13px; background: white;
     }
     .morning-field input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,0.15); }
-
     .meal { margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px dashed #e0e7ff; }
     .meal:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
-    
     .meal.prep-block {
         background: linear-gradient(135deg, #fefce8 0%, #fef3c7 100%);
-        border: 2px dashed #fbbf24; border-radius: 12px;
-        padding: 14px 16px; margin: 16px 0;
+        border: 2px dashed #fbbf24; border-radius: 12px; padding: 14px 16px; margin: 16px 0;
     }
     .meal.prep-block .meal-head { margin-bottom: 8px; }
     .meal.prep-block .meal-icon { background: #fbbf24; color: #78350f; }
@@ -276,19 +181,16 @@
     .meal.prep-block .meal-content { padding-left: 42px; color: #92400e; }
     .meal.prep-block .meal-content ul { margin: 0; padding-left: 18px; }
     .meal.prep-block .meal-content li { margin-bottom: 2px; font-size: 13px; }
-
     .meal-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
     .meal-icon {
-        width: 32px; height: 32px; border-radius: 8px;
-        background: #dbeafe; color: #1e40af;
-        display: flex; align-items: center; justify-content: center;
+        width: 32px; height: 32px; border-radius: 8px; background: #dbeafe;
+        color: #1e40af; display: flex; align-items: center; justify-content: center;
         font-weight: 800; font-size: 14px; flex-shrink: 0;
     }
     .meal-name { font-weight: 700; color: #1e3a8a; font-size: 16px; flex: 1; }
     .meal-time {
         width: 90px; padding: 5px 8px; border: 1px solid #cbd5e1;
-        border-radius: 6px; font-size: 12px; background: white;
-        color: #1e293b; font-family: inherit;
+        border-radius: 6px; font-size: 12px; background: white; color: #1e293b; font-family: inherit;
     }
     .meal-time:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,0.15); }
     .meal-content { padding-left: 42px; color: #334155; font-size: 14px; }
@@ -300,10 +202,8 @@
     }
     .or-choice .or-label {
         display: inline-block; background: #3b82f6; color: white;
-        padding: 2px 8px; border-radius: 4px;
-        font-size: 11px; font-weight: 700; margin-right: 6px;
+        padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; margin-right: 6px;
     }
-
     .meal-tracker {
         margin-top: 10px; background: #f8fafc; border-radius: 10px;
         padding: 10px 12px; display: flex; flex-direction: column; gap: 8px;
@@ -313,8 +213,7 @@
     .kbju-group label { font-weight: 700; min-width: 16px; }
     .kbju-group input {
         width: 70px; padding: 6px 7px; border: 1px solid #cbd5e1;
-        border-radius: 6px; font-size: 13px; text-align: center;
-        background: white; color: #1e293b;
+        border-radius: 6px; font-size: 13px; text-align: center; background: white; color: #1e293b;
     }
     .kbju-group input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,0.15); }
     .kbju-group .unit { font-size: 11px; color: #64748b; font-weight: 500; }
@@ -322,12 +221,10 @@
     .kbju-group.prot label { color: #2563eb; }
     .kbju-group.fat label { color: #d97706; }
     .kbju-group.carb label { color: #16a34a; }
-
     .stars { display: flex; gap: 2px; margin-left: auto; }
     .star { cursor: pointer; font-size: 20px; color: #cbd5e1; transition: color 0.15s; user-select: none; }
     .star.active { color: #fbbf24; }
     .star:hover { color: #fcd34d; }
-
     .meal-comment {
         width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1;
         border-radius: 6px; font-size: 12px; font-family: inherit;
@@ -335,7 +232,6 @@
     }
     .meal-comment::placeholder { color: #94a3b8; }
     .meal-comment:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,0.15); }
-
     .day-summary {
         margin-top: 20px; background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
         border-radius: 14px; padding: 18px; border: 1px solid #bfdbfe;
@@ -363,361 +259,190 @@
     .notes-input:focus, .mood-select:focus { outline: none; border-color: #3b82f6; }
     .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .summary-field label { display: block; font-size: 12px; font-weight: 700; color: #1e40af; margin-bottom: 4px; }
-
-    .empty-state {
-        text-align: center; padding: 60px 20px;
-        background: white; border-radius: 18px;
-        border: 2px dashed #bfdbfe;
-    }
+    .empty-state { text-align: center; padding: 60px 20px; background: white; border-radius: 18px; border: 2px dashed #bfdbfe; }
     .empty-state-icon { font-size: 60px; margin-bottom: 15px; }
     .empty-state-title { font-size: 20px; font-weight: 700; color: #1e3a8a; margin-bottom: 8px; }
     .empty-state-text { color: #1e40af; font-size: 14px; margin-bottom: 20px; }
-
-    /* ТРЕНИРОВКИ - СТИЛИ */
     .workouts-list { display: flex; flex-direction: column; gap: 15px; }
-
     .workout-card {
         background: white; border-radius: 18px; overflow: hidden;
-        box-shadow: 0 6px 20px rgba(154, 52, 18, 0.08);
-        border: 1px solid #fed7aa;
+        box-shadow: 0 6px 20px rgba(154, 52, 18, 0.08); border: 1px solid #fed7aa;
     }
     .workout-header {
         background: linear-gradient(135deg, #9a3412 0%, #ea580c 100%);
-        color: white; padding: 14px 20px;
-        display: flex; justify-content: space-between; align-items: center;
-        flex-wrap: wrap; gap: 10px; cursor: pointer;
+        color: white; padding: 14px 20px; display: flex; justify-content: space-between;
+        align-items: center; flex-wrap: wrap; gap: 10px; cursor: pointer;
     }
     .workout-header-left { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
     .workout-date { font-size: 18px; font-weight: 700; }
-    .workout-type-badge {
-        background: rgba(255,255,255,0.25); padding: 4px 12px;
-        border-radius: 15px; font-size: 12px; font-weight: 600;
-    }
+    .workout-type-badge { background: rgba(255,255,255,0.25); padding: 4px 12px; border-radius: 15px; font-size: 12px; font-weight: 600; }
     .workout-toggle-icon { font-size: 20px; transition: transform 0.2s; }
     .workout-card.collapsed .workout-toggle-icon { transform: rotate(-90deg); }
     .workout-card.collapsed .workout-body { display: none; }
-
     .workout-body { padding: 20px; }
-
-    .workout-info-grid {
-        display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-        gap: 10px; margin-bottom: 16px;
-    }
-    .info-item {
-        background: #fff7ed; padding: 10px 12px;
-        border-radius: 8px; border-left: 3px solid #ea580c;
-    }
-    .info-label {
-        font-size: 11px; color: #9a3412; font-weight: 700;
-        text-transform: uppercase; letter-spacing: 0.5px;
-    }
+    .workout-info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 16px; }
+    .info-item { background: #fff7ed; padding: 10px 12px; border-radius: 8px; border-left: 3px solid #ea580c; }
+    .info-label { font-size: 11px; color: #9a3412; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
     .info-value { font-size: 15px; font-weight: 700; color: #7c2d12; margin-top: 2px; }
-
-    .section-title {
-        font-weight: 700; color: #9a3412; font-size: 14px;
-        margin: 16px 0 8px; padding-top: 12px; border-top: 1px dashed #fed7aa;
-    }
+    .section-title { font-weight: 700; color: #9a3412; font-size: 14px; margin: 16px 0 8px; padding-top: 12px; border-top: 1px dashed #fed7aa; }
     .section-title:first-child { border-top: none; padding-top: 0; margin-top: 0; }
-
     .log-box {
-        background: #fff7ed; border: 1px solid #fdba74;
-        border-radius: 8px; padding: 12px; font-family: 'Consolas', monospace;
-        font-size: 12px; line-height: 1.5; white-space: pre-wrap;
+        background: #fff7ed; border: 1px solid #fdba74; border-radius: 8px; padding: 12px;
+        font-family: 'Consolas', monospace; font-size: 12px; line-height: 1.5; white-space: pre-wrap;
         color: #7c2d12; max-height: 300px; overflow-y: auto;
     }
-
     .parsed-list { display: flex; flex-direction: column; gap: 6px; }
-    .parsed-item {
-        background: white; padding: 8px 12px; border-radius: 6px;
-        border-left: 3px solid #ea580c; font-size: 13px;
-    }
+    .parsed-item { background: white; padding: 8px 12px; border-radius: 6px; border-left: 3px solid #ea580c; font-size: 13px; }
     .parsed-name { font-weight: 700; color: #7c2d12; }
     .parsed-stats { color: #6b7280; font-size: 11px; margin-top: 2px; }
-
-    .note-box {
-        background: #fff7ed; padding: 10px 12px;
-        border-radius: 8px; font-size: 13px; color: #7c2d12;
-        border-left: 3px solid #ea580c;
-    }
-
-    .workout-actions {
-        display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap;
-        padding-top: 12px; border-top: 1px dashed #fed7aa;
-    }
-    .action-btn {
-        padding: 6px 12px; border-radius: 6px; font-size: 12px;
-        font-weight: 600; cursor: pointer; border: 1px solid;
-        font-family: inherit; transition: all 0.2s;
-    }
+    .note-box { background: #fff7ed; padding: 10px 12px; border-radius: 8px; font-size: 13px; color: #7c2d12; border-left: 3px solid #ea580c; }
+    .workout-actions { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; padding-top: 12px; border-top: 1px dashed #fed7aa; }
+    .action-btn { padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid; font-family: inherit; transition: all 0.2s; }
     .action-btn.edit { background: white; color: #9a3412; border-color: #fdba74; }
     .action-btn.edit:hover { background: #fff7ed; }
     .action-btn.delete { background: white; color: #dc2626; border-color: #fca5a5; }
     .action-btn.delete:hover { background: #fee2e2; }
-
-    /* ДАШБОРД - СТИЛИ */
     .dashboard-section {
-        background: white; border-radius: 18px; margin-bottom: 25px;
-        padding: 22px; box-shadow: 0 6px 20px rgba(6, 95, 70, 0.08);
-        border: 1px solid #a7f3d0;
+        background: white; border-radius: 18px; margin-bottom: 25px; padding: 22px;
+        box-shadow: 0 6px 20px rgba(6, 95, 70, 0.08); border: 1px solid #a7f3d0;
     }
-    .dashboard-title {
-        font-size: 20px; font-weight: 700; color: #065f46;
-        margin: 0 0 16px; padding-bottom: 12px; border-bottom: 2px solid #a7f3d0;
-    }
-    .dashboard-controls {
-        display: flex; gap: 12px; margin-bottom: 18px; flex-wrap: wrap;
-        align-items: flex-end;
-    }
+    .dashboard-title { font-size: 20px; font-weight: 700; color: #065f46; margin: 0 0 16px; padding-bottom: 12px; border-bottom: 2px solid #a7f3d0; }
+    .dashboard-controls { display: flex; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; align-items: flex-end; }
     .dashboard-select-wrap { flex: 1; min-width: 200px; }
-    .dashboard-select-wrap label {
-        display: block; font-size: 12px; font-weight: 700;
-        color: #065f46; margin-bottom: 4px;
-    }
+    .dashboard-select-wrap label { display: block; font-size: 12px; font-weight: 700; color: #065f46; margin-bottom: 4px; }
     .dashboard-select {
-        width: 100%; padding: 9px 12px; border: 1.5px solid #a7f3d0;
-        border-radius: 8px; background: #ecfdf5; color: #1e293b;
-        font-size: 14px; font-family: inherit; cursor: pointer;
+        width: 100%; padding: 9px 12px; border: 1.5px solid #a7f3d0; border-radius: 8px;
+        background: #ecfdf5; color: #1e293b; font-size: 14px; font-family: inherit; cursor: pointer;
     }
     .dashboard-select:focus { outline: none; border-color: #10b981; box-shadow: 0 0 0 2px rgba(16,185,129,0.15); }
-
-    .metric-toggle {
-        display: flex; background: #ecfdf5; border: 1.5px solid #a7f3d0;
-        border-radius: 8px; overflow: hidden;
-    }
+    .metric-toggle { display: flex; background: #ecfdf5; border: 1.5px solid #a7f3d0; border-radius: 8px; overflow: hidden; }
     .metric-btn {
-        padding: 9px 14px; border: none; background: transparent;
-        cursor: pointer; font-size: 13px; font-weight: 600;
-        color: #065f46; font-family: inherit; transition: all 0.2s;
+        padding: 9px 14px; border: none; background: transparent; cursor: pointer;
+        font-size: 13px; font-weight: 600; color: #065f46; font-family: inherit; transition: all 0.2s;
     }
     .metric-btn.active { background: #10b981; color: white; }
     .metric-btn:hover:not(.active) { background: #a7f3d0; }
-
-    .dashboard-chart {
-        background: #ecfdf5; border-radius: 12px;
-        padding: 16px; margin-bottom: 16px; border: 1px solid #a7f3d0;
-    }
+    .dashboard-chart { background: #ecfdf5; border-radius: 12px; padding: 16px; margin-bottom: 16px; border: 1px solid #a7f3d0; }
     .chart-svg { width: 100%; height: 300px; display: block; }
-    .chart-empty {
-        text-align: center; padding: 40px 20px;
-        color: #065f46; font-size: 14px;
-    }
-
-    .dashboard-stats {
-        display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-        gap: 10px; margin-bottom: 16px;
-    }
-    .stat-card {
-        background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
-        border-radius: 10px; padding: 12px; border-left: 4px solid #10b981;
-    }
-    .stat-label {
-        font-size: 11px; font-weight: 700; color: #065f46;
-        text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;
-    }
+    .chart-empty { text-align: center; padding: 40px 20px; color: #065f46; font-size: 14px; }
+    .dashboard-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 16px; }
+    .stat-card { background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border-radius: 10px; padding: 12px; border-left: 4px solid #10b981; }
+    .stat-label { font-size: 11px; font-weight: 700; color: #065f46; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
     .stat-value { font-size: 20px; font-weight: 800; color: #064e3b; }
     .stat-sub { font-size: 11px; color: #065f46; margin-top: 2px; }
-
-    .weekly-table {
-        width: 100%; border-collapse: collapse; font-size: 13px;
-    }
-    .weekly-table th {
-        padding: 10px; text-align: left; border-bottom: 2px solid #a7f3d0;
-        background: #ecfdf5; color: #065f46; font-weight: 700;
-    }
+    .weekly-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .weekly-table th { padding: 10px; text-align: left; border-bottom: 2px solid #a7f3d0; background: #ecfdf5; color: #065f46; font-weight: 700; }
     .weekly-table td { padding: 10px; border-bottom: 1px solid #d1fae5; }
     .weekly-table tr:hover { background: #f0fdf4; }
     .weekly-table .cal { color: #dc2626; font-weight: 700; }
     .weekly-table .prot { color: #2563eb; font-weight: 700; }
     .weekly-table .fat { color: #d97706; font-weight: 700; }
     .weekly-table .carb { color: #16a34a; font-weight: 700; }
-
-    /* ПРОГРЕСС ТРЕНИРОВОК */
     .progress-section {
-        background: white; border-radius: 18px; margin-bottom: 25px;
-        padding: 22px; box-shadow: 0 6px 20px rgba(154, 52, 18, 0.08);
-        border: 1px solid #fed7aa;
+        background: white; border-radius: 18px; margin-bottom: 25px; padding: 22px;
+        box-shadow: 0 6px 20px rgba(154, 52, 18, 0.08); border: 1px solid #fed7aa;
     }
-    .progress-title {
-        font-size: 20px; font-weight: 700; color: #9a3412;
-        margin: 0 0 16px; padding-bottom: 12px; border-bottom: 2px solid #fed7aa;
-    }
-    .progress-controls {
-        display: flex; gap: 12px; margin-bottom: 18px; flex-wrap: wrap;
-        align-items: flex-end;
-    }
+    .progress-title { font-size: 20px; font-weight: 700; color: #9a3412; margin: 0 0 16px; padding-bottom: 12px; border-bottom: 2px solid #fed7aa; }
+    .progress-controls { display: flex; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; align-items: flex-end; }
     .progress-select-wrap { flex: 1; min-width: 200px; }
-    .progress-select-wrap label {
-        display: block; font-size: 12px; font-weight: 700;
-        color: #9a3412; margin-bottom: 4px;
-    }
+    .progress-select-wrap label { display: block; font-size: 12px; font-weight: 700; color: #9a3412; margin-bottom: 4px; }
     .progress-select {
-        width: 100%; padding: 9px 12px; border: 1.5px solid #fdba74;
-        border-radius: 8px; background: #fff7ed; color: #1e293b;
-        font-size: 14px; font-family: inherit; cursor: pointer;
+        width: 100%; padding: 9px 12px; border: 1.5px solid #fdba74; border-radius: 8px;
+        background: #fff7ed; color: #1e293b; font-size: 14px; font-family: inherit; cursor: pointer;
     }
     .progress-select:focus { outline: none; border-color: #ea580c; box-shadow: 0 0 0 2px rgba(234,88,12,0.15); }
-
-    .progress-chart {
-        background: #fff7ed; border-radius: 12px;
-        padding: 16px; margin-bottom: 16px; border: 1px solid #fed7aa;
-    }
-
-    .progress-stats {
-        display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-        gap: 10px; margin-bottom: 16px;
-    }
-
-    .progress-history {
-        background: #fff7ed; border-radius: 10px;
-        padding: 12px; border: 1px solid #fed7aa;
-    }
+    .progress-chart { background: #fff7ed; border-radius: 12px; padding: 16px; margin-bottom: 16px; border: 1px solid #fed7aa; }
+    .progress-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 16px; }
+    .progress-history { background: #fff7ed; border-radius: 10px; padding: 12px; border: 1px solid #fed7aa; }
     .history-title { font-size: 13px; font-weight: 700; color: #9a3412; margin-bottom: 10px; }
     .history-list { display: flex; flex-direction: column; gap: 6px; max-height: 280px; overflow-y: auto; }
     .history-entry {
-        display: grid; grid-template-columns: 100px 1fr auto;
-        gap: 10px; align-items: center;
-        background: white; padding: 8px 12px; border-radius: 6px;
-        font-size: 12px; border: 1px solid #fdba74;
+        display: grid; grid-template-columns: 100px 1fr auto; gap: 10px; align-items: center;
+        background: white; padding: 8px 12px; border-radius: 6px; font-size: 12px; border: 1px solid #fdba74;
     }
     .history-date { color: #6b7280; font-weight: 600; }
     .history-data { color: #1e293b; }
-    .history-trend {
-        font-size: 11px; font-weight: 700; padding: 2px 8px;
-        border-radius: 4px; white-space: nowrap;
-    }
+    .history-trend { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 4px; white-space: nowrap; }
     .history-trend.up { background: #dcfce7; color: #166534; }
     .history-trend.down { background: #fee2e2; color: #991b1b; }
     .history-trend.same { background: #f3f4f6; color: #6b7280; }
     .history-trend.first { background: #dbeafe; color: #1e40af; }
-
-    /* МОДАЛЬНЫЕ ОКНА */
     .modal-overlay {
-        position: fixed; inset: 0;
-        background: rgba(15, 23, 42, 0.7);
-        backdrop-filter: blur(4px);
-        display: none; align-items: flex-start; justify-content: center;
-        z-index: 1000; padding: 20px; overflow-y: auto;
+        position: fixed; inset: 0; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px);
+        display: none; align-items: flex-start; justify-content: center; z-index: 1000; padding: 20px; overflow-y: auto;
     }
     .modal-overlay.visible { display: flex; }
     .modal {
-        background: white; border-radius: 20px;
-        max-width: 700px; width: 100%;
-        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-        margin: 20px auto;
+        background: white; border-radius: 20px; max-width: 700px; width: 100%;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.3); margin: 20px auto;
     }
     .modal-header {
         background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
         color: white; padding: 20px 24px; border-radius: 20px 20px 0 0;
         display: flex; justify-content: space-between; align-items: center;
     }
-    .modal-header.train {
-        background: linear-gradient(135deg, #9a3412 0%, #ea580c 100%);
-    }
+    .modal-header.train { background: linear-gradient(135deg, #9a3412 0%, #ea580c 100%); }
     .modal-title { font-size: 20px; font-weight: 700; margin: 0; }
     .modal-close {
         background: rgba(255,255,255,0.2); border: none; color: white;
-        width: 32px; height: 32px; border-radius: 50%;
-        font-size: 18px; cursor: pointer; transition: all 0.2s;
+        width: 32px; height: 32px; border-radius: 50%; font-size: 18px; cursor: pointer; transition: all 0.2s;
     }
     .modal-close:hover { background: rgba(255,255,255,0.3); }
     .modal-body { padding: 24px; }
-
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
     .form-field label { display: block; font-size: 12px; font-weight: 700; color: #1e40af; margin-bottom: 4px; }
     .form-field.train label { color: #9a3412; }
     .form-field input, .form-field select {
-        width: 100%; padding: 8px 10px; border: 1.5px solid #bfdbfe;
-        border-radius: 6px; font-size: 13px; background: #eff6ff;
-        color: #1e293b; font-family: inherit;
+        width: 100%; padding: 8px 10px; border: 1.5px solid #bfdbfe; border-radius: 6px;
+        font-size: 13px; background: #eff6ff; color: #1e293b; font-family: inherit;
     }
-    .form-field.train input, .form-field.train select {
-        border-color: #fdba74; background: #fff7ed;
-    }
-    .form-field input:focus, .form-field select:focus,
-    .form-field textarea:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,0.15); }
-    .form-field.train input:focus, .form-field.train select:focus,
-    .form-field.train textarea:focus { border-color: #ea580c; box-shadow: 0 0 0 2px rgba(234,88,12,0.15); }
+    .form-field.train input, .form-field.train select { border-color: #fdba74; background: #fff7ed; }
+    .form-field input:focus, .form-field select:focus, .form-field textarea:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,0.15); }
+    .form-field.train input:focus, .form-field.train select:focus, .form-field.train textarea:focus { border-color: #ea580c; box-shadow: 0 0 0 2px rgba(234,88,12,0.15); }
     .form-field.full { grid-column: 1 / -1; }
     .form-field textarea {
-        width: 100%; padding: 10px; border: 1.5px solid #bfdbfe;
-        border-radius: 6px; font-size: 11px; font-family: 'Consolas', monospace;
-        background: #eff6ff; color: #1e293b; resize: vertical;
-        min-height: 200px; line-height: 1.4;
+        width: 100%; padding: 10px; border: 1.5px solid #bfdbfe; border-radius: 6px;
+        font-size: 11px; font-family: 'Consolas', monospace; background: #eff6ff;
+        color: #1e293b; resize: vertical; min-height: 200px; line-height: 1.4;
     }
-    .form-field.train textarea {
-        border-color: #fdba74; background: #fff7ed;
-    }
-
+    .form-field.train textarea { border-color: #fdba74; background: #fff7ed; }
     .form-stars { display: flex; gap: 4px; }
-    .form-star {
-        cursor: pointer; font-size: 26px; color: #fdba74;
-        transition: color 0.15s; user-select: none;
-    }
+    .form-star { cursor: pointer; font-size: 26px; color: #fdba74; transition: color 0.15s; user-select: none; }
     .form-star.active { color: #ea580c; }
     .form-star:hover { color: #f97316; }
-
     .form-note {
-        width: 100%; padding: 10px; border: 1.5px solid #fdba74;
-        border-radius: 6px; font-size: 13px; font-family: inherit;
-        background: #fff7ed; color: #1e293b; resize: vertical; min-height: 60px;
+        width: 100%; padding: 10px; border: 1.5px solid #fdba74; border-radius: 6px;
+        font-size: 13px; font-family: inherit; background: #fff7ed; color: #1e293b; resize: vertical; min-height: 60px;
     }
-
     .modal-footer {
-        padding: 16px 24px; border-top: 1px solid #bfdbfe;
-        display: flex; justify-content: flex-end; gap: 10px;
-        background: #eff6ff; border-radius: 0 0 20px 20px;
+        padding: 16px 24px; border-top: 1px solid #bfdbfe; display: flex;
+        justify-content: flex-end; gap: 10px; background: #eff6ff; border-radius: 0 0 20px 20px;
     }
-    .modal-footer.train {
-        border-color: #fed7aa; background: #fff7ed;
+    .modal-footer.train { border-color: #fed7aa; background: #fff7ed; }
+    .sync-status {
+        position: fixed; top: 10px; right: 10px; padding: 8px 16px; border-radius: 20px;
+        font-size: 12px; font-weight: 600; z-index: 1001; transition: all 0.3s; opacity: 0;
     }
-
-    /* ПЕЧАТЬ */
+    .sync-status.visible { opacity: 1; }
+    .sync-status.success { background: #10b981; color: white; }
+    .sync-status.error { background: #ef4444; color: white; }
+    .sync-status.syncing { background: #3b82f6; color: white; }
     @media print {
         body * { visibility: hidden; }
         #print-area, #print-area * { visibility: visible; }
-        #print-area {
-            position: absolute;
-            left: 0; top: 0;
-            width: 100%;
-            padding: 20px;
-        }
-        .days-nav, .day-header-actions, .meal-tracker, 
-        .morning-block, .day-summary, .rule-box,
-        .main-tabs, .sub-tabs, .toolbar, .week-selector {
-            display: none !important;
-        }
-        .day-card {
-            box-shadow: none !important;
-            border: 1px solid #ccc !important;
-            margin-bottom: 15px !important;
-            page-break-inside: avoid;
-        }
-        .day-card.collapsed .day-body {
-            display: block !important;
-        }
-        .day-header {
-            background: #f1f5f9 !important;
-            color: #1e293b !important;
-            padding: 10px 15px !important;
-        }
+        #print-area { position: absolute; left: 0; top: 0; width: 100%; padding: 20px; }
+        .days-nav, .day-header-actions, .meal-tracker, .morning-block, .day-summary, .rule-box,
+        .main-tabs, .sub-tabs, .toolbar, .week-selector, .sync-status { display: none !important; }
+        .day-card { box-shadow: none !important; border: 1px solid #ccc !important; margin-bottom: 15px !important; page-break-inside: avoid; }
+        .day-card.collapsed .day-body { display: block !important; }
+        .day-header { background: #f1f5f9 !important; color: #1e293b !important; padding: 10px 15px !important; }
         .day-title { color: #1e293b !important; }
         .meal-content { color: #1e293b !important; }
-        .or-choice {
-            background: #f8fafc !important;
-            color: #1e293b !important;
-            border-left-color: #64748b !important;
-        }
-        .or-choice .or-label {
-            background: #64748b !important;
-        }
-        .meal.prep-block {
-            background: #fefce8 !important;
-            border-color: #d97706 !important;
-        }
-        .meal.prep-block .meal-name,
-        .meal.prep-block .meal-content { color: #78350f !important; }
+        .or-choice { background: #f8fafc !important; color: #1e293b !important; border-left-color: #64748b !important; }
+        .or-choice .or-label { background: #64748b !important; }
+        .meal.prep-block { background: #fefce8 !important; border-color: #d97706 !important; }
+        .meal.prep-block .meal-name, .meal.prep-block .meal-content { color: #78350f !important; }
     }
-
     @media (max-width: 600px) {
         .summary-grid { grid-template-columns: 1fr; }
         .kbju-group input { width: 60px; }
@@ -731,14 +456,12 @@
 <body>
 
 <div class="container">
-
     <div class="main-tabs">
         <button class="main-tab-btn food active" onclick="switchMainTab('food')">📘 Питание</button>
         <button class="main-tab-btn train" onclick="switchMainTab('train')">🏋️ Тренировки</button>
     </div>
 
     <div class="main-tab-content active" id="main-tab-food">
-        
         <div class="sub-tabs">
             <button class="sub-tab-btn active" onclick="switchSubTab('weeks', event)">📅 Недели</button>
             <button class="sub-tab-btn" onclick="switchSubTab('dashboard', event)">📊 Дашборд</button>
@@ -755,7 +478,6 @@
                     <div class="macro-badge">У: 80–100 г</div>
                 </div>
             </header>
-
             <div class="week-selector">
                 <div class="week-selector-label">📅 Текущая неделя</div>
                 <div class="week-selector-row">
@@ -765,7 +487,6 @@
                     </div>
                 </div>
             </div>
-
             <div class="toolbar">
                 <button class="btn primary" onclick="openNutritionModal()">📥 Импортировать меню</button>
                 <button class="btn" onclick="createEmptyWeek()">➕ Пустая неделя</button>
@@ -774,13 +495,11 @@
                 <button class="btn danger" onclick="resetAllData()">🗑 Очистить всё</button>
                 <input type="file" id="import-all-file" accept=".json" style="display:none;" onchange="importAllData(this)">
             </div>
-
             <div class="rule-box">
                 <b>🔄 Правило перекусов:</b><br>
                 • Если <b>Перекус 1 = белковый</b> → <b>Перекус 2 = углеводный</b><br>
                 • Если <b>Перекус 1 = углеводный</b> → <b>Перекус 2 = белковый</b>
             </div>
-
             <div id="days-container"></div>
         </div>
 
@@ -789,11 +508,9 @@
                 <h1>📊 ДАШБОРД</h1>
                 <div class="subtitle">Аналитика питания</div>
             </header>
-
             <div class="toolbar">
                 <button class="btn green primary" onclick="renderDashboard()">🔄 Обновить</button>
             </div>
-
             <div class="dashboard-section">
                 <h2 class="dashboard-title">⚖️ Динамика веса</h2>
                 <div class="dashboard-controls">
@@ -809,7 +526,6 @@
                 <div id="weight-chart-container"></div>
                 <div id="weight-stats-container"></div>
             </div>
-
             <div class="dashboard-section">
                 <h2 class="dashboard-title">🔥 КБЖУ по дням</h2>
                 <div class="dashboard-controls">
@@ -834,13 +550,11 @@
                 <div id="kbju-chart-container"></div>
                 <div id="kbju-stats-container"></div>
             </div>
-
             <div class="dashboard-section">
                 <h2 class="dashboard-title">📈 Среднее по неделям</h2>
                 <div id="weekly-avg-container"></div>
             </div>
         </div>
-
     </div>
 
     <div class="main-tab-content" id="main-tab-train">
@@ -853,14 +567,12 @@
                 <div class="macro-badge" id="stat-time">⏱ 0 мин</div>
             </div>
         </header>
-
         <div class="toolbar">
             <button class="btn orange primary" onclick="openTrainModal()">➕ Добавить тренировку</button>
             <button class="btn orange" onclick="exportAllData()">💾 Экспорт</button>
             <button class="btn orange" onclick="document.getElementById('import-train-file').click()">📂 Импорт</button>
             <input type="file" id="import-train-file" accept=".json" style="display:none;" onchange="importTrainData(this)">
         </div>
-
         <div class="progress-section" id="progress-section" style="display:none;">
             <h2 class="progress-title">📈 Прогресс по упражнениям</h2>
             <div class="progress-controls">
@@ -882,10 +594,8 @@
             <div id="progress-stats-container"></div>
             <div id="progress-history-container"></div>
         </div>
-
         <div class="workouts-list" id="workouts-list"></div>
     </div>
-
 </div>
 
 <div class="modal-overlay" id="nutrition-modal" onclick="if(event.target===this)closeAllModals()">
@@ -995,27 +705,129 @@
     </div>
 </div>
 
-<!-- Скрытая область для печати -->
 <div id="print-area" style="display:none;"></div>
+<div id="sync-status" class="sync-status"></div>
 
 <script>
+// ============================================
+// 🔥 FIREBASE CONFIGURATION (ЗАМЕНИТЕ ЭТИ ДАННЫЕ!)
+// ============================================
+const firebaseConfig = {
+  apiKey: "AIzaSyDvOH_VAzHBJKeXiZ8adIHsaJ6C3aGurcE",
+  authDomain: "diary-51564.firebaseapp.com",
+  projectId: "diary-51564",
+  storageBucket: "diary-51564.firebasestorage.app",
+  messagingSenderId: "1021457298792",
+  appId: "1:1021457298792:web:650fe99ac0b7ba234992dd",
+  measurementId: "G-CYSH82Z6YJ"
+};
+
+// Инициализация Firebase
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const diaryRef = db.ref('lera_diary_v1');
+
 let nutritionData = { weeks: [], currentWeekId: null };
 let workouts = [];
 let editingWorkoutId = null;
 let currentKbjuMetric = 'cal';
 let currentTrainMetric = 'weight';
 const formStarsData = {};
+let syncTimeout = null;
 
 const mealIcons = {
-    breakfast:"З", lunch:"О", dinner:"У",
-    snack:"П", snack1:"П1", snack2:"П2",
+    breakfast:"З", lunch:"О", dinner:"У", snack:"П", snack1:"П1", snack2:"П2",
     prep:"🍳", preworkout:"💪", postworkout:"💪"
 };
-
 const typeLabels = {
-    strength: '💪 Силовая', cardio: '🏃 Кардио',
-    hiit: '🔥 ВИИТ', flex: '🧘 Растяжка', mix: '🔄 Микс'
+    strength: '💪 Силовая', cardio: '🏃 Кардио', hiit: '🔥 ВИИТ', flex: '🧘 Растяжка', mix: '🔄 Микс'
 };
+
+// ============================================
+// FIREBASE SYNC FUNCTIONS
+// ============================================
+function showSyncStatus(message, type = 'success') {
+    const statusEl = document.getElementById('sync-status');
+    statusEl.textContent = message;
+    statusEl.className = `sync-status visible ${type}`;
+    setTimeout(() => { statusEl.classList.remove('visible'); }, 3000);
+}
+
+function syncToCloud() {
+    if(syncTimeout) clearTimeout(syncTimeout);
+    showSyncStatus('💾 Сохранение...', 'syncing');
+    
+    syncTimeout = setTimeout(() => {
+        const data = {
+            nutrition: nutritionData,
+            workouts: workouts,
+            progress: JSON.parse(localStorage.getItem('exercise-progress') || '{}'),
+            lastUpdated: Date.now()
+        };
+        
+        diaryRef.set(data)
+            .then(() => {
+                console.log('✅ Data saved to Firebase');
+                showSyncStatus('✅ Сохранено!', 'success');
+            })
+            .catch((error) => {
+                console.error('❌ Firebase error:', error);
+                showSyncStatus('❌ Ошибка сохранения', 'error');
+            });
+    }, 1000);
+}
+
+function loadFromCloud() {
+    showSyncStatus('📡 Загрузка...', 'syncing');
+    
+    diaryRef.once('value')
+        .then((snapshot) => {
+            const data = snapshot.val();
+            if(data) {
+                if(data.nutrition && data.nutrition.weeks) nutritionData = data.nutrition;
+                if(data.workouts) workouts = data.workouts;
+                if(data.progress) localStorage.setItem('exercise-progress', JSON.stringify(data.progress));
+                console.log('✅ Data loaded from Firebase');
+                showSyncStatus('✅ Данные загружены!', 'success');
+            } else {
+                console.log('ℹ️ No data in Firebase, using local');
+                showSyncStatus('ℹ️ Нет данных в облаке', 'syncing');
+                loadLocalFallback();
+            }
+            renderNutritionAll();
+            renderTrainAll();
+        })
+        .catch((error) => {
+            console.error('❌ Firebase load error:', error);
+            showSyncStatus('❌ Ошибка загрузки', 'error');
+            loadLocalFallback();
+            renderNutritionAll();
+            renderTrainAll();
+        });
+}
+
+function loadLocalFallback() {
+    const rawNutrition = localStorage.getItem('nutrition-data');
+    if(rawNutrition) { try { nutritionData = JSON.parse(rawNutrition); } catch(e) {} }
+    const rawTrain = localStorage.getItem('workouts-data');
+    if(rawTrain) { try { workouts = JSON.parse(rawTrain).workouts || []; } catch(e) {} }
+}
+
+// Слушатель изменений в реальном времени
+diaryRef.on('value', (snapshot) => {
+    const data = snapshot.val();
+    if(data && data.lastUpdated) {
+        // Простая проверка: если данные пришли не от нас (или просто обновляем)
+        // В реальном приложении можно сравнивать lastUpdated, но для простоты обновляем всегда при изменении
+        if(data.nutrition) nutritionData = data.nutrition;
+        if(data.workouts) workouts = data.workouts;
+        if(data.progress) localStorage.setItem('exercise-progress', JSON.stringify(data.progress));
+        
+        // Перерисовываем только если мы не в процессе редактирования (упрощенно)
+        renderNutritionAll();
+        renderTrainAll();
+    }
+});
 
 // === ВКЛАДКИ ===
 function switchMainTab(tab) {
@@ -1025,7 +837,6 @@ function switchMainTab(tab) {
     document.getElementById(`main-tab-${tab}`).classList.add('active');
     if(tab === 'train') renderTrainAll();
 }
-
 function switchSubTab(tab, event) {
     document.querySelectorAll('.sub-tab-btn').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.sub-tab-content').forEach(c => c.classList.remove('active'));
@@ -1041,7 +852,6 @@ function openNutritionModal() {
     startOfWeek.setDate(today.getDate() - today.getDay() + 1);
     const endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(startOfWeek.getDate() + 6);
-    
     document.getElementById('f-start-date').value = startOfWeek.toISOString().slice(0,10);
     document.getElementById('f-end-date').value = endOfWeek.toISOString().slice(0,10);
     document.getElementById('f-menu-json').value = '';
@@ -1051,7 +861,6 @@ function openNutritionModal() {
 function openTrainModal(id = null) {
     editingWorkoutId = id;
     document.getElementById('train-modal-title').textContent = id ? '✏️ Редактировать' : '➕ Новая тренировка';
-    
     if(id) {
         const w = workouts.find(x => x.id === id);
         if(!w) return;
@@ -1075,7 +884,6 @@ function openTrainModal(id = null) {
         setFormStars('f-train-feel-after', 0);
         setFormStars('f-train-rating', 0);
     }
-    
     document.getElementById('train-modal').classList.add('visible');
 }
 
@@ -1094,68 +902,40 @@ function setFormStars(containerId, rating) {
     });
 }
 
-// === НАВИГАЦИЯ И СВORAЧИВАНИЕ ===
+// === НАВИГАЦИЯ ===
 function scrollToDay(di) {
     const el = document.getElementById(`day-${di}`);
     if(!el) return;
-    
     el.classList.remove('collapsed');
     el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    
     el.style.transition = 'box-shadow 0.3s';
     el.style.boxShadow = '0 0 0 3px #2563eb';
-    setTimeout(() => {
-        el.style.boxShadow = '';
-    }, 1500);
+    setTimeout(() => { el.style.boxShadow = ''; }, 1500);
 }
-
 function toggleDay(di) {
     const el = document.getElementById(`day-${di}`);
     if(el) el.classList.toggle('collapsed');
 }
-
 function toggleAllDays() {
     const cards = document.querySelectorAll('.day-card');
     const allCollapsed = Array.from(cards).every(c => c.classList.contains('collapsed'));
-    cards.forEach(c => {
-        if(allCollapsed) c.classList.remove('collapsed');
-        else c.classList.add('collapsed');
-    });
+    cards.forEach(c => { if(allCollapsed) c.classList.remove('collapsed'); else c.classList.add('collapsed'); });
 }
 
-// === ЭКСПОРТ МЕНЮ В ТЕКСТ ===
+// === ЭКСПОРТ/ПЕЧАТЬ ===
 function exportMenuAsText() {
     const week = nutritionData.weeks.find(w => w.id === nutritionData.currentWeekId);
     if(!week) return;
-    
-    let text = `МЕНЮ: ${week.title}\n`;
-    text += `${'='.repeat(50)}\n\n`;
-    text += `Цель: 1250-1300 ккал | Б: 100-110г | Ж: 50-55г | У: 80-100г\n\n`;
-    text += `Правило перекусов:\n`;
-    text += `• Перекус 1 белковый → Перекус 2 углеводный\n`;
-    text += `• Перекус 1 углеводный → Перекус 2 белковый\n\n`;
-    
+    let text = `МЕНЮ: ${week.title}\n${'='.repeat(50)}\n\nЦель: 1250-1300 ккал | Б: 100-110г | Ж: 50-55г | У: 80-100г\n\n`;
     week.menu.forEach(day => {
-        text += `${'─'.repeat(50)}\n`;
-        text += `${day.day.toUpperCase()} (${day.date})${day.training ? ' 💪 ТРЕНИРОВКА' : ''}\n`;
-        text += `${'─'.repeat(50)}\n\n`;
-        
+        text += `${'─'.repeat(50)}\n${day.day.toUpperCase()} (${day.date})${day.training ? ' 💪 ТРЕНИРОВКА' : ''}\n${'─'.repeat(50)}\n\n`;
         day.meals.forEach(meal => {
             text += `  ${meal.name}\n`;
-            if(meal.items) {
-                meal.items.forEach(item => {
-                    text += `    • ${item}\n`;
-                });
-            } else if(meal.choices) {
-                meal.choices.forEach(c => {
-                    text += `    [${c.label}] ${c.items.join(', ')}\n`;
-                });
-            }
+            if(meal.items) meal.items.forEach(item => { text += `    • ${item}\n`; });
+            else if(meal.choices) meal.choices.forEach(c => { text += `    [${c.label}] ${c.items.join(', ')}\n`; });
             text += `\n`;
         });
-        text += `\n`;
     });
-    
     const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -1165,80 +945,57 @@ function exportMenuAsText() {
     URL.revokeObjectURL(url);
 }
 
-// === ПЕЧАТЬ МЕНЮ ===
 function printMenu() {
     const week = nutritionData.weeks.find(w => w.id === nutritionData.currentWeekId);
     if(!week) return;
-    
-    // Разворачиваем все дни
     document.querySelectorAll('.day-card').forEach(c => c.classList.remove('collapsed'));
-    
-    // Создаём чистую версию для печати
     const printArea = document.getElementById('print-area');
     let html = `<h1 style="text-align:center;color:#1e3a8a;margin-bottom:20px;">МЕНЮ: ${week.title}</h1>`;
     html += `<p style="text-align:center;color:#64748b;margin-bottom:30px;">Цель: 1250-1300 ккал | Б: 100-110г | Ж: 50-55г | У: 80-100г</p>`;
-    
     week.menu.forEach(day => {
         html += `<div style="margin-bottom:25px;page-break-inside:avoid;">`;
         html += `<h2 style="background:#1e40af;color:white;padding:10px 15px;border-radius:8px;margin:0 0 10px;">${day.day} • ${day.date}${day.training?' 💪':''}</h2>`;
-        
         day.meals.forEach(meal => {
             const isPrep = ['prep','preworkout','postworkout'].includes(meal.type);
             const bg = isPrep ? 'background:#fefce8;border:2px dashed #fbbf24;padding:10px;border-radius:8px;margin:10px 0;' : '';
-            html += `<div style="${bg}margin-bottom:10px;">`;
-            html += `<strong style="color:#1e3a8a;">${meal.name}</strong><br>`;
+            html += `<div style="${bg}margin-bottom:10px;"><strong style="color:#1e3a8a;">${meal.name}</strong><br>`;
             if(meal.items) {
                 html += `<ul style="margin:5px 0;padding-left:20px;">`;
-                meal.items.forEach(item => {
-                    html += `<li>${item}</li>`;
-                });
+                meal.items.forEach(item => { html += `<li>${item}</li>`; });
                 html += `</ul>`;
             } else if(meal.choices) {
                 meal.choices.forEach(c => {
                     html += `<div style="background:#eff6ff;border-left:3px solid #3b82f6;padding:5px 10px;margin:3px 0;border-radius:4px;">`;
-                    html += `<strong style="background:#3b82f6;color:white;padding:2px 6px;border-radius:3px;font-size:11px;margin-right:6px;">${c.label}</strong>`;
-                    html += `${c.items.join(', ')}</div>`;
+                    html += `<strong style="background:#3b82f6;color:white;padding:2px 6px;border-radius:3px;font-size:11px;margin-right:6px;">${c.label}</strong>${c.items.join(', ')}</div>`;
                 });
             }
             html += `</div>`;
         });
         html += `</div>`;
     });
-    
     printArea.innerHTML = html;
     printArea.style.display = 'block';
-    
-    setTimeout(() => {
-        window.print();
-        printArea.style.display = 'none';
-    }, 100);
+    setTimeout(() => { window.print(); printArea.style.display = 'none'; }, 100);
 }
 
-// === ПИТАНИЕ: ИМПОРТ МЕНЮ ===
+// === ПИТАНИЕ: ЛОГИКА ===
 function importMenu() {
     const startDate = document.getElementById('f-start-date').value;
     const endDate = document.getElementById('f-end-date').value;
     const menuJson = document.getElementById('f-menu-json').value.trim();
-    
     if(!startDate || !endDate) { alert('Укажите даты'); return; }
-    
     let menu;
     try {
         menu = JSON.parse(menuJson);
         if(!Array.isArray(menu)) throw new Error('Меню должно быть массивом');
-    } catch(e) {
-        alert('❌ Ошибка в JSON: ' + e.message);
-        return;
-    }
+    } catch(e) { alert('❌ Ошибка в JSON: ' + e.message); return; }
     
     const weekId = 'week-' + Date.now();
-    const week = {
+    nutritionData.weeks.push({
         id: weekId, startDate, endDate,
         title: `Неделя ${formatDateShort(startDate)} – ${formatDateShort(endDate)}`,
         menu, data: {}
-    };
-    
-    nutritionData.weeks.push(week);
+    });
     nutritionData.currentWeekId = weekId;
     saveNutrition();
     closeAllModals();
@@ -1252,7 +1009,6 @@ function createEmptyWeek() {
     startOfWeek.setDate(today.getDate() - today.getDay() + 1);
     const endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(startOfWeek.getDate() + 6);
-    
     const weekId = 'week-' + Date.now();
     const days = ['Понедельник','Вторник','Среда','Четверг','Пятница','Суббота','Воскресенье'];
     const menu = days.map((day, i) => {
@@ -1260,16 +1016,11 @@ function createEmptyWeek() {
         date.setDate(startOfWeek.getDate() + i);
         return { day, date: formatDateShort(date.toISOString().slice(0,10)), training: false, meals: [] };
     });
-    
-    const week = {
-        id: weekId,
-        startDate: startOfWeek.toISOString().slice(0,10),
-        endDate: endOfWeek.toISOString().slice(0,10),
+    nutritionData.weeks.push({
+        id: weekId, startDate: startOfWeek.toISOString().slice(0,10), endDate: endOfWeek.toISOString().slice(0,10),
         title: `Неделя ${formatDateShort(startOfWeek.toISOString().slice(0,10))} – ${formatDateShort(endOfWeek.toISOString().slice(0,10))}`,
         menu, data: {}
-    };
-    
-    nutritionData.weeks.push(week);
+    });
     nutritionData.currentWeekId = weekId;
     saveNutrition();
     renderNutritionAll();
@@ -1287,16 +1038,13 @@ function switchWeek() {
 }
 
 function deleteWeek() {
-    if(!nutritionData.currentWeekId) return;
-    if(!confirm('Удалить эту неделю?')) return;
-    
+    if(!nutritionData.currentWeekId || !confirm('Удалить эту неделю?')) return;
     nutritionData.weeks = nutritionData.weeks.filter(w => w.id !== nutritionData.currentWeekId);
     nutritionData.currentWeekId = nutritionData.weeks.length > 0 ? nutritionData.weeks[0].id : null;
     saveNutrition();
     renderNutritionAll();
 }
 
-// === ПИТАНИЕ: РЕНДЕР ===
 function renderNutritionAll() {
     renderWeekSelector();
     renderDays();
@@ -1308,40 +1056,23 @@ function renderWeekSelector() {
         select.innerHTML = '<option value="">— нет недель —</option>';
         return;
     }
-    
-    select.innerHTML = nutritionData.weeks.map(w => 
-        `<option value="${w.id}">${w.title}</option>`
-    ).join('');
-    
+    select.innerHTML = nutritionData.weeks.map(w => `<option value="${w.id}">${w.title}</option>`).join('');
     if(nutritionData.currentWeekId) select.value = nutritionData.currentWeekId;
 }
 
 function renderDays() {
     const container = document.getElementById('days-container');
-    
     if(nutritionData.weeks.length === 0) {
-        container.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-state-icon">📘</div>
-                <div class="empty-state-title">Нет недель</div>
-                <div class="empty-state-text">Импортируйте меню или создайте пустую неделю</div>
-            </div>
-        `;
+        container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📘</div><div class="empty-state-title">Нет недель</div><div class="empty-state-text">Импортируйте меню или создайте пустую неделю</div></div>`;
         return;
     }
-    
     const week = nutritionData.weeks.find(w => w.id === nutritionData.currentWeekId);
     if(!week) return;
     
-    // Навигация
     const navHtml = `
         <div class="days-nav">
             <span class="days-nav-label">📅 Перейти:</span>
-            ${week.menu.map((day, di) => `
-                <button class="day-nav-btn ${day.training?'training':''}" onclick="scrollToDay(${di})">
-                    ${day.day.slice(0,2)} ${day.date}
-                </button>
-            `).join('')}
+            ${week.menu.map((day, di) => `<button class="day-nav-btn ${day.training?'training':''}" onclick="scrollToDay(${di})">${day.day.slice(0,2)} ${day.date}</button>`).join('')}
             <div class="nav-actions">
                 <button class="nav-action-btn" onclick="toggleAllDays()">🔽 Все</button>
                 <button class="nav-action-btn" onclick="exportMenuAsText()">📥 .txt</button>
@@ -1352,7 +1083,6 @@ function renderDays() {
     
     const daysHtml = week.menu.map((day, di) => {
         const mealsHtml = day.meals.map((m, mi) => renderMeal(m, di, mi, week.id)).join('');
-        
         return `
             <div class="day-card" id="day-${di}">
                 <div class="day-header ${day.training?'training':''}">
@@ -1403,7 +1133,6 @@ function renderDays() {
     }).join('');
     
     container.innerHTML = navHtml + daysHtml;
-    
     week.menu.forEach((_, di) => updateTotals(week.id, di));
 }
 
@@ -1412,7 +1141,6 @@ function renderMeal(m, di, mi, weekId) {
     const isPrep = ['prep','preworkout','postworkout'].includes(m.type);
     const prepClass = isPrep ? 'prep-block' : '';
     const showTime = !isPrep;
-    
     let content = '';
     if(m.items) content=`<ul>${m.items.map(i=>`<li>${i}</li>`).join('')}</ul>`;
     else if(m.choices) content=m.choices.map(c=>`<div class="or-choice"><span class="or-label">${c.label}</span> ${c.items.join(', ')}</div>`).join('');
@@ -1443,10 +1171,7 @@ function renderMeal(m, di, mi, weekId) {
                 <div class="meal-name">${m.name}</div>
                 ${showTime?`<input type="time" class="meal-time" data-week="${weekId}" data-key="time-${di}-${mi}" oninput="saveNutrition()" value="${timeVal}">`:''}
             </div>
-            <div class="meal-content">
-                ${content}
-                ${trackerHtml}
-            </div>
+            <div class="meal-content">${content}${trackerHtml}</div>
         </div>`;
 }
 
@@ -1461,10 +1186,8 @@ function setStars(el, rating) {
     const key = container.dataset.key;
     const current = parseInt(getWeekData(weekId, key) || 0);
     const newVal = current === rating ? 0 : rating;
-    
     const week = nutritionData.weeks.find(w => w.id === weekId);
     if(week) week.data[key] = newVal;
-    
     container.querySelectorAll('.star').forEach(s => {
         s.classList.toggle('active', parseInt(s.dataset.rating) <= newVal);
     });
@@ -1486,60 +1209,28 @@ function updateTotals(weekId, di) {
 }
 
 // === ДАШБОРД ===
-function renderDashboard() {
-    renderWeightChart();
-    renderKbjuChart();
-    renderWeeklyAvg();
-}
-
+function renderDashboard() { renderWeightChart(); renderKbjuChart(); renderWeeklyAvg(); }
 function setKbjuMetric(metric) {
     currentKbjuMetric = metric;
-    document.querySelectorAll('#sub-tab-dashboard .metric-btn').forEach(b => {
-        b.classList.toggle('active', b.dataset.metric === metric);
-    });
+    document.querySelectorAll('#sub-tab-dashboard .metric-btn').forEach(b => { b.classList.toggle('active', b.dataset.metric === metric); });
     renderKbjuChart();
 }
-
 function renderWeightChart() {
     const period = document.getElementById('weight-period').value;
-    const container = document.getElementById('weight-chart-container');
-    const statsContainer = document.getElementById('weight-stats-container');
-    
     const data = collectWeightData(period);
-    
-    if(data.length === 0) {
-        container.innerHTML = '<div class="chart-empty">Нет данных о весе</div>';
-        statsContainer.innerHTML = '';
-        return;
-    }
-    
-    container.innerHTML = renderSVGLineChart(data, 'weight', 'кг', '#10b981');
-    statsContainer.innerHTML = renderDashStatsBlock(data, 'weight', 'кг');
+    document.getElementById('weight-chart-container').innerHTML = data.length === 0 ? '<div class="chart-empty">Нет данных о весе</div>' : renderSVGLineChart(data, 'weight', 'кг', '#10b981');
+    document.getElementById('weight-stats-container').innerHTML = data.length === 0 ? '' : renderDashStatsBlock(data, 'weight', 'кг');
 }
-
 function renderKbjuChart() {
     const period = document.getElementById('kbju-period').value;
-    const container = document.getElementById('kbju-chart-container');
-    const statsContainer = document.getElementById('kbju-stats-container');
-    
     const data = collectKbjuData(period, currentKbjuMetric);
-    
-    if(data.length === 0) {
-        container.innerHTML = '<div class="chart-empty">Нет данных КБЖУ</div>';
-        statsContainer.innerHTML = '';
-        return;
-    }
-    
     const units = { cal: 'ккал', prot: 'г', fat: 'г', carb: 'г' };
-    
-    container.innerHTML = renderSVGLineChart(data, currentKbjuMetric, units[currentKbjuMetric], '#10b981');
-    statsContainer.innerHTML = renderDashStatsBlock(data, currentKbjuMetric, units[currentKbjuMetric]);
+    document.getElementById('kbju-chart-container').innerHTML = data.length === 0 ? '<div class="chart-empty">Нет данных КБЖУ</div>' : renderSVGLineChart(data, currentKbjuMetric, units[currentKbjuMetric], '#10b981');
+    document.getElementById('kbju-stats-container').innerHTML = data.length === 0 ? '' : renderDashStatsBlock(data, currentKbjuMetric, units[currentKbjuMetric]);
 }
-
 function collectWeightData(period) {
     const weeks = getFilteredWeeks(period);
     const data = [];
-    
     weeks.forEach(week => {
         const startDate = new Date(week.startDate);
         week.menu.forEach((day, di) => {
@@ -1551,22 +1242,16 @@ function collectWeightData(period) {
             }
         });
     });
-    
     return data.sort((a, b) => a.date.localeCompare(b.date));
 }
-
 function collectKbjuData(period, metric) {
     const weeks = getFilteredWeeks(period);
     const data = [];
-    
     weeks.forEach(week => {
         const startDate = new Date(week.startDate);
         week.menu.forEach((day, di) => {
             let total = 0;
-            day.meals.forEach((meal, mi) => {
-                total += parseFloat(week.data[`m-${di}-${mi}-${metric}`]) || 0;
-            });
-            
+            day.meals.forEach((meal, mi) => { total += parseFloat(week.data[`m-${di}-${mi}-${metric}`]) || 0; });
             if(total > 0) {
                 const date = new Date(startDate);
                 date.setDate(startDate.getDate() + di);
@@ -1574,143 +1259,80 @@ function collectKbjuData(period, metric) {
             }
         });
     });
-    
     return data.sort((a, b) => a.date.localeCompare(b.date));
 }
-
 function getFilteredWeeks(period) {
     const sorted = [...nutritionData.weeks].sort((a, b) => a.startDate.localeCompare(b.startDate));
     if(period === 'all') return sorted;
-    const count = parseInt(period);
-    return sorted.slice(-count);
+    return sorted.slice(-parseInt(period));
 }
-
 function renderSVGLineChart(data, field, unit, color) {
     const width = 800, height = 300;
     const padding = { top: 30, right: 30, bottom: 60, left: 60 };
     const chartW = width - padding.left - padding.right;
     const chartH = height - padding.top - padding.bottom;
-    
     const values = data.map(d => d[field]);
     const minVal = Math.min(...values);
     const maxVal = Math.max(...values);
     const valRange = maxVal - minVal || 1;
     const yMin = Math.max(0, minVal - valRange * 0.1);
     const yMax = maxVal + valRange * 0.15;
-    
     const xStep = data.length > 1 ? chartW / (data.length - 1) : chartW / 2;
-    
     const points = data.map((d, i) => {
         const x = padding.left + (data.length > 1 ? i * xStep : chartW / 2);
         const y = padding.top + chartH - ((d[field] - yMin) / (yMax - yMin)) * chartH;
         return { x, y, value: d[field], date: d.date };
     });
-    
     const linePath = points.map((p, i) => `${i===0?'M':'L'} ${p.x} ${p.y}`).join(' ');
     const areaPath = linePath + ` L ${points[points.length-1].x} ${padding.top + chartH} L ${points[0].x} ${padding.top + chartH} Z`;
-    
     const gridLines = [];
-    const yTicks = 5;
-    for(let i = 0; i <= yTicks; i++) {
-        const val = yMin + (yMax - yMin) * (i / yTicks);
-        const y = padding.top + chartH - (i / yTicks) * chartH;
+    for(let i = 0; i <= 5; i++) {
+        const val = yMin + (yMax - yMin) * (i / 5);
+        const y = padding.top + chartH - (i / 5) * chartH;
         gridLines.push(`<line x1="${padding.left}" y1="${y}" x2="${padding.left + chartW}" y2="${y}" stroke="#a7f3d0" stroke-width="1" stroke-dasharray="2,4"/>`);
         gridLines.push(`<text x="${padding.left - 8}" y="${y + 4}" text-anchor="end" font-size="11" fill="#065f46" font-weight="600">${Math.round(val)}</text>`);
     }
-    
     const pointsHtml = points.map((p, i) => {
-        const isFirst = i === 0;
-        const isLast = i === data.length - 1;
+        const isFirst = i === 0, isLast = i === data.length - 1;
         const pointColor = isLast ? color : (isFirst ? '#2563eb' : color);
         const shortDate = p.date.slice(5).split('-').reverse().join('.');
-        return `
-            <circle cx="${p.x}" cy="${p.y}" r="${isFirst||isLast?6:4}" fill="${pointColor}" stroke="white" stroke-width="2"/>
-            <text x="${p.x}" y="${p.y - 10}" text-anchor="middle" font-size="11" font-weight="700" fill="#064e3b">${p.value}</text>
-            <text x="${p.x}" y="${padding.top + chartH + 18}" text-anchor="middle" font-size="10" fill="#065f46" font-weight="600">${shortDate}</text>
-        `;
+        return `<circle cx="${p.x}" cy="${p.y}" r="${isFirst||isLast?6:4}" fill="${pointColor}" stroke="white" stroke-width="2"/>
+                <text x="${p.x}" y="${p.y - 10}" text-anchor="middle" font-size="11" font-weight="700" fill="#064e3b">${p.value}</text>
+                <text x="${p.x}" y="${padding.top + chartH + 18}" text-anchor="middle" font-size="10" fill="#065f46" font-weight="600">${shortDate}</text>`;
     }).join('');
-    
-    const axes = `
+    return `<div class="dashboard-chart"><svg class="chart-svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet">
+        <defs><linearGradient id="areaGrad-${field}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${color}" stop-opacity="0.3"/><stop offset="100%" stop-color="${color}" stop-opacity="0"/></linearGradient></defs>
+        ${gridLines.join('')}
         <line x1="${padding.left}" y1="${padding.top}" x2="${padding.left}" y2="${padding.top + chartH}" stroke="#065f46" stroke-width="1.5"/>
         <line x1="${padding.left}" y1="${padding.top + chartH}" x2="${padding.left + chartW}" y2="${padding.top + chartH}" stroke="#065f46" stroke-width="1.5"/>
-    `;
-    
-    const title = `<text x="${width/2}" y="18" text-anchor="middle" font-size="13" font-weight="700" fill="#064e3b">${unit}</text>`;
-    
-    return `
-        <div class="dashboard-chart">
-            <svg class="chart-svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet">
-                <defs>
-                    <linearGradient id="areaGrad-${field}" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stop-color="${color}" stop-opacity="0.3"/>
-                        <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
-                    </linearGradient>
-                </defs>
-                ${gridLines.join('')}
-                ${axes}
-                <path d="${areaPath}" fill="url(#areaGrad-${field})"/>
-                <path d="${linePath}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
-                ${pointsHtml}
-                ${title}
-            </svg>
-        </div>
-    `;
+        <path d="${areaPath}" fill="url(#areaGrad-${field})"/>
+        <path d="${linePath}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+        ${pointsHtml}
+        <text x="${width/2}" y="18" text-anchor="middle" font-size="13" font-weight="700" fill="#064e3b">${unit}</text>
+    </svg></div>`;
 }
-
 function renderDashStatsBlock(data, field, unit) {
     const values = data.map(d => d[field]);
-    const first = values[0];
-    const last = values[values.length - 1];
+    const first = values[0], last = values[values.length - 1];
     const diff = last - first;
-    const max = Math.max(...values);
-    const min = Math.min(...values);
+    const max = Math.max(...values), min = Math.min(...values);
     const avg = values.reduce((s, v) => s + v, 0) / values.length;
-    
-    const firstDate = new Date(data[0].date);
-    const lastDate = new Date(data[data.length - 1].date);
-    const daysDiff = Math.round((lastDate - firstDate) / (1000 * 60 * 60 * 24));
-    let periodText = daysDiff === 0 ? 'в один день' : `за ${daysDiff} дней`;
-    
+    const daysDiff = Math.round((new Date(data[data.length - 1].date) - new Date(data[0].date)) / (1000 * 60 * 60 * 24));
+    const periodText = daysDiff === 0 ? 'в один день' : `за ${daysDiff} дней`;
     const trendIcon = diff > 0 ? '📈' : (diff < 0 ? '📉' : '➡️');
     const trendColor = diff > 0 ? '#166534' : (diff < 0 ? '#991b1b' : '#6b7280');
-    
-    return `
-        <div class="dashboard-stats">
-            <div class="stat-card">
-                <div class="stat-label">Старт</div>
-                <div class="stat-value">${first} ${unit}</div>
-                <div class="stat-sub">${data[0].date}</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Сейчас</div>
-                <div class="stat-value">${last} ${unit}</div>
-                <div class="stat-sub">${data[data.length-1].date}</div>
-            </div>
-            <div class="stat-card" style="border-left-color:${trendColor};">
-                <div class="stat-label">Изменение ${trendIcon}</div>
-                <div class="stat-value" style="color:${trendColor};">${diff > 0 ? '+' : ''}${Math.round(diff*10)/10} ${unit}</div>
-                <div class="stat-sub">${periodText}</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Среднее</div>
-                <div class="stat-value">${Math.round(avg*10)/10} ${unit}</div>
-                <div class="stat-sub">мин: ${min} • макс: ${max}</div>
-            </div>
-        </div>
-    `;
+    return `<div class="dashboard-stats">
+        <div class="stat-card"><div class="stat-label">Старт</div><div class="stat-value">${first} ${unit}</div><div class="stat-sub">${data[0].date}</div></div>
+        <div class="stat-card"><div class="stat-label">Сейчас</div><div class="stat-value">${last} ${unit}</div><div class="stat-sub">${data[data.length-1].date}</div></div>
+        <div class="stat-card" style="border-left-color:${trendColor};"><div class="stat-label">Изменение ${trendIcon}</div><div class="stat-value" style="color:${trendColor};">${diff > 0 ? '+' : ''}${Math.round(diff*10)/10} ${unit}</div><div class="stat-sub">${periodText}</div></div>
+        <div class="stat-card"><div class="stat-label">Среднее</div><div class="stat-value">${Math.round(avg*10)/10} ${unit}</div><div class="stat-sub">мин: ${min} • макс: ${max}</div></div>
+    </div>`;
 }
-
 function renderWeeklyAvg() {
     const container = document.getElementById('weekly-avg-container');
-    
-    if(nutritionData.weeks.length === 0) {
-        container.innerHTML = '<div class="chart-empty">Нет данных</div>';
-        return;
-    }
-    
+    if(nutritionData.weeks.length === 0) { container.innerHTML = '<div class="chart-empty">Нет данных</div>'; return; }
     const weeklyData = nutritionData.weeks.map(week => {
         let cal = 0, prot = 0, fat = 0, carb = 0, days = 0;
-        
         week.menu.forEach((day, di) => {
             let dayCal = 0;
             day.meals.forEach((meal, mi) => {
@@ -1719,91 +1341,41 @@ function renderWeeklyAvg() {
                 fat += parseFloat(week.data[`m-${di}-${mi}-fat`]) || 0;
                 carb += parseFloat(week.data[`m-${di}-${mi}-carb`]) || 0;
             });
-            if(dayCal > 0) {
-                cal += dayCal;
-                days++;
-            }
+            if(dayCal > 0) { cal += dayCal; days++; }
         });
-        
-        return {
-            title: week.title,
-            avgCal: days > 0 ? Math.round(cal / days) : 0,
-            avgProt: days > 0 ? Math.round(prot / days) : 0,
-            avgFat: days > 0 ? Math.round(fat / days) : 0,
-            avgCarb: days > 0 ? Math.round(carb / days) : 0,
-            days
-        };
+        return { title: week.title, avgCal: days > 0 ? Math.round(cal / days) : 0, avgProt: days > 0 ? Math.round(prot / days) : 0, avgFat: days > 0 ? Math.round(fat / days) : 0, avgCarb: days > 0 ? Math.round(carb / days) : 0, days };
     });
-    
-    container.innerHTML = `
-        <div style="overflow-x:auto;">
-            <table class="weekly-table">
-                <thead>
-                    <tr>
-                        <th>Неделя</th>
-                        <th style="text-align:center;">Дней</th>
-                        <th style="text-align:center;">Ккал</th>
-                        <th style="text-align:center;">Б</th>
-                        <th style="text-align:center;">Ж</th>
-                        <th style="text-align:center;">У</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${weeklyData.map(w => `
-                        <tr>
-                            <td>${w.title}</td>
-                            <td style="text-align:center;">${w.days}</td>
-                            <td style="text-align:center;" class="cal">${w.avgCal || '—'}</td>
-                            <td style="text-align:center;" class="prot">${w.avgProt || '—'}</td>
-                            <td style="text-align:center;" class="fat">${w.avgFat || '—'}</td>
-                            <td style="text-align:center;" class="carb">${w.avgCarb || '—'}</td>
-                        </tr>
-                    `).join('')}
-                </tbody>
-            </table>
-        </div>
-    `;
+    container.innerHTML = `<div style="overflow-x:auto;"><table class="weekly-table"><thead><tr><th>Неделя</th><th style="text-align:center;">Дней</th><th style="text-align:center;">Ккал</th><th style="text-align:center;">Б</th><th style="text-align:center;">Ж</th><th style="text-align:center;">У</th></tr></thead><tbody>
+        ${weeklyData.map(w => `<tr><td>${w.title}</td><td style="text-align:center;">${w.days}</td><td style="text-align:center;" class="cal">${w.avgCal || '—'}</td><td style="text-align:center;" class="prot">${w.avgProt || '—'}</td><td style="text-align:center;" class="fat">${w.avgFat || '—'}</td><td style="text-align:center;" class="carb">${w.avgCarb || '—'}</td></tr>`).join('')}
+    </tbody></table></div>`;
 }
 
 // === ТРЕНИРОВКИ ===
 function saveWorkout() {
     const date = document.getElementById('f-train-date').value;
     if(!date) { alert('Укажите дату'); return; }
-    
     const log = document.getElementById('f-train-log').value.trim();
     const parsedExercises = log ? extractExercises(log) : [];
-    
     const workout = {
-        id: editingWorkoutId || ('w-' + Date.now()),
-        date,
+        id: editingWorkoutId || ('w-' + Date.now()), date,
         type: document.getElementById('f-train-type').value,
         duration: parseInt(document.getElementById('f-train-duration').value) || 0,
-        time: document.getElementById('f-train-time').value,
-        log,
-        parsedExercises,
+        time: document.getElementById('f-train-time').value, log, parsedExercises,
         note: document.getElementById('f-train-note').value.trim(),
         rating: formStarsData['f-train-rating'] || 0,
         feelBefore: formStarsData['f-train-feel-before'] || 0,
         feelAfter: formStarsData['f-train-feel-after'] || 0
     };
-    
     if(editingWorkoutId) {
         removeProgressByWorkout(editingWorkoutId);
         const idx = workouts.findIndex(w => w.id === editingWorkoutId);
         if(idx >= 0) workouts[idx] = workout;
-    } else {
-        workouts.push(workout);
-    }
-    
-    if(parsedExercises.length > 0) {
-        saveExerciseProgress(workout);
-    }
-    
+    } else { workouts.push(workout); }
+    if(parsedExercises.length > 0) saveExerciseProgress(workout);
     saveTrainings();
     closeAllModals();
     renderTrainAll();
 }
-
 function deleteWorkout(id) {
     if(!confirm('Удалить эту тренировку?')) return;
     removeProgressByWorkout(id);
@@ -1811,68 +1383,49 @@ function deleteWorkout(id) {
     saveTrainings();
     renderTrainAll();
 }
-
 function toggleWorkout(id) {
     const card = document.querySelector(`.workout-card[data-id="${id}"]`);
     if(card) card.classList.toggle('collapsed');
 }
-
 function extractExercises(text) {
     const lines = text.split('\n').map(l => l.trim()).filter(l => l);
     const exercises = [];
     let current = null;
-    
     for(let i = 0; i < lines.length; i++) {
         const line = lines[i];
         if(line.match(/^(СУПЕРСЕТ|КРУГОВАЯ|🏋️|GymKeeper)/i)) continue;
-        
-        const isExercise = 
-            line.match(/^\d+\)\s+.+/) ||
-            (line.includes('·') && !line.match(/\d+(кг|lb)\*/i));
-        
+        const isExercise = line.match(/^\d+\)\s+.+/) || (line.includes('·') && !line.match(/\d+(кг|lb)\*/i));
         if(isExercise) {
             if(current) exercises.push(current);
-            const name = line.replace(/^\d+\)\s*/, '').trim();
-            current = { name, sets: [] };
+            current = { name: line.replace(/^\d+\)\s*/, '').trim(), sets: [] };
         } else if(current && line.match(/\d+(кг|lb)\*/i)) {
             const match = line.match(/(\d+)(кг|lb)\*(\d+)/i);
             if(match) {
                 const weight = parseInt(match[1]);
                 const unit = match[2].toLowerCase();
                 const reps = parseInt(match[3]);
-                const weightKg = unit === 'lb' ? Math.round(weight * 0.4536) : weight;
-                current.sets.push({ weight: weightKg, reps });
+                current.sets.push({ weight: unit === 'lb' ? Math.round(weight * 0.4536) : weight, reps });
             }
         }
     }
     if(current) exercises.push(current);
     return exercises.filter(e => e.sets.length > 0);
 }
-
 function saveExerciseProgress(workout) {
     const allProgress = JSON.parse(localStorage.getItem('exercise-progress') || '{}');
-    
     Object.keys(allProgress).forEach(exName => {
         allProgress[exName] = allProgress[exName].filter(e => e.workoutId !== workout.id);
         if(allProgress[exName].length === 0) delete allProgress[exName];
     });
-    
     workout.parsedExercises.forEach(ex => {
         if(!allProgress[ex.name]) allProgress[ex.name] = [];
         const maxWeight = Math.max(...ex.sets.map(s => s.weight));
         const totalReps = ex.sets.reduce((sum, s) => sum + s.reps, 0);
         const volume = ex.sets.reduce((sum, s) => sum + s.weight * s.reps, 0);
-        allProgress[ex.name].push({
-            date: workout.date,
-            workoutId: workout.id,
-            sets: ex.sets.length,
-            maxWeight, totalReps, volume
-        });
+        allProgress[ex.name].push({ date: workout.date, workoutId: workout.id, sets: ex.sets.length, maxWeight, totalReps, volume });
     });
-    
     localStorage.setItem('exercise-progress', JSON.stringify(allProgress));
 }
-
 function removeProgressByWorkout(workoutId) {
     const allProgress = JSON.parse(localStorage.getItem('exercise-progress') || '{}');
     let changed = false;
@@ -1884,13 +1437,7 @@ function removeProgressByWorkout(workoutId) {
     });
     if(changed) localStorage.setItem('exercise-progress', JSON.stringify(allProgress));
 }
-
-function renderTrainAll() {
-    renderTrainStats();
-    renderWorkouts();
-    renderTrainProgress();
-}
-
+function renderTrainAll() { renderTrainStats(); renderWorkouts(); renderTrainProgress(); }
 function renderTrainStats() {
     const total = workouts.length;
     const exSet = new Set();
@@ -1903,7 +1450,6 @@ function renderTrainStats() {
     document.getElementById('stat-exercises').textContent = `🎯 ${exSet.size} упражнений`;
     document.getElementById('stat-time').textContent = `⏱ ${totalTime} мин`;
 }
-
 function formatDate(dateStr) {
     if(!dateStr) return '';
     const d = new Date(dateStr);
@@ -1911,54 +1457,23 @@ function formatDate(dateStr) {
     const months = ['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
     return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}, ${days[d.getDay()]}`;
 }
-
 function renderWorkouts() {
     const list = document.getElementById('workouts-list');
-    
     if(workouts.length === 0) {
-        list.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-state-icon">🏋️</div>
-                <div class="empty-state-title">Пока нет тренировок</div>
-                <div class="empty-state-text">Нажмите «➕ Добавить тренировку»</div>
-                <button class="btn orange primary" onclick="openTrainModal()">➕ Добавить первую тренировку</button>
-            </div>
-        `;
+        list.innerHTML = `<div class="empty-state"><div class="empty-state-icon">🏋️</div><div class="empty-state-title">Пока нет тренировок</div><div class="empty-state-text">Нажмите «➕ Добавить тренировку»</div><button class="btn orange primary" onclick="openTrainModal()">➕ Добавить первую тренировку</button></div>`;
         return;
     }
-    
     const sorted = [...workouts].sort((a, b) => {
         if(a.date !== b.date) return b.date.localeCompare(a.date);
         return (b.time || '').localeCompare(a.time || '');
     });
-    
     list.innerHTML = sorted.map(w => {
         const parsedHtml = (w.parsedExercises && w.parsedExercises.length > 0) ? `
             <div class="section-title">🎯 Извлечённые упражнения (${w.parsedExercises.length})</div>
-            <div class="parsed-list">
-                ${w.parsedExercises.map(ex => `
-                    <div class="parsed-item">
-                        <div class="parsed-name">${ex.name}</div>
-                        <div class="parsed-stats">
-                            ${ex.sets.length} подходов • макс. ${Math.max(...ex.sets.map(s=>s.weight))} кг • ${ex.sets.reduce((s,x)=>s+x.reps,0)} повт.
-                        </div>
-                    </div>
-                `).join('')}
-            </div>
-        ` : '';
-        
-        const feelBeforeHtml = w.feelBefore ? `
-            <div class="stars">${[1,2,3,4,5].map(n => `<span class="star ${n<=w.feelBefore?'active':''}">★</span>`).join('')}</div>
-        ` : '<span style="color:#9a3412;font-size:12px;">—</span>';
-        
-        const feelAfterHtml = w.feelAfter ? `
-            <div class="stars">${[1,2,3,4,5].map(n => `<span class="star ${n<=w.feelAfter?'active':''}">★</span>`).join('')}</div>
-        ` : '<span style="color:#9a3412;font-size:12px;">—</span>';
-        
-        const ratingHtml = w.rating ? `
-            <div class="stars">${[1,2,3,4,5].map(n => `<span class="star ${n<=w.rating?'active':''}">★</span>`).join('')}</div>
-        ` : '';
-        
+            <div class="parsed-list">${w.parsedExercises.map(ex => `<div class="parsed-item"><div class="parsed-name">${ex.name}</div><div class="parsed-stats">${ex.sets.length} подходов • макс. ${Math.max(...ex.sets.map(s=>s.weight))} кг • ${ex.sets.reduce((s,x)=>s+x.reps,0)} повт.</div></div>`).join('')}</div>` : '';
+        const feelBeforeHtml = w.feelBefore ? `<div class="stars">${[1,2,3,4,5].map(n => `<span class="star ${n<=w.feelBefore?'active':''}">★</span>`).join('')}</div>` : '<span style="color:#9a3412;font-size:12px;">—</span>';
+        const feelAfterHtml = w.feelAfter ? `<div class="stars">${[1,2,3,4,5].map(n => `<span class="star ${n<=w.feelAfter?'active':''}">★</span>`).join('')}</div>` : '<span style="color:#9a3412;font-size:12px;">—</span>';
+        const ratingHtml = w.rating ? `<div class="stars">${[1,2,3,4,5].map(n => `<span class="star ${n<=w.rating?'active':''}">★</span>`).join('')}</div>` : '';
         return `
             <div class="workout-card" data-id="${w.id}">
                 <div class="workout-header" onclick="toggleWorkout('${w.id}')">
@@ -1973,317 +1488,155 @@ function renderWorkouts() {
                     <div class="workout-info-grid">
                         ${w.duration ? `<div class="info-item"><div class="info-label">⏱ Длительность</div><div class="info-value">${w.duration} мин</div></div>` : ''}
                         ${w.time ? `<div class="info-item"><div class="info-label">🕐 Время</div><div class="info-value">${w.time}</div></div>` : ''}
-                        <div class="info-item">
-                            <div class="info-label">😊 До</div>
-                            <div class="info-value">${feelBeforeHtml}</div>
-                        </div>
-                        <div class="info-item">
-                            <div class="info-label">🔥 После</div>
-                            <div class="info-value">${feelAfterHtml}</div>
-                        </div>
+                        <div class="info-item"><div class="info-label">😊 До</div><div class="info-value">${feelBeforeHtml}</div></div>
+                        <div class="info-item"><div class="info-label">🔥 После</div><div class="info-value">${feelAfterHtml}</div></div>
                     </div>
-                    
-                    ${w.log ? `
-                        <div class="section-title">📋 Лог тренировки</div>
-                        <div class="log-box">${escapeHtml(w.log)}</div>
-                    ` : ''}
-                    
+                    ${w.log ? `<div class="section-title">📋 Лог тренировки</div><div class="log-box">${escapeHtml(w.log)}</div>` : ''}
                     ${parsedHtml}
-                    
-                    ${w.note ? `
-                        <div class="section-title">💬 Заметки</div>
-                        <div class="note-box">${escapeHtml(w.note)}</div>
-                    ` : ''}
-                    
+                    ${w.note ? `<div class="section-title">💬 Заметки</div><div class="note-box">${escapeHtml(w.note)}</div>` : ''}
                     <div class="workout-actions">
                         <button class="action-btn edit" onclick="event.stopPropagation();openTrainModal('${w.id}')">✏️ Редактировать</button>
                         <button class="action-btn delete" onclick="event.stopPropagation();deleteWorkout('${w.id}')">🗑 Удалить</button>
                     </div>
                 </div>
-            </div>
-        `;
+            </div>`;
     }).join('');
 }
-
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
+function escapeHtml(text) { const div = document.createElement('div'); div.textContent = text; return div.innerHTML; }
 function renderTrainProgress() {
     const allProgress = JSON.parse(localStorage.getItem('exercise-progress') || '{}');
     const section = document.getElementById('progress-section');
     const select = document.getElementById('progress-exercise-select');
-    
     const exerciseNames = Object.keys(allProgress).filter(n => allProgress[n].length > 0).sort();
-    
-    if(exerciseNames.length === 0) {
-        section.style.display = 'none';
-        return;
-    }
-    
+    if(exerciseNames.length === 0) { section.style.display = 'none'; return; }
     section.style.display = 'block';
     const currentValue = select.value;
-    
-    select.innerHTML = '<option value="">— выберите упражнение —</option>' +
-        exerciseNames.map(name => {
-            const count = allProgress[name].length;
-            return `<option value="${name.replace(/"/g,'&quot;')}">${name} (${count})</option>`;
-        }).join('');
-    
-    if(currentValue && exerciseNames.includes(currentValue)) {
-        select.value = currentValue;
-    }
-    
+    select.innerHTML = '<option value="">— выберите упражнение —</option>' + exerciseNames.map(name => `<option value="${name.replace(/"/g,'&quot;')}">${name} (${allProgress[name].length})</option>`).join('');
+    if(currentValue && exerciseNames.includes(currentValue)) select.value = currentValue;
     renderTrainChart();
 }
-
 function setTrainMetric(metric) {
     currentTrainMetric = metric;
-    document.querySelectorAll('#main-tab-train .metric-btn').forEach(b => {
-        b.classList.toggle('active', b.dataset.metric === metric);
-    });
+    document.querySelectorAll('#main-tab-train .metric-btn').forEach(b => { b.classList.toggle('active', b.dataset.metric === metric); });
     renderTrainChart();
 }
-
 function renderTrainChart() {
     const select = document.getElementById('progress-exercise-select');
     const name = select.value;
     const chartC = document.getElementById('progress-chart-container');
     const statsC = document.getElementById('progress-stats-container');
     const histC = document.getElementById('progress-history-container');
-    
-    if(!name) {
-        chartC.innerHTML = '<div class="chart-empty">Выберите упражнение</div>';
-        statsC.innerHTML = '';
-        histC.innerHTML = '';
-        return;
-    }
-    
+    if(!name) { chartC.innerHTML = '<div class="chart-empty">Выберите упражнение</div>'; statsC.innerHTML = ''; histC.innerHTML = ''; return; }
     const allProgress = JSON.parse(localStorage.getItem('exercise-progress') || '{}');
     const history = allProgress[name];
-    if(!history || history.length === 0) {
-        chartC.innerHTML = '<div class="chart-empty">Нет данных</div>';
-        return;
-    }
-    
+    if(!history || history.length === 0) { chartC.innerHTML = '<div class="chart-empty">Нет данных</div>'; return; }
     const sorted = [...history].sort((a, b) => a.date.localeCompare(b.date));
     const values = sorted.map(e => currentTrainMetric === 'weight' ? e.maxWeight : e.volume);
     const unit = currentTrainMetric === 'weight' ? 'кг' : 'кг·повт';
     const metricLabel = currentTrainMetric === 'weight' ? 'Макс. вес' : 'Объём';
-    
     chartC.innerHTML = renderTrainSVGChart(sorted, values, unit, metricLabel);
     statsC.innerHTML = renderTrainStatsBlock(sorted, values, unit);
     histC.innerHTML = renderTrainHistoryBlock(sorted, values, unit);
 }
-
 function renderTrainSVGChart(entries, values, unit, metricLabel) {
     const width = 800, height = 280;
     const padding = { top: 30, right: 30, bottom: 60, left: 60 };
     const chartW = width - padding.left - padding.right;
     const chartH = height - padding.top - padding.bottom;
-    
-    const minVal = Math.min(...values);
-    const maxVal = Math.max(...values);
+    const minVal = Math.min(...values), maxVal = Math.max(...values);
     const valRange = maxVal - minVal || 1;
-    const yMin = Math.max(0, minVal - valRange * 0.1);
-    const yMax = maxVal + valRange * 0.15;
-    
+    const yMin = Math.max(0, minVal - valRange * 0.1), yMax = maxVal + valRange * 0.15;
     const xStep = entries.length > 1 ? chartW / (entries.length - 1) : chartW / 2;
-    
     const points = entries.map((e, i) => {
         const x = padding.left + (entries.length > 1 ? i * xStep : chartW / 2);
         const y = padding.top + chartH - ((values[i] - yMin) / (yMax - yMin)) * chartH;
         return { x, y, value: values[i], date: e.date };
     });
-    
     const linePath = points.map((p, i) => `${i===0?'M':'L'} ${p.x} ${p.y}`).join(' ');
     const areaPath = linePath + ` L ${points[points.length-1].x} ${padding.top + chartH} L ${points[0].x} ${padding.top + chartH} Z`;
-    
     const gridLines = [];
-    const yTicks = 5;
-    for(let i = 0; i <= yTicks; i++) {
-        const val = yMin + (yMax - yMin) * (i / yTicks);
-        const y = padding.top + chartH - (i / yTicks) * chartH;
+    for(let i = 0; i <= 5; i++) {
+        const val = yMin + (yMax - yMin) * (i / 5);
+        const y = padding.top + chartH - (i / 5) * chartH;
         gridLines.push(`<line x1="${padding.left}" y1="${y}" x2="${padding.left + chartW}" y2="${y}" stroke="#fdba74" stroke-width="1" stroke-dasharray="2,4"/>`);
         gridLines.push(`<text x="${padding.left - 8}" y="${y + 4}" text-anchor="end" font-size="11" fill="#9a3412" font-weight="600">${Math.round(val)}</text>`);
     }
-    
     const pointsHtml = points.map((p, i) => {
-        const isFirst = i === 0;
-        const isLast = i === entries.length - 1;
+        const isFirst = i === 0, isLast = i === entries.length - 1;
         const color = isLast ? '#ea580c' : (isFirst ? '#2563eb' : '#f97316');
         const shortDate = p.date.slice(5).split('-').reverse().join('.');
-        return `
-            <circle cx="${p.x}" cy="${p.y}" r="${isFirst||isLast?6:4}" fill="${color}" stroke="white" stroke-width="2"/>
-            <text x="${p.x}" y="${p.y - 10}" text-anchor="middle" font-size="11" font-weight="700" fill="#7c2d12">${p.value}</text>
-            <text x="${p.x}" y="${padding.top + chartH + 18}" text-anchor="middle" font-size="10" fill="#9a3412" font-weight="600">${shortDate}</text>
-        `;
+        return `<circle cx="${p.x}" cy="${p.y}" r="${isFirst||isLast?6:4}" fill="${color}" stroke="white" stroke-width="2"/>
+                <text x="${p.x}" y="${p.y - 10}" text-anchor="middle" font-size="11" font-weight="700" fill="#7c2d12">${p.value}</text>
+                <text x="${p.x}" y="${padding.top + chartH + 18}" text-anchor="middle" font-size="10" fill="#9a3412" font-weight="600">${shortDate}</text>`;
     }).join('');
-    
-    const axes = `
+    return `<div class="progress-chart"><svg class="chart-svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet">
+        <defs><linearGradient id="areaGrad-train" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ea580c" stop-opacity="0.3"/><stop offset="100%" stop-color="#ea580c" stop-opacity="0"/></linearGradient></defs>
+        ${gridLines.join('')}
         <line x1="${padding.left}" y1="${padding.top}" x2="${padding.left}" y2="${padding.top + chartH}" stroke="#9a3412" stroke-width="1.5"/>
         <line x1="${padding.left}" y1="${padding.top + chartH}" x2="${padding.left + chartW}" y2="${padding.top + chartH}" stroke="#9a3412" stroke-width="1.5"/>
-    `;
-    
-    const title = `<text x="${width/2}" y="18" text-anchor="middle" font-size="13" font-weight="700" fill="#7c2d12">${metricLabel} (${unit})</text>`;
-    
-    return `
-        <div class="progress-chart">
-            <svg class="chart-svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet">
-                <defs>
-                    <linearGradient id="areaGrad-train" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stop-color="#ea580c" stop-opacity="0.3"/>
-                        <stop offset="100%" stop-color="#ea580c" stop-opacity="0"/>
-                    </linearGradient>
-                </defs>
-                ${gridLines.join('')}
-                ${axes}
-                <path d="${areaPath}" fill="url(#areaGrad-train)"/>
-                <path d="${linePath}" fill="none" stroke="#ea580c" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
-                ${pointsHtml}
-                ${title}
-            </svg>
-        </div>
-    `;
+        <path d="${areaPath}" fill="url(#areaGrad-train)"/>
+        <path d="${linePath}" fill="none" stroke="#ea580c" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+        ${pointsHtml}
+        <text x="${width/2}" y="18" text-anchor="middle" font-size="13" font-weight="700" fill="#7c2d12">${metricLabel} (${unit})</text>
+    </svg></div>`;
 }
-
 function renderTrainStatsBlock(entries, values, unit) {
-    const first = values[0];
-    const last = values[values.length - 1];
+    const first = values[0], last = values[values.length - 1];
     const diff = last - first;
     const percent = first > 0 ? (diff / first) * 100 : 0;
-    const max = Math.max(...values);
-    const min = Math.min(...values);
+    const max = Math.max(...values), min = Math.min(...values);
     const avg = values.reduce((s, v) => s + v, 0) / values.length;
-    
-    const firstDate = new Date(entries[0].date);
-    const lastDate = new Date(entries[entries.length - 1].date);
-    const daysDiff = Math.round((lastDate - firstDate) / (1000 * 60 * 60 * 24));
-    let periodText = '';
-    if(daysDiff === 0) periodText = 'в один день';
-    else if(daysDiff === 1) periodText = 'за 1 день';
-    else if(daysDiff < 30) periodText = `за ${daysDiff} дней`;
-    else {
-        const months = Math.round(daysDiff / 30);
-        periodText = `за ${months} ${months===1?'месяц':'месяцев'}`;
-    }
-    
+    const daysDiff = Math.round((new Date(entries[entries.length - 1].date) - new Date(entries[0].date)) / (1000 * 60 * 60 * 24));
+    let periodText = daysDiff === 0 ? 'в один день' : (daysDiff === 1 ? 'за 1 день' : (daysDiff < 30 ? `за ${daysDiff} дней` : `за ${Math.round(daysDiff / 30)} месяцев`));
     const trendIcon = diff > 0 ? '📈' : (diff < 0 ? '📉' : '➡️');
     const trendColor = diff > 0 ? '#166534' : (diff < 0 ? '#991b1b' : '#6b7280');
-    
-    return `
-        <div class="progress-stats">
-            <div class="stat-card">
-                <div class="stat-label">Старт</div>
-                <div class="stat-value">${first} ${unit}</div>
-                <div class="stat-sub">${entries[0].date}</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Сейчас</div>
-                <div class="stat-value">${last} ${unit}</div>
-                <div class="stat-sub">${entries[entries.length-1].date}</div>
-            </div>
-            <div class="stat-card" style="border-left-color:${trendColor};">
-                <div class="stat-label">Прогресс ${trendIcon}</div>
-                <div class="stat-value" style="color:${trendColor};">${diff > 0 ? '+' : ''}${Math.round(diff)} ${unit}</div>
-                <div class="stat-sub">${percent > 0 ? '+' : ''}${percent.toFixed(1)}% ${periodText}</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Рекорд</div>
-                <div class="stat-value">${max} ${unit}</div>
-                <div class="stat-sub">мин: ${min} • сред: ${Math.round(avg)}</div>
-            </div>
-        </div>
-    `;
+    return `<div class="progress-stats">
+        <div class="stat-card"><div class="stat-label">Старт</div><div class="stat-value">${first} ${unit}</div><div class="stat-sub">${entries[0].date}</div></div>
+        <div class="stat-card"><div class="stat-label">Сейчас</div><div class="stat-value">${last} ${unit}</div><div class="stat-sub">${entries[entries.length-1].date}</div></div>
+        <div class="stat-card" style="border-left-color:${trendColor};"><div class="stat-label">Прогресс ${trendIcon}</div><div class="stat-value" style="color:${trendColor};">${diff > 0 ? '+' : ''}${Math.round(diff)} ${unit}</div><div class="stat-sub">${percent > 0 ? '+' : ''}${percent.toFixed(1)}% ${periodText}</div></div>
+        <div class="stat-card"><div class="stat-label">Рекорд</div><div class="stat-value">${max} ${unit}</div><div class="stat-sub">мин: ${min} • сред: ${Math.round(avg)}</div></div>
+    </div>`;
 }
-
 function renderTrainHistoryBlock(entries, values, unit) {
     const rows = [...entries].reverse().map((entry, idx) => {
         const realIdx = entries.length - 1 - idx;
         const prev = realIdx > 0 ? values[realIdx - 1] : null;
         const curr = values[realIdx];
-        
         let trendHtml = '';
-        if(prev === null) {
-            trendHtml = '<span class="history-trend first">старт</span>';
-        } else {
+        if(prev === null) trendHtml = '<span class="history-trend first">старт</span>';
+        else {
             const diff = curr - prev;
             if(diff > 0) trendHtml = `<span class="history-trend up">↑ +${diff}</span>`;
             else if(diff < 0) trendHtml = `<span class="history-trend down">↓ ${diff}</span>`;
             else trendHtml = `<span class="history-trend same">=</span>`;
         }
-        
-        return `
-            <div class="history-entry">
-                <span class="history-date">${entry.date}</span>
-                <span class="history-data">${entry.sets} подх. • ${entry.maxWeight} кг макс. • ${entry.totalReps} повт.</span>
-                ${trendHtml}
-            </div>
-        `;
+        return `<div class="history-entry"><span class="history-date">${entry.date}</span><span class="history-data">${entry.sets} подх. • ${entry.maxWeight} кг макс. • ${entry.totalReps} повт.</span>${trendHtml}</div>`;
     }).join('');
-    
-    return `
-        <div class="progress-history">
-            <div class="history-title">📜 Вся история (${entries.length} записей)</div>
-            <div class="history-list">${rows}</div>
-        </div>
-    `;
+    return `<div class="progress-history"><div class="history-title">📜 Вся история (${entries.length} записей)</div><div class="history-list">${rows}</div></div>`;
 }
 
 // === СОХРАНЕНИЕ ===
 function saveNutrition() {
     const week = nutritionData.weeks.find(w => w.id === nutritionData.currentWeekId);
     if(!week) return;
-    
     document.querySelectorAll(`[data-week="${week.id}"]`).forEach(el => {
         const key = el.dataset.key;
         if(!key) return;
-        
-        let value;
-        if(el.type === 'checkbox') value = el.checked;
-        else value = el.value;
-        
-        if(value !== undefined && value !== '') {
-            week.data[key] = value;
-        }
+        let value = el.type === 'checkbox' ? el.checked : el.value;
+        if(value !== undefined && value !== '') week.data[key] = value;
     });
-    
     document.querySelectorAll(`input[data-week="${week.id}"][data-field]`).forEach(inp => {
-        const k = `m-${inp.dataset.day}-${inp.dataset.meal}-${inp.dataset.field}`;
-        if(inp.value) week.data[k] = inp.value;
+        if(inp.value) week.data[`m-${inp.dataset.day}-${inp.dataset.meal}-${inp.dataset.field}`] = inp.value;
     });
-    
-    localStorage.setItem('nutrition-data', JSON.stringify(nutritionData));
+    syncToCloud();
 }
 
 function saveTrainings() {
-    localStorage.setItem('workouts-data', JSON.stringify({ workouts }));
-}
-
-function loadAll() {
-    const rawNutrition = localStorage.getItem('nutrition-data');
-    if(rawNutrition) {
-        try { nutritionData = JSON.parse(rawNutrition); } catch(e) { console.error(e); }
-    }
-    
-    const rawTrain = localStorage.getItem('workouts-data');
-    if(rawTrain) {
-        try {
-            const data = JSON.parse(rawTrain);
-            workouts = data.workouts || [];
-        } catch(e) { console.error(e); }
-    }
+    syncToCloud();
 }
 
 function exportAllData() {
-    const data = {
-        nutrition: nutritionData,
-        workouts,
-        progress: JSON.parse(localStorage.getItem('exercise-progress') || '{}'),
-        exportedAt: new Date().toISOString()
-    };
+    const data = { nutrition: nutritionData, workouts, progress: JSON.parse(localStorage.getItem('exercise-progress') || '{}'), exportedAt: new Date().toISOString() };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -2302,22 +1655,14 @@ function importAllData(input) {
             const parsed = JSON.parse(e.target.result);
             if(parsed.nutrition && parsed.nutrition.weeks) {
                 const existingIds = new Set(nutritionData.weeks.map(w => w.id));
-                parsed.nutrition.weeks.forEach(w => {
-                    if(!existingIds.has(w.id)) nutritionData.weeks.push(w);
-                });
-                if(parsed.nutrition.currentWeekId && !nutritionData.currentWeekId) {
-                    nutritionData.currentWeekId = parsed.nutrition.currentWeekId;
-                }
+                parsed.nutrition.weeks.forEach(w => { if(!existingIds.has(w.id)) nutritionData.weeks.push(w); });
+                if(parsed.nutrition.currentWeekId && !nutritionData.currentWeekId) nutritionData.currentWeekId = parsed.nutrition.currentWeekId;
             }
             if(parsed.workouts) {
                 const existingIds = new Set(workouts.map(w => w.id));
-                parsed.workouts.forEach(w => {
-                    if(!existingIds.has(w.id)) workouts.push(w);
-                });
+                parsed.workouts.forEach(w => { if(!existingIds.has(w.id)) workouts.push(w); });
             }
-            if(parsed.progress) {
-                localStorage.setItem('exercise-progress', JSON.stringify(parsed.progress));
-            }
+            if(parsed.progress) localStorage.setItem('exercise-progress', JSON.stringify(parsed.progress));
             saveNutrition();
             saveTrainings();
             renderNutritionAll();
@@ -2338,18 +1683,12 @@ function importTrainData(input) {
             const parsed = JSON.parse(e.target.result);
             if(parsed.workouts) {
                 const existingIds = new Set(workouts.map(w => w.id));
-                parsed.workouts.forEach(w => {
-                    if(!existingIds.has(w.id)) workouts.push(w);
-                });
-                if(parsed.progress) {
-                    localStorage.setItem('exercise-progress', JSON.stringify(parsed.progress));
-                }
+                parsed.workouts.forEach(w => { if(!existingIds.has(w.id)) workouts.push(w); });
+                if(parsed.progress) localStorage.setItem('exercise-progress', JSON.stringify(parsed.progress));
                 saveTrainings();
                 renderTrainAll();
                 alert(`✅ Импортировано тренировок: ${parsed.workouts.length}`);
-            } else {
-                alert('❌ Неверный формат');
-            }
+            } else { alert('❌ Неверный формат'); }
         } catch(err) { alert('❌ Ошибка чтения'); }
     };
     reader.readAsText(file);
@@ -2358,6 +1697,7 @@ function importTrainData(input) {
 
 function resetAllData() {
     if(confirm('Удалить ВСЕ данные (питание + тренировки)? Это нельзя отменить.')) {
+        diaryRef.remove().catch(console.error);
         localStorage.removeItem('nutrition-data');
         localStorage.removeItem('workouts-data');
         localStorage.removeItem('exercise-progress');
@@ -2369,10 +1709,7 @@ function resetAllData() {
 }
 
 // === СТАРТ ===
-loadAll();
-renderNutritionAll();
-renderTrainAll();
+loadFromCloud();
 </script>
-
 </body>
 </html>
