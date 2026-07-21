@@ -1853,87 +1853,101 @@ function importFatSecretCSV(input) {
 function processFatSecretData(csvText) {
     const lines = csvText.split('\n');
     let targetDate = null;
-    const mealsData = {}; 
-    const mealItems = {}; 
     
-    // Точные названия из твоего CSV
-    const mealHeaders = ['Завтрак', 'Обед', 'Ужин', 'Перекус/Другое'];
-    const mealMap = {
-        'Завтрак': 'breakfast',
-        'Обед': 'lunch',
-        'Ужин': 'dinner',
-        'Перекус/Другое': 'snack' 
-    };
-
-    let currentMealKey = null; // Ключ текущего блока (breakfast, lunch...)
-
-    for (let i = 0; i < lines.length; i++) {
-        const line = lines[i].trim();
-        if (!line) continue;
-
-        // 1. Ищем дату (только один раз)
-        if (!targetDate && line.includes('Food Diary Report')) {
+    // 1. Ищем дату
+    for (let line of lines) {
+        if (line.includes('Food Diary Report')) {
             const cleanLine = line.replace(/"/g, '');
             const dateMatch = cleanLine.match(/([а-яё]+),\s*([а-яё]+)\s+(\d+),\s*(\d{4})/i);
             if (dateMatch) {
                 targetDate = convertFatSecretDate(dateMatch[3], dateMatch[2], dateMatch[4]);
-            }
-        }
-
-        // 2. Проверяем, является ли строка ЗАГОЛОВКОМ приема пищи
-        let isHeader = false;
-        for (const headerName of mealHeaders) {
-            // Строгое сравнение: строка должна начинаться с "Завтрак," или "Обед,"
-            if (line.startsWith(headerName + ',')) {
-                currentMealKey = mealMap[headerName];
-                isHeader = true;
-                
-                // Парсим суммы для этого приема
-                const parts = line.split(',');
-                mealsData[currentMealKey] = { 
-                    cal: parseFloat(parts[1]) || 0,
-                    fat: parseFloat((parts[2] || '').replace(/["\s]/g, '')) || 0,
-                    carb: parseFloat((parts[4] || '').replace(/["\s]/g, '')) || 0,
-                    prot: parseFloat((parts[7] || '').replace(/["\s]/g, '')) || 0
-                };
-                mealItems[currentMealKey] = []; // Создаем пустой список для продуктов
                 break;
-            }
-        }
-
-        // Если это заголовок, переходим к следующей строке
-        if (isHeader) continue;
-
-        // 3. Если мы внутри какого-то блока (currentMealKey не null), собираем продукты
-        if (currentMealKey) {
-            // Игнорируем строку "Всего" и технические разделители
-            if (line.startsWith('Всего') || line.startsWith('#') || line.includes('Report Details')) {
-                continue;
-            }
-
-            const parts = line.split(',');
-            // Продукт должен иметь название и число во втором столбце (калории)
-            if (parts.length > 1 && !isNaN(parseFloat(parts[1]))) {
-                const name = parts[0].replace(/"/g, '').trim();
-                const cal = parseFloat(parts[1]) || 0;
-                const fat = parseFloat((parts[2] || '').replace(/["\s]/g, '')) || 0;
-                const carb = parseFloat((parts[4] || '').replace(/["\s]/g, '')) || 0;
-                const prot = parseFloat((parts[7] || '').replace(/["\s]/g, '')) || 0;
-                
-                let weight = '';
-                // Вес часто идет в СЛЕДУЮЩЕЙ строке (паттерн "120 г")
-                if (lines[i+1] && lines[i+1].trim().match(/\d+\s*г/)) {
-                    weight = lines[i+1].trim();
-                }
-
-                mealItems[currentMealKey].push({ name, cal, fat, carb, prot, weight });
             }
         }
     }
 
     if (!targetDate) { alert('❌ Не удалось найти дату.'); return; }
 
-    // 4. Сохранение в неделю
+    // 2. Разбиваем текст на блоки по заголовкам
+    // Мы используем регулярное выражение, чтобы найти все места, где начинается прием пищи
+    const mealHeaders = ['Завтрак', 'Обед', 'Ужин', 'Перекус/Другое'];
+    const blocks = {};
+    
+    let currentBlockName = null;
+    let currentBlockContent = [];
+
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        
+        // Проверяем, является ли строка заголовком
+        let isHeader = false;
+        for (const header of mealHeaders) {
+            if (line.startsWith(header + ',')) {
+                // Если был предыдущий блок, сохраняем его
+                if (currentBlockName) {
+                    blocks[currentBlockName] = currentBlockContent;
+                }
+                currentBlockName = header;
+                currentBlockContent = [];
+                isHeader = true;
+                break;
+            }
+        }
+        
+        // Если это не заголовок и не конец файла, добавляем в текущий блок
+        if (!isHeader && currentBlockName && !line.startsWith('Всего') && line !== '') {
+            currentBlockContent.push(line);
+        }
+    }
+    // Сохраняем последний блок
+    if (currentBlockName) {
+        blocks[currentBlockName] = currentBlockContent;
+    }
+
+    // 3. Парсим каждый блок
+    const mealsData = {};
+    const mealItems = {};
+    const mealMap = { 'Завтрак': 'breakfast', 'Обед': 'lunch', 'Ужин': 'dinner', 'Перекус/Другое': 'snack' };
+
+    for (const [headerName, itemsLines] of Object.entries(blocks)) {
+        const appType = mealMap[headerName];
+        if (!appType) continue;
+
+        mealItems[appType] = [];
+        let blockCal = 0, blockProt = 0, blockFat = 0, blockCarb = 0;
+
+        // Первая строка в блоке продуктов часто содержит сумму, если она там есть
+        // Но в твоем файле суммы идут в заголовке. Поэтому просто парсим продукты.
+        
+        for (let j = 0; j < itemsLines.length; j++) {
+            const line = itemsLines[j];
+            const parts = line.split(',');
+            
+            // Пропускаем строки, которые не похожи на продукты (например, пустые или технические)
+            if (parts.length < 2 || isNaN(parseFloat(parts[1]))) continue;
+
+            const name = parts[0].replace(/"/g, '').trim();
+            const cal = parseFloat(parts[1]) || 0;
+            const fat = parseFloat((parts[2] || '').replace(/["\s]/g, '')) || 0;
+            const carb = parseFloat((parts[4] || '').replace(/["\s]/g, '')) || 0;
+            const prot = parseFloat((parts[7] || '').replace(/["\s]/g, '')) || 0;
+
+            // Суммируем для итогов блока
+            blockCal += cal; blockProt += prot; blockFat += fat; blockCarb += carb;
+
+            let weight = '';
+            // Вес в следующей строке массива itemsLines
+            if (itemsLines[j+1] && itemsLines[j+1].match(/\d+\s*г/)) {
+                weight = itemsLines[j+1].trim();
+            }
+
+            mealItems[appType].push({ name, cal, fat, carb, prot, weight });
+        }
+
+        mealsData[appType] = { cal: blockCal, prot: blockProt, fat: blockFat, carb: blockCarb };
+    }
+
+    // 4. Сохранение в неделю (код тот же)
     const week = nutritionData.weeks.find(w => {
         const start = new Date(w.startDate);
         const end = new Date(w.endDate);
