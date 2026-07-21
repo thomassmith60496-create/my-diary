@@ -1236,16 +1236,28 @@ function setStars(el, rating) {
 
 function updateTotals(weekId, di) {
     let s = { cal: 0, prot: 0, fat: 0, carb: 0 };
+    
+    // Сначала собираем данные из полей в переменную week.data, 
+    // но НЕ вызываем syncToCloud прямо здесь
     document.querySelectorAll(`input[data-week="${weekId}"][data-day="${di}"][data-field]`).forEach(inp => {
         const f = inp.dataset.field;
         const v = parseFloat(inp.value) || 0;
         if(s[f] !== undefined) s[f] += v;
+        
+        // Обновляем данные в объекте nutritionData, чтобы они не потерялись
+        const week = nutritionData.weeks.find(w => w.id === weekId);
+        if(week && week.data) {
+            week.data[`m-${inp.dataset.day}-${inp.dataset.meal}-${inp.dataset.field}`] = inp.value;
+        }
     });
+
+    // Обновляем только текст на экране (итоги)
     ['cal','prot','fat','carb'].forEach(f => {
         const el = document.getElementById(`sum-${f}-${weekId}-${di}`);
         if(el) el.textContent = Math.round(s[f]);
     });
-    // Тоже вызываем сохранение
+    
+    // Вызываем сохранение в облако (оно само подождет 3 секунды)
     syncToCloud();
 }
 
