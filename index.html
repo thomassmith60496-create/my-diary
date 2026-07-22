@@ -2571,92 +2571,88 @@ function importFinanceExcel(input) {
                 const row = jsonData[i];
                 if(!row || row.length < 3) continue;
                 
-                // Ожидаемые колонки: Дата | Сумма | Категория | [Подкатегория] | [Комментарий] | [Тип]
-                const dateRaw = String(row[0] || '').trim();
-                const amountRaw = String(row[1] || '').trim();
-                const categoryName = String(row[2] || '').trim();
-                const subcategory = row[3] ? String(row[3]).trim() : '';
-                const comment = row[4] ? String(row[4]).trim() : '';
-                const typeRaw = row[5] ? String(row[5]).trim().toLowerCase() : 'expense';
+                // Структура файла: Период(формула) | Дата | Тип | Сумма | Категория | Подкатегория | Комментарий
+                // Индексы:       0                 | 1    | 2    | 3     | 4         | 5             | 6
                 
-                if(!dateRaw || !amountRaw || !categoryName) continue;
+                const dateRaw = row[1]; // Дата — колонка B (индекс 1)
+                const typeRaw = String(row[2] || '').trim().toLowerCase(); // Тип — колонка C (индекс 2)
+                const amountRaw = row[3]; // Сумма — колонка D (индекс 3)
+                const categoryName = String(row[4] || '').trim(); // Категория — колонка E (индекс 4)
+                const subcategory = row[5] ? String(row[5]).trim() : ''; // Подкатегория — колонка F (индекс 5)
+                const comment = row[6] ? String(row[6]).trim() : ''; // Комментарий — колонка G (индекс 6)
                 
-                // Если имя категории — это просто число, значит колонки съехали — пропускаем
-                if(/^\d+([.,]\d+)?$/.test(categoryName) && !isNaN(parseFloat(categoryName))) {
-                    errors++; continue;
-                }
+                if(!dateRaw || amountRaw === undefined || amountRaw === null || amountRaw === '' || !categoryName) continue;
                 
-                // Парсим дату
+                // --- ПАРСИМ ДАТУ ---
                 let date = '';
-                const dateNum = parseFloat(dateRaw);
                 
-                // 1. Excel serial date (число дней с 30.12.1899)
-                if(!isNaN(dateNum) && dateNum > 1 && dateNum < 200000 && /^[\d.]+$/.test(String(dateRaw).trim())) {
+                // 1. Если это Date-объект (SheetJS парсит дату как Date)
+                if(dateRaw instanceof Date && !isNaN(dateRaw.getTime())) {
+                    date = dateRaw.toISOString().slice(0,10);
+                }
+                // 2. Excel serial date (число)
+                else if(typeof dateRaw === 'number' && dateRaw > 1 && dateRaw < 200000) {
                     const excelEpoch = new Date(1899, 11, 30);
-                    const parsed = new Date(excelEpoch.getTime() + dateNum * 86400000);
+                    const parsed = new Date(excelEpoch.getTime() + dateRaw * 86400000);
                     date = parsed.toISOString().slice(0,10);
                 }
-                // 2. ДД.ММ.ГГГГ или ДД.ММ.ГГ
-                else if(/^\d{1,2}\.\d{1,2}\.\d{2,4}$/.test(dateRaw)) {
-                    const parts = dateRaw.split('.');
-                    const d = parts[0].padStart(2,'0');
-                    const m = parts[1].padStart(2,'0');
-                    const y = parts[2].length === 2 ? '20' + parts[2] : parts[2];
-                    date = `${y}-${m}-${d}`;
-                }
-                // 3. ДД/ММ/ГГГГ или ДД/ММ/ГГ
-                else if(/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(dateRaw)) {
-                    const parts = dateRaw.split('/');
-                    const d = parts[0].padStart(2,'0');
-                    const m = parts[1].padStart(2,'0');
-                    const y = parts[2].length === 2 ? '20' + parts[2] : parts[2];
-                    date = `${y}-${m}-${d}`;
-                }
-                // 4. ДД-ММ-ГГГГ или ДД-ММ-ГГ
-                else if(/^\d{1,2}\-\d{1,2}\-\d{2,4}$/.test(dateRaw)) {
-                    const parts = dateRaw.split('-');
-                    const d = parts[0].padStart(2,'0');
-                    const m = parts[1].padStart(2,'0');
-                    const y = parts[2].length === 2 ? '20' + parts[2] : parts[2];
-                    date = `${y}-${m}-${d}`;
-                }
-                // 5. ДД.ММ (без года, подставляем текущий год)
-                else if(/^\d{1,2}\.\d{1,2}$/.test(dateRaw)) {
-                    const parts = dateRaw.split('.');
-                    const d = parts[0].padStart(2,'0');
-                    const m = parts[1].padStart(2,'0');
-                    const y = new Date().getFullYear();
-                    date = `${y}-${m}-${d}`;
-                }
-                // 6. ISO YYYY-MM-DD
-                else if(/^\d{4}-\d{2}-\d{2}$/.test(dateRaw)) {
-                    date = dateRaw;
-                }
-                // 7. Последняя попытка — через Date()
+                // 3. Строка с датой
                 else {
-                    const d = new Date(dateRaw);
-                    if(!isNaN(d.getTime())) {
-                        date = d.toISOString().slice(0,10);
+                    const dateStr = String(dateRaw).trim();
+                    // ДД.ММ.ГГГГ или ДД.ММ.ГГ
+                    if(/^\d{1,2}\.\d{1,2}\.\d{2,4}$/.test(dateStr)) {
+                        const parts = dateStr.split('.');
+                        const d = parts[0].padStart(2,'0');
+                        const m = parts[1].padStart(2,'0');
+                        const y = parts[2].length === 2 ? '20' + parts[2] : parts[2];
+                        date = `${y}-${m}-${d}`;
+                    }
+                    // ДД/ММ/ГГГГ
+                    else if(/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(dateStr)) {
+                        const parts = dateStr.split('/');
+                        const d = parts[0].padStart(2,'0');
+                        const m = parts[1].padStart(2,'0');
+                        const y = parts[2].length === 2 ? '20' + parts[2] : parts[2];
+                        date = `${y}-${m}-${d}`;
+                    }
+                    // ISO YYYY-MM-DD
+                    else if(/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+                        date = dateStr;
+                    }
+                    // ДД.ММ (без года)
+                    else if(/^\d{1,2}\.\d{1,2}$/.test(dateStr)) {
+                        const parts = dateStr.split('.');
+                        date = `${new Date().getFullYear()}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+                    }
+                    // Последняя попытка
+                    else {
+                        const d = new Date(dateStr);
+                        if(!isNaN(d.getTime())) {
+                            date = d.toISOString().slice(0,10);
+                        }
                     }
                 }
                 
-                // Проверяем валидность даты
                 if(!date) { errors++; continue; }
                 const dateObj = new Date(date);
                 if(isNaN(dateObj.getTime())) { errors++; continue; }
                 date = dateObj.toISOString().slice(0,10);
                 
-                // Парсим сумму
-                let amount = parseFloat(amountRaw.replace(/[^\d.,\-]/g, '').replace(',', '.'));
+                // --- ПАРСИМ СУММУ ---
+                let amount = 0;
+                if(typeof amountRaw === 'number') {
+                    amount = amountRaw;
+                } else {
+                    amount = parseFloat(String(amountRaw).replace(/[^\d.,\-]/g, '').replace(',', '.'));
+                }
                 if(isNaN(amount) || amount === 0) { errors++; continue; }
                 
-                // Определяем тип операции
-                const isExpense = typeRaw === 'expense' || typeRaw === 'расход' || typeRaw === 'трата' || amount < 0;
+                // Определяем тип: смотрим на тип и на знак суммы
+                const isExpense = typeRaw === 'расход' || typeRaw === 'expense' || typeRaw === 'трата' || amount < 0;
                 
                 // Ищем или создаём категорию
                 let category = financeData.categories.find(c => c.name.toLowerCase() === categoryName.toLowerCase());
                 if(!category) {
-                    // Создаём новую категорию
                     category = {
                         id: 'cat-' + Date.now() + '-' + Math.random().toString(36).slice(2,6),
                         name: categoryName,
@@ -2666,7 +2662,7 @@ function importFinanceExcel(input) {
                     financeData.categories.push(category);
                 }
                 
-                // Если указана подкатегория — добавляем её если такой ещё нет
+                // Добавляем подкатегорию если её ещё нет
                 if(subcategory && category.subcategories.indexOf(subcategory) === -1) {
                     category.subcategories.push(subcategory);
                 }
@@ -2697,6 +2693,20 @@ function importFinanceExcel(input) {
     };
     reader.readAsArrayBuffer(file);
     input.value = '';
+}
+
+// --- DATE FORMAT HELPER ---
+
+function formatFinanceDate(dateStr) {
+    if(!dateStr) return '';
+    // Если дата уже в формате ДД.ММ.ГГГГ — возвращаем как есть
+    if(/^\d{2}\.\d{2}\.\d{4}$/.test(dateStr)) return dateStr;
+    // Если ISO YYYY-MM-DD — конвертируем
+    const parts = dateStr.split('-');
+    if(parts.length === 3) {
+        return `${parts[2]}.${parts[1]}.${parts[0]}`;
+    }
+    return dateStr;
 }
 
 // --- RENDER FUNCTIONS ---
@@ -2995,7 +3005,7 @@ function renderFinanceTransactions() {
             const commentHtml = t.comment ? `<br><span style="font-size:11px;color:#a855f7;">💬 ${t.comment}</span>` : '';
             const isExpense = t.type === 'expense';
             return `<tr style="border-bottom:1px solid #f3e8ff;">
-                <td style="padding:8px 10px;font-weight:600;color:#475569;">${t.date}</td>
+                <td style="padding:8px 10px;font-weight:600;color:#475569;">${formatFinanceDate(t.date)}</td>
                 <td style="padding:8px 10px;">${isExpense ? '📉' : '📈'}</td>
                 <td style="padding:8px 10px;color:#334155;">${catName}${subcatHtml}${commentHtml}</td>
                 <td style="padding:8px 10px;text-align:right;font-weight:700;${isExpense ? 'color:#dc2626;' : 'color:#16a34a;'}">${isExpense ? '−' : '+'}${Math.abs(t.amount).toLocaleString('ru-RU')} ₽</td>
@@ -3056,7 +3066,7 @@ function renderFinanceSavings() {
             const sign = s.amount >= 0 ? '+' : '';
             const color = s.amount >= 0 ? '#16a34a' : '#dc2626';
             return `<tr style="border-bottom:1px solid #f3e8ff;">
-                <td style="padding:8px 10px;font-weight:600;color:#475569;">${s.date}</td>
+                <td style="padding:8px 10px;font-weight:600;color:#475569;">${formatFinanceDate(s.date)}</td>
                 <td style="padding:8px 10px;color:#334155;">🎯 ${s.goal}</td>
                 <td style="padding:8px 10px;text-align:right;font-weight:700;color:${color};">${sign}${s.amount.toLocaleString('ru-RU')} ₽</td>
                 <td style="padding:8px 10px;text-align:center;">
@@ -3181,8 +3191,9 @@ function renderFinanceCategories() {
                         <div style="height:100%;width:${pct}%;background:${barColor};border-radius:4px;"></div>
                     </div>` : '<span style="color:#94a3b8;font-size:11px;">без лимита</span>'}
                 </td>
-                <td style="padding:8px 10px;text-align:center;">
+                <td style="padding:8px 10px;text-align:center;white-space:nowrap;">
                     <button onclick="openCategoryModal('${c.id}')" style="padding:3px 8px;font-size:11px;background:white;color:#7e22ce;border:1px solid #d8b4fe;border-radius:4px;cursor:pointer;">✏️</button>
+                    <button onclick="deleteFinanceItem('category','${c.id}')" style="padding:3px 8px;font-size:11px;background:white;color:#dc2626;border:1px solid #fecaca;border-radius:4px;cursor:pointer;">🗑</button>
                 </td>
             </tr>`;
         }).join('')}
