@@ -131,10 +131,6 @@
     }
     .week-select:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,0.15); }
     .week-actions { display: flex; gap: 8px; }
-    .week-action-btn {
-        padding: 8px 14px; border-radius: 6px; font-size: 12px;
-        font-weight: 600; cursor: pointer; border: 1px solid; font-family: inherit; transition: all 0.2s;
-    }
     .week-action-btn.delete { background: white; color: #dc2626; border-color: #fca5a5; }
     .week-action-btn.delete:hover { background: #fee2e2; }
     .rule-box {
@@ -489,14 +485,12 @@
                 </div>
             </div>
             <div class="toolbar">
-                <button class="btn primary" onclick="openNutritionModal()">📥 Импортировать меню</button>
+                <button class="btn primary" onclick="openNutritionModal()">📥 Импортировать меню (JSON)</button>
                 <button class="btn" onclick="createEmptyWeek()">➕ Пустая неделя</button>
                 <button class="btn" onclick="exportAllData()">💾 Экспорт всего</button>
                 <button class="btn" onclick="document.getElementById('import-all-file').click()">📂 Импорт всего</button>
                 <button class="btn danger" onclick="resetAllData()">🗑 Очистить всё</button>
                 <input type="file" id="import-all-file" accept=".json" style="display:none;" onchange="importAllData(this)">
-                <button class="btn primary" onclick="document.getElementById('import-fatsecret-pdf').click()">📥 Импорт PDF</button>
-                <input type="file" id="import-fatsecret-pdf" accept=".pdf" style="display:none;" onchange="importFatSecretPDF(this)">
             </div>
             <div class="rule-box">
                 <b>🔄 Правило перекусов:</b><br>
@@ -713,7 +707,7 @@
 
 <script>
 // ============================================
-// 🔥 FIREBASE CONFIGURATION (ЗАМЕНИТЕ ЭТИ ДАННЫЕ!)
+// 🔥 FIREBASE CONFIGURATION
 // ============================================
 const firebaseConfig = {
   apiKey: "AIzaSyDvOH_VAzHBJKeXiZ8adIHsaJ6C3aGurcE",
@@ -725,7 +719,6 @@ const firebaseConfig = {
   measurementId: "G-CYSH82Z6YJ"
 };
 
-// Инициализация Firebase
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const diaryRef = db.ref('lera_diary_v1');
@@ -737,7 +730,7 @@ let currentKbjuMetric = 'cal';
 let currentTrainMetric = 'weight';
 const formStarsData = {};
 let syncTimeout = null;
-let isInitialLoad = true; // Флаг первой загрузки
+let isInitialLoad = true;
 
 const mealIcons = {
     breakfast:"З", lunch:"О", dinner:"У", snack:"П", snack1:"П1", snack2:"П2",
@@ -760,14 +753,10 @@ function showSyncStatus(message, type = 'success') {
 
 function syncToCloud() {
     if(syncTimeout) clearTimeout(syncTimeout);
-    
-    // Показываем статус только если прошло больше 2 секунд с последнего ввода
-    // Это чтобы не мелькало "Сохранение..." каждую секунду
     const statusEl = document.getElementById('sync-status');
     if(statusEl && !statusEl.classList.contains('visible')) {
         showSyncStatus('💾 Сохранение...', 'syncing');
     }
-    
     syncTimeout = setTimeout(() => {
         const data = {
             nutrition: nutritionData,
@@ -775,7 +764,6 @@ function syncToCloud() {
             progress: JSON.parse(localStorage.getItem('exercise-progress') || '{}'),
             lastUpdated: Date.now()
         };
-        
         diaryRef.set(data)
             .then(() => {
                 console.log('✅ Data saved to Firebase');
@@ -785,29 +773,25 @@ function syncToCloud() {
                 console.error('❌ Firebase error:', error);
                 showSyncStatus('❌ Ошибка сохранения', 'error');
             });
-    }, 5000); // Увеличили задержку до 3 секунд (было 1000)
+    }, 5000);
 }
 
 function loadFromCloud() {
     showSyncStatus('📡 Загрузка...', 'syncing');
-    
     diaryRef.once('value')
         .then((snapshot) => {
             const data = snapshot.val();
             if(data && data.nutrition && data.nutrition.weeks && data.nutrition.weeks.length > 0) {
-                // Данные есть в Firebase
                 nutritionData = data.nutrition;
                 if(data.workouts) workouts = data.workouts;
                 if(data.progress) localStorage.setItem('exercise-progress', JSON.stringify(data.progress));
                 console.log('✅ Data loaded from Firebase');
                 showSyncStatus('✅ Данные загружены!', 'success');
             } else {
-                // Нет данных в Firebase - пробуем localStorage
                 console.log('ℹ️ No valid data in Firebase, checking localStorage');
                 loadLocalFallback();
                 showSyncStatus('ℹ️ Использованы локальные данные', 'syncing');
             }
-            
             isInitialLoad = false;
             renderNutritionAll();
             renderTrainAll();
@@ -830,9 +814,7 @@ function loadLocalFallback() {
             if(parsed && parsed.weeks && parsed.weeks.length > 0) {
                 nutritionData = parsed;
             }
-        } catch(e) { 
-            console.error('Error parsing localStorage nutrition:', e);
-        } 
+        } catch(e) { console.error('Error parsing localStorage nutrition:', e); } 
     }
     const rawTrain = localStorage.getItem('workouts-data');
     if(rawTrain) { 
@@ -841,22 +823,17 @@ function loadLocalFallback() {
             if(parsed && parsed.workouts) {
                 workouts = parsed.workouts;
             }
-        } catch(e) {
-            console.error('Error parsing localStorage workouts:', e);
-        } 
+        } catch(e) { console.error('Error parsing localStorage workouts:', e); } 
     }
 }
 
-// Слушатель изменений в реальном времени
 diaryRef.on('value', (snapshot) => {
-    if(isInitialLoad) return; // Пропускаем первую загрузку
-    
+    if(isInitialLoad) return;
     const data = snapshot.val();
     if(data && data.nutrition && data.nutrition.weeks) {
         nutritionData = data.nutrition;
         if(data.workouts) workouts = data.workouts;
         if(data.progress) localStorage.setItem('exercise-progress', JSON.stringify(data.progress));
-        
         renderNutritionAll();
         renderTrainAll();
     }
@@ -1099,12 +1076,9 @@ function renderDays() {
         container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📘</div><div class="empty-state-title">Нет недель</div><div class="empty-state-text">Импортируйте меню или создайте пустую неделю</div></div>`;
         return;
     }
-    
-    // Проверяем что currentWeekId валиден
     if(!nutritionData.currentWeekId || !nutritionData.weeks.find(w => w.id === nutritionData.currentWeekId)) {
         nutritionData.currentWeekId = nutritionData.weeks[0].id;
     }
-    
     const week = nutritionData.weeks.find(w => w.id === nutritionData.currentWeekId);
     if(!week) return;
     
@@ -1188,59 +1162,6 @@ function renderMeal(m, di, mi, weekId) {
     const starsVal = parseInt(getWeekData(weekId, `stars-${di}-${mi}`) || 0);
     const commentVal = getWeekData(weekId, `comment-${di}-${mi}`) || '';
     
-    // === ТАБЛИЦА ПРОДУКТОВ ===
-    const itemsJson = getWeekData(weekId, `items-${di}-${mi}`);
-    let itemsTableHtml = '';
-    
-    if (itemsJson) {
-        try {
-            const items = JSON.parse(itemsJson);
-            if (items.length > 0) {
-                // Уникальный ID для контейнера таблицы, чтобы он не сбивался
-                const containerId = `items-container-${weekId}-${di}-${mi}`;
-                
-                itemsTableHtml = `
-                    <div style="margin-top:8px;">
-                        <button onclick="toggleItems('${containerId}')" 
-                                style="font-size:11px; padding:2px 6px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:4px; cursor:pointer; color:#1e3a8a;">
-                            📋 Список продуктов (${items.length})
-                        </button>
-                        <div id="${containerId}" class="hidden" style="margin-top:5px; font-size:11px; background:#f8fafc; padding:8px; border-radius:6px; border:1px solid #e2e8f0;">
-                            <table style="width:100%; border-collapse:collapse; text-align:left;">
-                                <thead>
-                                    <tr style="border-bottom:2px solid #bfdbfe; color:#1e40af;">
-                                        <th style="padding:2px; width:35%;">Продукт</th>
-                                        <th style="padding:2px; width:15%;">Вес</th>
-                                        <th style="padding:2px; width:10%;">К</th>
-                                        <th style="padding:2px; width:10%;">Б</th>
-                                        <th style="padding:2px; width:10%;">Ж</th>
-                                        <th style="padding:2px; width:10%;">У</th>
-                                        <th style="padding:2px; width:10%;"></th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${items.map((item, idx) => `
-                                        <tr style="border-bottom:1px solid #e2e8f0;">
-                                            <td style="padding:2px;">${item.name}</td>
-                                            <td style="padding:2px;"><input type="text" value="${item.weight}" style="width:100%; border:none; background:transparent; font-size:11px;" onchange="updateItemWeight('${weekId}', ${di}, ${mi}, ${idx}, this.value)"></td>
-                                            <td style="padding:2px;"><input type="number" value="${Math.round(item.cal)}" style="width:100%; border:none; background:transparent; font-size:11px; text-align:right;" onchange="updateItemMacro('${weekId}', ${di}, ${mi}, ${idx}, 'cal', this.value)"></td>
-                                            <td style="padding:2px;"><input type="number" value="${Math.round(item.prot)}" style="width:100%; border:none; background:transparent; font-size:11px; text-align:right;" onchange="updateItemMacro('${weekId}', ${di}, ${mi}, ${idx}, 'prot', this.value)"></td>
-                                            <td style="padding:2px;"><input type="number" value="${Math.round(item.fat)}" style="width:100%; border:none; background:transparent; font-size:11px; text-align:right;" onchange="updateItemMacro('${weekId}', ${di}, ${mi}, ${idx}, 'fat', this.value)"></td>
-                                            <td style="padding:2px;"><input type="number" value="${Math.round(item.carb)}" style="width:100%; border:none; background:transparent; font-size:11px; text-align:right;" onchange="updateItemMacro('${weekId}', ${di}, ${mi}, ${idx}, 'carb', this.value)"></td>
-                                            <td style="padding:2px; text-align:center;"><button onclick="deleteItem('${weekId}', ${di}, ${mi}, ${idx})" style="background:none; border:none; cursor:pointer; color:#ef4444;">🗑</button></td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                            <button onclick="addItem('${weekId}', ${di}, ${mi})" style="margin-top:5px; font-size:10px; background:#ecfdf5; border:1px solid #a7f3d0; border-radius:4px; cursor:pointer; color:#065f46; width:100%;">➕ Добавить продукт</button>
-                        </div>
-                    </div>
-                `;
-            }
-        } catch(e) {}
-    }
-    // ================================
-
     const trackerHtml = isPrep ? '' : `
         <div class="meal-tracker">
             <div class="tracker-row">
@@ -1254,7 +1175,6 @@ function renderMeal(m, di, mi, weekId) {
             </div>
             <textarea class="meal-comment" data-week="${weekId}" data-key="comment-${di}-${mi}" oninput="saveNutrition()" placeholder="💬 Комментарий...">${commentVal}</textarea>
         </div>
-        ${itemsTableHtml}
     `;
     
     return `
@@ -1266,12 +1186,6 @@ function renderMeal(m, di, mi, weekId) {
             </div>
             <div class="meal-content">${content}${trackerHtml}</div>
         </div>`;
-}
-
-// Функция переключения видимости без перерисовки всего дня
-function toggleItems(id) {
-    const el = document.getElementById(id);
-    if (el) el.classList.toggle('hidden');
 }
 
 function getWeekData(weekId, key) {
@@ -1299,33 +1213,24 @@ function setStars(el, rating) {
 
 function updateTotals(weekId, di) {
     let s = { cal: 0, prot: 0, fat: 0, carb: 0 };
-    
-    // Проходим по всем полям КБЖУ этого дня и считаем сумму
     document.querySelectorAll(`input[data-week="${weekId}"][data-day="${di}"][data-field]`).forEach(inp => {
         const f = inp.dataset.field;
         const v = parseFloat(inp.value) || 0;
         if(s[f] !== undefined) s[f] += v;
-        
-        // Сразу обновляем данные в объекте nutritionData, чтобы они были актуальны
         const week = nutritionData.weeks.find(w => w.id === weekId);
         if(week && week.data) {
             week.data[`m-${inp.dataset.day}-${inp.dataset.meal}-${inp.dataset.field}`] = inp.value;
         }
     });
-
-    // Обновляем только текст итогов на экране
     ['cal','prot','fat','carb'].forEach(f => {
         const el = document.getElementById(`sum-${f}-${weekId}-${di}`);
         if(el) el.textContent = Math.round(s[f]);
     });
-    
-    // Запускаем отложенное сохранение (оно само подождет 5 секунд)
     syncToCloud();
 }
 
 // === ДАШБОРД ===
 function renderDashboard() { 
-    console.log('Rendering dashboard...');
     renderWeightChart(); 
     renderKbjuChart(); 
     renderWeeklyAvg(); 
@@ -1742,24 +1647,16 @@ function renderTrainHistoryBlock(entries, values, unit) {
 function saveNutrition() {
     const week = nutritionData.weeks.find(w => w.id === nutritionData.currentWeekId);
     if(!week) return;
-    
-    // Если объекта data еще нет, создаем его
     if(!week.data) week.data = {};
-    
-    // Собираем все данные из полей ввода
     document.querySelectorAll(`[data-week="${week.id}"]`).forEach(el => {
         const key = el.dataset.key;
         if(!key) return;
         let value = el.type === 'checkbox' ? el.checked : el.value;
         if(value !== undefined && value !== '') week.data[key] = value;
     });
-    
-    // Дополнительно собираем данные из полей КБЖУ (на всякий случай)
     document.querySelectorAll(`input[data-week="${week.id}"][data-field]`).forEach(inp => {
         if(inp.value) week.data[`m-${inp.dataset.day}-${inp.dataset.meal}-${inp.dataset.field}`] = inp.value;
     });
-    
-    // Запускаем отложенное сохранение
     syncToCloud();
 }
    
@@ -1836,353 +1733,10 @@ function resetAllData() {
     }
 }
 
-// === ИМПОРТ ИЗ FATSECRET PDF ===
-async function importFatSecretPDF(input) {
-    const file = input.files[0];
-    if (!file) return;
-
-    // Подключаем pdf.js динамически, если еще не подключен
-    if (typeof pdfjsLib === 'undefined') {
-        const script = document.createElement('script');
-        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-        script.onload = () => {
-            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-            processPDF(file);
-        };
-        document.head.appendChild(script);
-    } else {
-        processPDF(file);
-    }
-    input.value = '';
+function saveTrainings() {
+    syncToCloud();
 }
 
-async function processPDF(file) {
-    try {
-        const arrayBuffer = await file.arrayBuffer();
-        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-        
-        let fullText = '';
-        for (let i = 1; i <= pdf.numPages; i++) {
-            const page = await pdf.getPage(i);
-            const textContent = await page.getTextContent();
-            const pageText = textContent.items.map(item => item.str).join(' ');
-            fullText += pageText + '\n';
-        }
-
-        parseFatSecretText(fullText);
-    } catch (e) {
-        console.error('PDF Error:', e);
-        alert('❌ Ошибка чтения PDF: ' + e.message);
-    }
-}
-
-function parseFatSecretText(text) {
-    // 1. Ищем дату
-    const dateMatch = text.match(/([а-яё]+),\s*([а-яё]+)\s+(\d+),\s*(\d{4})/i);
-    if (!dateMatch) { alert('❌ Не удалось найти дату в PDF.'); return; }
-    
-    const months = {'января':'01','февраля':'02','марта':'03','апреля':'04','мая':'05','июня':'06','июля':'07','августа':'08','сентября':'09','октября':'10','ноября':'11','декабря':'12'};
-    const m = months[dateMatch[2].toLowerCase()];
-    if (!m) { alert('❌ Неизвестный месяц.'); return; }
-    const targetDate = `${dateMatch[4]}-${m}-${dateMatch[3].padStart(2,'0')}`;
-
-    // 2. Блочная логика для PDF
-    const mealHeaders = ['Завтрак', 'Обед', 'Ужин', 'Перекус/Другое'];
-    const blocks = {};
-    let currentBlock = null;
-    
-    // Разбиваем текст на слова/токены, но сохраняем порядок
-    // В PDF текст идет потоком: "Завтрак мой кофе 51 1,55 ..."
-    // Нам нужно найти позиции заголовков
-    const headerPositions = [];
-    mealHeaders.forEach(h => {
-        const idx = text.indexOf(h);
-        if (idx !== -1) headerPositions.push({ name: h, pos: idx });
-    });
-    
-    // Сортируем по позиции в тексте
-    headerPositions.sort((a, b) => a.pos - b.pos);
-    
-    // Извлекаем блоки
-    for (let i = 0; i < headerPositions.length; i++) {
-        const start = headerPositions[i].pos + headerPositions[i].name.length;
-        const end = (i + 1 < headerPositions.length) ? headerPositions[i+1].pos : text.indexOf('Всего', start);
-        const blockText = text.substring(start, end > start ? end : undefined);
-        blocks[headerPositions[i].name] = blockText;
-    }
-
-    // 3. Парсим каждый блок
-    const mealsData = {};
-    const mealItems = {};
-    const mealMap = { 'Завтрак': 'breakfast', 'Обед': 'lunch', 'Ужин': 'dinner', 'Перекус/Другое': 'snack' };
-
-    for (const [headerName, blockText] of Object.entries(blocks)) {
-        const appType = mealMap[headerName];
-        if (!appType) continue;
-
-        mealItems[appType] = [];
-        let blockCal = 0, blockProt = 0, blockFat = 0, blockCarb = 0;
-
-        // В PDF числа идут через пробелы или запятые
-        // Паттерн продукта: Название ... Число(Кал) Число(Жир) ... Число(Угл) ... Число(Белк)
-        // Это сложно парсить регексом из-за названий с цифрами. 
-        // Используем эвристику: ищем последовательности чисел
-        
-        // Упрощенный подход: разбиваем по словам и ищем паттерны
-        const tokens = blockText.split(/\s+/);
-        let currentProduct = { name: '', cal: 0, fat: 0, carb: 0, prot: 0, weight: '' };
-        let numberBuffer = [];
-        
-        for (let t of tokens) {
-            // Очищаем токен от мусора
-            t = t.replace(/[(),]/g, '').trim();
-            if (!t) continue;
-            
-            // Если это число
-            if (/^\d+[.,]?\d*$/.test(t)) {
-                numberBuffer.push(parseFloat(t.replace(',', '.')));
-            } else if (t.match(/^\d+г$/)) {
-                // Это вес
-                currentProduct.weight = t;
-            } else if (t === 'порция' || t === 'шт') {
-                // Единица измерения, пропускаем
-                continue;
-            } else {
-                // Это слово названия
-                if (numberBuffer.length >= 4 && currentProduct.name) {
-                    // Сохраняем предыдущий продукт
-                    currentProduct.cal = numberBuffer[0] || 0;
-                    currentProduct.fat = numberBuffer[1] || 0;
-                    currentProduct.carb = numberBuffer[3] || 0; // Индекс 3 = Углеводы (после Кал, Жир, Н/жир)
-                    currentProduct.prot = numberBuffer[6] || 0; // Индекс 6 = Белки
-                    
-                    blockCal += currentProduct.cal;
-                    blockProt += currentProduct.prot;
-                    blockFat += currentProduct.fat;
-                    blockCarb += currentProduct.carb;
-                    
-                    mealItems[appType].push({...currentProduct});
-                    numberBuffer = [];
-                }
-                currentProduct.name += (currentProduct.name ? ' ' : '') + t;
-            }
-        }
-        
-        // Сохраняем последний продукт в блоке
-        if (numberBuffer.length >= 4 && currentProduct.name) {
-            currentProduct.cal = numberBuffer[0] || 0;
-            currentProduct.fat = numberBuffer[1] || 0;
-            currentProduct.carb = numberBuffer[3] || 0;
-            currentProduct.prot = numberBuffer[6] || 0;
-            
-            blockCal += currentProduct.cal;
-            blockProt += currentProduct.prot;
-            blockFat += currentProduct.fat;
-            blockCarb += currentProduct.carb;
-            
-            mealItems[appType].push({...currentProduct});
-        }
-
-        mealsData[appType] = { cal: blockCal, prot: blockProt, fat: blockFat, carb: blockCarb };
-    }
-
-    // 4. Сохранение в неделю
-    const week = nutritionData.weeks.find(w => {
-        const start = new Date(w.startDate);
-        const end = new Date(w.endDate);
-        const current = new Date(targetDate);
-        start.setHours(0,0,0,0); end.setHours(23,59,59,999); current.setHours(12,0,0,0);
-        return current >= start && current <= end;
-    });
-
-    if (!week) { alert(`⚠️ Неделя для ${targetDate} не найдена.`); return; }
-    const dayIndex = getDayIndexInWeek(week, targetDate);
-    if (dayIndex === -1) return;
-
-    const typeToIndex = { 'breakfast': 0, 'lunch': 1, 'dinner': 2, 'snack': 3 };
-    
-    Object.keys(mealsData).forEach(type => {
-        const data = mealsData[type];
-        const idx = typeToIndex[type];
-        
-        week.data[`m-${dayIndex}-${idx}-cal`] = Math.round(data.cal);
-        week.data[`m-${dayIndex}-${idx}-prot`] = Math.round(data.prot);
-        week.data[`m-${dayIndex}-${idx}-fat`] = Math.round(data.fat);
-        week.data[`m-${dayIndex}-${idx}-carb`] = Math.round(data.carb);
-        
-        if (mealItems[type] && mealItems[type].length > 0) {
-            week.data[`items-${dayIndex}-${idx}`] = JSON.stringify(mealItems[type]);
-        }
-    });
-
-    saveNutrition();
-    renderDays(); 
-    alert(`✅ Данные за ${targetDate} успешно импортированы из PDF!`);
-}
-   
-function convertFatSecretDate(day, monthWord, year) {
-    const months = {
-        'января': '01', 'февраля': '02', 'марта': '03', 'апреля': '04',
-        'мая': '05', 'июня': '06', 'июля': '07', 'августа': '08',
-        'сентября': '09', 'октября': '10', 'ноября': '11', 'декабря': '12'
-    };
-    const mKey = monthWord.toLowerCase();
-    const monthNum = months[mKey];
-    if (monthNum) return `${year}-${monthNum}-${day.padStart(2, '0')}`;
-    return null;
-}
-
-function getDayIndexInWeek(week, dateStr) {
-    const start = new Date(week.startDate);
-    const target = new Date(dateStr);
-    start.setHours(0,0,0,0);
-    target.setHours(0,0,0,0);
-    const diffTime = target - start;
-    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-    if (diffDays >= 0 && diffDays < week.menu.length) return diffDays;
-    return -1;
-}
-
-// === РЕДАКТИРОВАНИЕ СПИСКА ПРОДУКТОВ ===
-function updateItemWeight(weekId, di, mi, idx, value) {
-    const week = nutritionData.weeks.find(w => w.id === weekId);
-    if (!week) return;
-    
-    const key = `items-${di}-${mi}`;
-    if (week.data[key]) {
-        const items = JSON.parse(week.data[key]);
-        if (items[idx]) {
-            items[idx].weight = value;
-            week.data[key] = JSON.stringify(items);
-            saveNutrition();
-        }
-    }
-}
-
-function updateItemMacro(weekId, di, mi, idx, field, value) {
-    const week = nutritionData.weeks.find(w => w.id === weekId);
-    if (!week) return;
-    
-    const key = `items-${di}-${mi}`;
-    if (week.data[key]) {
-        const items = JSON.parse(week.data[key]);
-        if (items[idx]) {
-            items[idx][field] = parseFloat(value) || 0;
-            week.data[key] = JSON.stringify(items);
-            
-            // Пересчитываем итоги приема пищи
-            recalcMealTotals(week, di, mi);
-            saveNutrition();
-        }
-    }
-}
-
-function recalcMealTotals(week, di, mi) {
-    const key = `items-${di}-${mi}`;
-    if (week.data[key]) {
-        const items = JSON.parse(week.data[key]);
-        let s = { cal: 0, prot: 0, fat: 0, carb: 0 };
-        items.forEach(item => {
-            s.cal += item.cal || 0;
-            s.prot += item.prot || 0;
-            s.fat += item.fat || 0;
-            s.carb += item.carb || 0;
-        });
-        
-        week.data[`m-${di}-${mi}-cal`] = Math.round(s.cal);
-        week.data[`m-${di}-${mi}-prot`] = Math.round(s.prot);
-        week.data[`m-${di}-${mi}-fat`] = Math.round(s.fat);
-        week.data[`m-${di}-${mi}-carb`] = Math.round(s.carb);
-        
-        // Обновляем отображение итогов без полной перерисовки
-        ['cal','prot','fat','carb'].forEach(f => {
-            const el = document.getElementById(`sum-${f}-${week.id}-${di}`);
-            if(el) el.textContent = Math.round(s[f]);
-        });
-    }
-}
-
-// === УПРАВЛЕНИЕ СПИСКОМ ПРОДУКТОВ ===
-function deleteItem(weekId, di, mi, idx) {
-    const week = nutritionData.weeks.find(w => w.id === weekId);
-    if (!week) return;
-    const key = `items-${di}-${mi}`;
-    if (week.data[key]) {
-        const items = JSON.parse(week.data[key]);
-        items.splice(idx, 1);
-        week.data[key] = JSON.stringify(items);
-        recalcMealTotals(week, di, mi);
-        saveNutrition();
-        renderDays(); // Здесь перерисовка нужна, так как количество строк изменилось
-    }
-}
-
-function addItem(weekId, di, mi) {
-    const week = nutritionData.weeks.find(w => w.id === weekId);
-    if (!week) return;
-    const key = `items-${di}-${mi}`;
-    let items = [];
-    if (week.data[key]) items = JSON.parse(week.data[key]);
-    items.push({ name: "Новый продукт", cal: 0, prot: 0, fat: 0, carb: 0, weight: "" });
-    week.data[key] = JSON.stringify(items);
-    recalcMealTotals(week, di, mi);
-    saveNutrition();
-    renderDays();
-}
-
-function updateItemWeight(weekId, di, mi, idx, value) {
-    const week = nutritionData.weeks.find(w => w.id === weekId);
-    if (!week) return;
-    const key = `items-${di}-${mi}`;
-    if (week.data[key]) {
-        const items = JSON.parse(week.data[key]);
-        if (items[idx]) {
-            items[idx].weight = value;
-            week.data[key] = JSON.stringify(items);
-            saveNutrition();
-        }
-    }
-}
-
-function updateItemMacro(weekId, di, mi, idx, field, value) {
-    const week = nutritionData.weeks.find(w => w.id === weekId);
-    if (!week) return;
-    const key = `items-${di}-${mi}`;
-    if (week.data[key]) {
-        const items = JSON.parse(week.data[key]);
-        if (items[idx]) {
-            items[idx][field] = parseFloat(value) || 0;
-            week.data[key] = JSON.stringify(items);
-            recalcMealTotals(week, di, mi);
-            saveNutrition();
-        }
-    }
-}
-
-function recalcMealTotals(week, di, mi) {
-    const key = `items-${di}-${mi}`;
-    if (week.data[key]) {
-        const items = JSON.parse(week.data[key]);
-        let s = { cal: 0, prot: 0, fat: 0, carb: 0 };
-        items.forEach(item => {
-            s.cal += item.cal || 0;
-            s.prot += item.prot || 0;
-            s.fat += item.fat || 0;
-            s.carb += item.carb || 0;
-        });
-        week.data[`m-${di}-${mi}-cal`] = Math.round(s.cal);
-        week.data[`m-${di}-${mi}-prot`] = Math.round(s.prot);
-        week.data[`m-${di}-${mi}-fat`] = Math.round(s.fat);
-        week.data[`m-${di}-${mi}-carb`] = Math.round(s.carb);
-        
-        // Обновляем только цифры итогов, не трогая таблицу
-        ['cal','prot','fat','carb'].forEach(f => {
-            const el = document.getElementById(`sum-${f}-${week.id}-${di}`);
-            if(el) el.textContent = Math.round(s[f]);
-        });
-    }
-}
-   
 // === СТАРТ ===
 loadFromCloud();
 </script>
