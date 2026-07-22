@@ -1085,7 +1085,12 @@ function renderDays() {
     const navHtml = `
         <div class="days-nav">
             <span class="days-nav-label">📅 Перейти:</span>
-            ${week.menu.map((day, di) => `<button class="day-nav-btn ${day.training?'training':''}" onclick="scrollToDay(${di})">${day.day.slice(0,2)} ${day.date}</button>`).join('')}
+            ${week.menu.map((day, di) => {
+                // Словарь для красивых сокращений
+                const dayShort = { 'Понедельник': 'Пн', 'Вторник': 'Вт', 'Среда': 'Ср', 'Четверг': 'Чт', 'Пятница': 'Пт', 'Суббота': 'Сб', 'Воскресенье': 'Вс' };
+                const shortName = dayShort[day.day] || day.day.slice(0, 2);
+                return `<button class="day-nav-btn ${day.training?'training':''}" onclick="scrollToDay(${di})">${shortName} ${day.date}</button>`;
+            }).join('')}
             <div class="nav-actions">
                 <button class="nav-action-btn" onclick="toggleAllDays()">🔽 Все</button>
                 <button class="nav-action-btn" onclick="exportMenuAsText()">📥 .txt</button>
@@ -1155,8 +1160,18 @@ function renderMeal(m, di, mi, weekId) {
     const prepClass = isPrep ? 'prep-block' : '';
     const showTime = !isPrep;
     let content = '';
-    if(m.items) content=`<ul>${m.items.map(i=>`<li>${i}</li>`).join('')}</ul>`;
-    else if(m.choices) content=m.choices.map(c=>`<div class="or-choice"><span class="or-label">${c.label}</span> ${c.items.join(', ')}</div>`).join('');
+    // Проверяем, можно ли редактировать этот прием пищи
+    const isEditable = (m.type === 'breakfast' || m.type === 'lunch' || m.type === 'dinner');
+    
+    if (isEditable) {
+        // Если это Завтрак, Обед или Ужин — показываем текстовое поле
+        const savedDesc = getWeekData(weekId, `desc-${di}-${mi}`) || '';
+        content = `<textarea class="meal-desc-input" data-week="${weekId}" data-key="desc-${di}-${mi}" oninput="saveNutrition()" placeholder="Опиши, что съела..." style="width:100%; min-height:60px; padding:8px; border:1px solid #cbd5e1; border-radius:6px; font-family:inherit; font-size:13px; resize:vertical; margin-bottom:8px; background:#f8fafc;">${savedDesc}</textarea>`;
+    } else {
+        // Для перекусов и остального оставляем старый вид (список или варианты)
+        if(m.items) content=`<ul>${m.items.map(i=>`<li>${i}</li>`).join('')}</ul>`;
+        else if(m.choices) content=m.choices.map(c=>`<div class="or-choice"><span class="or-label">${c.label}</span> ${c.items.join(', ')}</div>`).join('');
+    }
     
     const timeVal = getWeekData(weekId, `time-${di}-${mi}`) || '';
     const starsVal = parseInt(getWeekData(weekId, `stars-${di}-${mi}`) || 0);
