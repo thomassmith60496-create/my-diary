@@ -1160,13 +1160,24 @@ function renderMeal(m, di, mi, weekId) {
     const prepClass = isPrep ? 'prep-block' : '';
     const showTime = !isPrep;
     let content = '';
-    // Проверяем, можно ли редактировать этот прием пищи
     const isEditable = (m.type === 'breakfast' || m.type === 'lunch' || m.type === 'dinner');
     
     if (isEditable) {
-        // Если это Завтрак, Обед или Ужин — показываем текстовое поле
-        const savedDesc = getWeekData(weekId, `desc-${di}-${mi}`) || '';
-        content = `<textarea class="meal-desc-input" data-week="${weekId}" data-key="desc-${di}-${mi}" oninput="saveNutrition()" placeholder="Опиши, что съела..." style="width:100%; min-height:60px; padding:8px; border:1px solid #cbd5e1; border-radius:6px; font-family:inherit; font-size:13px; resize:vertical; margin-bottom:8px; background:#f8fafc;">${savedDesc}</textarea>`;
+        // 1. Сначала проверяем, есть ли уже сохраненный тобой текст
+        let displayText = getWeekData(weekId, `desc-${di}-${mi}`);
+        
+        // 2. Если ты еще не редактировала, берем текст из импортированного меню по умолчанию
+        if (!displayText) {
+            if (m.items) {
+                displayText = m.items.join('\n'); // Каждый продукт с новой строки
+            } else if (m.choices) {
+                displayText = m.choices.map(c => `[${c.label}] ${c.items.join(', ')}`).join('\n');
+            } else {
+                displayText = '';
+            }
+        }
+        
+        content = `<textarea class="meal-desc-input" data-week="${weekId}" data-key="desc-${di}-${mi}" oninput="saveNutrition()" placeholder="Опиши, что съела..." style="width:100%; min-height:60px; padding:8px; border:1px solid #cbd5e1; border-radius:6px; font-family:inherit; font-size:13px; resize:vertical; margin-bottom:8px; background:#f8fafc; color:#1e293b;">${displayText}</textarea>`;
     } else {
         // Для перекусов и остального оставляем старый вид (список или варианты)
         if(m.items) content=`<ul>${m.items.map(i=>`<li>${i}</li>`).join('')}</ul>`;
