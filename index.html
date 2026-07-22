@@ -599,9 +599,8 @@
         </div>
         <div class="workouts-list" id="workouts-list"></div>
     </div>
-</div>
 
-   <div class="main-tab-content" id="main-tab-finance">
+    <div class="main-tab-content" id="main-tab-finance">
         <header style="background: linear-gradient(135deg, #7e22ce 0%, #a855f7 100%); box-shadow: 0 10px 30px rgba(168, 85, 247, 0.25);">
            <h1>💰 ФИНАНСЫ</h1>
            <div class="subtitle">Учёт доходов, расходов и накоплений</div>
@@ -886,7 +885,7 @@ function syncToCloud() {
             planned: financeData.planned,
             categories: financeData.categories,
             lastUpdated: Date.now()
-        });
+        })
             .then(() => {
                 console.log('✅ Data saved to Firebase');
                 showSyncStatus('✅ Сохранено!', 'success');
@@ -1886,7 +1885,7 @@ function saveNutrition() {
     document.querySelectorAll(`[data-week="${week.id}"]`).forEach(el => {
         const key = el.dataset.key;
         if(!key) return;
-        let value = el.type === 'checkbox' ? el.checked : el.value;
+        let value = el.type === 'checkbox' ? (el.checked ? '1' : '0') : el.value;
         week.data[key] = value;
     });
     
