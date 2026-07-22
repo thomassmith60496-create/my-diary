@@ -2327,8 +2327,6 @@ function updatePlanSubcategoryOptions() {
 
 // --- SUBCATEGORY TAG MANAGEMENT ---
 
-let _subcategoryTags = [];
-
 function addSubcategoryTag() {
     const input = document.getElementById('f-cat-new-subcat');
     const val = input.value.trim();
@@ -2977,7 +2975,7 @@ function renderFinanceCategories() {
                 <td style="padding:8px 10px;font-weight:600;color:#475569;">${c.name}${subcatsHtml}</td>
                 <td style="padding:8px 10px;text-align:right;color:#475569;">${limit > 0 ? limit.toLocaleString('ru-RU') + ' ₽' : '—'}</td>
                 <td style="padding:8px 10px;text-align:right;font-weight:600;color:#dc2626;">${spent.toLocaleString('ru-RU')} ₽</td>
-                <td style="padding:8px 10px;text-align:right;font-weight:600;color:${remaining >= 0 ? '#16a34a' : '#dc2626};">${limit > 0 ? remaining.toLocaleString('ru-RU') + ' ₽' : '—'}</td>
+                <td style="padding:8px 10px;text-align:right;font-weight:600;color:${remaining >= 0 ? '#16a34a' : '#dc2626'};">${limit > 0 ? remaining.toLocaleString('ru-RU') + ' ₽' : '—'}</td>
                 <td style="padding:8px 10px;text-align:center;min-width:120px;">
                     ${limit > 0 ? `<div style="height:8px;background:#e9d5ff;border-radius:4px;overflow:hidden;max-width:120px;margin:0 auto;">
                         <div style="height:100%;width:${pct}%;background:${barColor};border-radius:4px;"></div>
