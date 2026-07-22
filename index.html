@@ -818,6 +818,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const diaryRef = db.ref('lera_diary_v1');
+const financeRef = db.ref('lera_finance_v1');
 
 let nutritionData = { weeks: [], currentWeekId: null };
 let workouts = [];
@@ -827,6 +828,21 @@ let currentTrainMetric = 'weight';
 const formStarsData = {};
 let syncTimeout = null;
 let isInitialLoad = true;
+let financeData = {
+    transactions: [], // Все операции (доходы/расходы)
+    savings: [], // Накопления
+    planned: [], // Планируемые расходы
+    categories: [
+        // Категории по умолчанию
+        { id: 'cat-food', name: 'Еда', limit: 20000, subcategories: ['Продукты', 'Доставка', 'Фастфуд', 'Кафе'] },
+        { id: 'cat-transport', name: 'Транспорт', limit: 3000, subcategories: ['Такси', 'Общественный транспорт', 'Бензин'] },
+        { id: 'cat-connection', name: 'Связь', limit: 1000, subcategories: ['Интернет', 'Мобильная связь'] },
+        { id: 'cat-marketplace', name: 'Маркетплейсы', limit: 5000, subcategories: ['ВБ', 'Озон', 'Яндекс Маркет'] },
+        { id: 'cat-sport', name: 'Спорт', limit: 5000, subcategories: ['Тренер', 'Абонемент', 'Экипировка'] },
+        { id: 'cat-education', name: 'Обучение', limit: 15000, subcategories: ['Автошкола', 'Курсы', 'Книги'] },
+        { id: 'cat-tech', name: 'Техника', limit: 0, subcategories: ['Телефон', 'Ноутбук', 'Аксессуары'] }
+    ]
+};
 
 const mealIcons = {
     breakfast:"З", lunch:"О", dinner:"У", snack:"П", snack1:"П1", snack2:"П2",
@@ -860,7 +876,17 @@ function syncToCloud() {
             progress: JSON.parse(localStorage.getItem('exercise-progress') || '{}'),
             lastUpdated: Date.now()
         };
-        diaryRef.set(data)
+        
+        diaryRef.set(data);
+        
+        // Синхронизируем финансы отдельно
+        financeRef.set({
+            transactions: financeData.transactions,
+            savings: financeData.savings,
+            planned: financeData.planned,
+            categories: financeData.categories,
+            lastUpdated: Date.now()
+        });
             .then(() => {
                 console.log('✅ Data saved to Firebase');
                 showSyncStatus('✅ Сохранено!', 'success');
@@ -874,6 +900,7 @@ function syncToCloud() {
 
 function loadFromCloud() {
     showSyncStatus('📡 Загрузка...', 'syncing');
+    
     diaryRef.once('value')
         .then((snapshot) => {
             const data = snapshot.val();
@@ -888,9 +915,13 @@ function loadFromCloud() {
                 loadLocalFallback();
                 showSyncStatus('ℹ️ Использованы локальные данные', 'syncing');
             }
+            
             isInitialLoad = false;
             renderNutritionAll();
             renderTrainAll();
+            
+            // Загружаем финансы из отдельного узла
+            loadFinanceFromCloud();
         })
         .catch((error) => {
             console.error('❌ Firebase load error:', error);
@@ -899,6 +930,28 @@ function loadFromCloud() {
             isInitialLoad = false;
             renderNutritionAll();
             renderTrainAll();
+            
+            // Даже при ошибке основных данных пробуем загрузить финансы
+            loadFinanceFromCloud();
+        });
+}
+
+function loadFinanceFromCloud() {
+    financeRef.once('value')
+        .then((finSnapshot) => {
+            const finData = finSnapshot.val();
+            if(finData) {
+                if(finData.transactions) financeData.transactions = finData.transactions;
+                if(finData.savings) financeData.savings = finData.savings;
+                if(finData.planned) financeData.planned = finData.planned;
+                if(finData.categories && finData.categories.length > 0) financeData.categories = finData.categories;
+                console.log('✅ Finance data loaded');
+            } else {
+                console.log('ℹ️ No finance data in Firebase yet');
+            }
+        })
+        .catch((error) => {
+            console.error('❌ Finance load error:', error);
         });
 }
 
@@ -1921,6 +1974,20 @@ function resetAllData() {
 
 function saveTrainings() {
     syncToCloud();
+}
+
+function saveFinance() {
+    financeRef.set({
+        transactions: financeData.transactions,
+        savings: financeData.savings,
+        planned: financeData.planned,
+        categories: financeData.categories,
+        lastUpdated: Date.now()
+    }).then(() => {
+        console.log('✅ Finance saved');
+    }).catch((error) => {
+        console.error('❌ Finance save error:', error);
+    });
 }
 
 // === СТАРТ ===
