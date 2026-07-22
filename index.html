@@ -1710,19 +1710,25 @@ function renderTrainHistoryBlock(entries, values, unit) {
 function saveNutrition() {
     const week = nutritionData.weeks.find(w => w.id === nutritionData.currentWeekId);
     if(!week) return;
+    
     if(!week.data) week.data = {};
+    
+    // Сохраняем все поля с data-week (включая пустые значения)
     document.querySelectorAll(`[data-week="${week.id}"]`).forEach(el => {
         const key = el.dataset.key;
         if(!key) return;
         let value = el.type === 'checkbox' ? el.checked : el.value;
-        if(value !== undefined && value !== '') week.data[key] = value;
+        week.data[key] = value;
     });
-    document.querySelectorAll(`[data-week="${week.id}"]`).forEach(el => {
-        const key = el.dataset.key;
-        if(!key) return;
-        let value = el.type === 'checkbox' ? el.checked : el.value;
-        if(value !== undefined && value !== '') week.data[key] = value;
+    
+    // Сохраняем поля КБЖУ
+    document.querySelectorAll(`input[data-week="${week.id}"][data-field]`).forEach(inp => {
+        const key = `m-${inp.dataset.day}-${inp.dataset.meal}-${inp.dataset.field}`;
+        week.data[key] = inp.value;
     });
+    
+    syncToCloud();
+}
    
 function exportAllData() {
     const data = { nutrition: nutritionData, workouts, progress: JSON.parse(localStorage.getItem('exercise-progress') || '{}'), exportedAt: new Date().toISOString() };
