@@ -1717,11 +1717,12 @@ function saveNutrition() {
         let value = el.type === 'checkbox' ? el.checked : el.value;
         if(value !== undefined && value !== '') week.data[key] = value;
     });
-    document.querySelectorAll(`input[data-week="${week.id}"][data-field]`).forEach(inp => {
-        if(inp.value) week.data[`m-${inp.dataset.day}-${inp.dataset.meal}-${inp.dataset.field}`] = inp.value;
+    document.querySelectorAll(`[data-week="${week.id}"]`).forEach(el => {
+        const key = el.dataset.key;
+        if(!key) return;
+        let value = el.type === 'checkbox' ? el.checked : el.value;
+        if(value !== undefined && value !== '') week.data[key] = value;
     });
-    syncToCloud();
-}
    
 function exportAllData() {
     const data = { nutrition: nutritionData, workouts, progress: JSON.parse(localStorage.getItem('exercise-progress') || '{}'), exportedAt: new Date().toISOString() };
