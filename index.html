@@ -2256,6 +2256,7 @@ function openCategoryModal(catId) {
         if(!cat) return;
         document.getElementById('category-modal-title').textContent = '✏️ Редактировать категорию';
         document.getElementById('f-cat-name').value = cat.name;
+        document.getElementById('f-cat-type').value = cat.type || 'expense';
         document.getElementById('f-cat-limit').value = cat.limit;
         window._editingCategoryId = catId;
     } else {
@@ -2269,14 +2270,13 @@ function openCategoryModal(catId) {
     const container = document.getElementById('f-cat-subcats-container');
     if(catId && financeData.categories.find(c => c.id === catId)) {
         const cat = financeData.categories.find(c => c.id === catId);
-        container.innerHTML = cat.subcategories.map((sc, i) =>
-            `<span class="subcat-tag">${sc}<span class="remove-subcat" onclick="removeSubcategoryTag(this, ${i})">✕</span></span>`
-        ).join('');
         window._editingSubcategories = [...cat.subcategories];
+        window._editingSubcategoryLimits = Object.assign({}, cat.subcategoryLimits || {});
     } else {
-        container.innerHTML = '';
         window._editingSubcategories = [];
+        window._editingSubcategoryLimits = {};
     }
+    renderSubcategoryTags();
     document.getElementById('category-modal').classList.add('visible');
 }
 
@@ -2390,9 +2390,25 @@ function removeSubcategoryTag(el, idx) {
 function renderSubcategoryTags() {
     const container = document.getElementById('f-cat-subcats-container');
     if(!window._editingSubcategories) window._editingSubcategories = [];
-    container.innerHTML = window._editingSubcategories.map((sc, i) =>
-        `<span class="subcat-tag">${sc}<span class="remove-subcat" onclick="removeSubcategoryTag(this, ${i})">✕</span></span>`
-    ).join('');
+    if(!window._editingSubcategoryLimits) window._editingSubcategoryLimits = {};
+    container.innerHTML = window._editingSubcategories.map((sc, i) => {
+        const limitVal = window._editingSubcategoryLimits[sc] || '';
+        return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
+            <span class="subcat-tag" style="margin:0;">${sc}</span>
+            <div style="display:flex;align-items:center;gap:4px;flex:1;min-width:120px;">
+                <label style="font-size:11px;color:#7e22ce;font-weight:600;white-space:nowrap;">Лимит:</label>
+                <input type="number" step="0.01" min="0" value="${limitVal}"
+                    onchange="updateSubcategoryLimit(this, '${sc.replace(/'/g, "\\'")}')"
+                    style="width:100%;padding:4px 8px;border:1px solid #d8b4fe;border-radius:4px;font-size:12px;background:white;font-family:inherit;">
+            </div>
+            <span class="remove-subcat" onclick="removeSubcategoryTag(this, ${i})" style="cursor:pointer;font-weight:700;color:#a855f7;font-size:14px;">✕</span>
+        </div>`;
+    }).join('');
+}
+
+function updateSubcategoryLimit(input, subcatName) {
+    if(!window._editingSubcategoryLimits) window._editingSubcategoryLimits = {};
+    window._editingSubcategoryLimits[subcatName] = input.value;
 }
 
 // --- PARSE FORMULA (e.g. "=100+200") ---
@@ -2509,6 +2525,17 @@ function saveCategory() {
     if(!name) { alert('Введите название категории'); return; }
     
     const subcategories = window._editingSubcategories || [];
+    const subcategoryLimits = window._editingSubcategoryLimits || {};
+    
+    // Валидация: лимит подкатегории не может превышать лимит категории
+    if(limit > 0) {
+        for(const [scName, scLimit] of Object.entries(subcategoryLimits)) {
+            if(scLimit && parseFloat(scLimit) > limit) {
+                alert(`Лимит подкатегории "${scName}" (${parseFloat(scLimit)} ₽) превышает лимит категории (${limit} ₽)`);
+                return;
+            }
+        }
+    }
     
     if(window._editingCategoryId) {
         // Редактирование
@@ -2518,6 +2545,7 @@ function saveCategory() {
             cat.type = type;
             cat.limit = limit;
             cat.subcategories = subcategories;
+            cat.subcategoryLimits = subcategoryLimits;
         }
     } else {
         // Новая категория
@@ -2530,7 +2558,8 @@ function saveCategory() {
             name,
             type,
             limit,
-            subcategories
+            subcategories,
+            subcategoryLimits
         });
     }
     
@@ -3262,32 +3291,16 @@ function renderFinanceCategories() {
         <thead><tr style="background:#faf5ff;">
             <th style="padding:8px 10px;text-align:left;border-bottom:2px solid #e9d5ff;color:#7e22ce;">Категория</th>
             <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #e9d5ff;color:#7e22ce;">Лимит</th>
-            <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #e9d5ff;color:#7e22ce;">Потрачено</th>
-            <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #e9d5ff;color:#7e22ce;">Остаток</th>
-            <th style="padding:8px 10px;text-align:center;border-bottom:2px solid #e9d5ff;color:#7e22ce;">Прогресс</th>
             <th style="padding:8px 10px;text-align:center;border-bottom:2px solid #e9d5ff;color:#7e22ce;"></th>
         </tr></thead><tbody>
         ${financeData.categories.map(c => {
-            const spent = financeData.transactions
-                .filter(t => t.type === 'expense' && t.category === c.id)
-                .reduce((s, t) => s + Math.abs(t.amount), 0);
             const limit = c.limit || 0;
-            const remaining = limit > 0 ? limit - spent : 0;
-            const pct = limit > 0 ? Math.min(100, (spent / limit) * 100) : 0;
-            const barColor = pct > 90 ? '#dc2626' : (pct > 70 ? '#d97706' : '#16a34a');
             const subcatsHtml = c.subcategories && c.subcategories.length > 0
                 ? `<br><span style="font-size:10px;color:#a855f7;">📂 ${c.subcategories.join(', ')}</span>` : '';
             
             return `<tr style="border-bottom:1px solid #f3e8ff;">
                 <td style="padding:8px 10px;font-weight:600;color:#475569;">${c.name}${subcatsHtml}</td>
                 <td style="padding:8px 10px;text-align:right;color:#475569;">${limit > 0 ? limit.toLocaleString('ru-RU') + ' ₽' : '—'}</td>
-                <td style="padding:8px 10px;text-align:right;font-weight:600;color:#dc2626;">${spent.toLocaleString('ru-RU')} ₽</td>
-                <td style="padding:8px 10px;text-align:right;font-weight:600;color:${remaining >= 0 ? '#16a34a' : '#dc2626'};">${limit > 0 ? remaining.toLocaleString('ru-RU') + ' ₽' : '—'}</td>
-                <td style="padding:8px 10px;text-align:center;min-width:120px;">
-                    ${limit > 0 ? `<div style="height:8px;background:#e9d5ff;border-radius:4px;overflow:hidden;max-width:120px;margin:0 auto;">
-                        <div style="height:100%;width:${pct}%;background:${barColor};border-radius:4px;"></div>
-                    </div>` : '<span style="color:#94a3b8;font-size:11px;">без лимита</span>'}
-                </td>
                 <td style="padding:8px 10px;text-align:center;white-space:nowrap;">
                     <button onclick="openCategoryModal('${c.id}')" style="padding:3px 8px;font-size:11px;background:white;color:#7e22ce;border:1px solid #d8b4fe;border-radius:4px;cursor:pointer;">✏️</button>
                     <button onclick="deleteFinanceItem('category','${c.id}')" style="padding:3px 8px;font-size:11px;background:white;color:#dc2626;border:1px solid #fecaca;border-radius:4px;cursor:pointer;">🗑</button>
