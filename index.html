@@ -1163,23 +1163,47 @@ function renderMeal(m, di, mi, weekId) {
     const isEditable = (m.type === 'breakfast' || m.type === 'lunch' || m.type === 'dinner');
     
     if (isEditable) {
-        // 1. Сначала проверяем, есть ли уже сохраненный тобой текст
-        let displayText = getWeekData(weekId, `desc-${di}-${mi}`);
-        
-        // 2. Если ты еще не редактировала, берем текст из импортированного меню по умолчанию
-        if (!displayText) {
-            if (m.items) {
-                displayText = m.items.join('\n'); // Каждый продукт с новой строки
-            } else if (m.choices) {
-                displayText = m.choices.map(c => `[${c.label}] ${c.items.join(', ')}`).join('\n');
-            } else {
-                displayText = '';
-            }
+        // Собираем список продуктов из меню
+        let itemsList = [];
+        if (m.items) itemsList = m.items;
+        else if (m.choices) {
+            m.choices.forEach(c => {
+                c.items.forEach(item => itemsList.push(`[${c.label}] ${item}`));
+            });
         }
         
-        content = `<textarea class="meal-desc-input" data-week="${weekId}" data-key="desc-${di}-${mi}" oninput="saveNutrition()" placeholder="Опиши, что съела..." style="width:100%; min-height:60px; padding:8px; border:1px solid #cbd5e1; border-radius:6px; font-family:inherit; font-size:13px; resize:vertical; margin-bottom:8px; background:#f8fafc; color:#1e293b;">${displayText}</textarea>`;
+        if (itemsList.length > 0) {
+            content = `<div class="meal-items-list" style="margin-bottom:8px;">`;
+            itemsList.forEach((item, idx) => {
+                const eatenVal = getWeekData(weekId, `eaten-${di}-${mi}-${idx}`);
+                const eaten = eatenVal !== '0'; // по умолчанию всё съедено
+                const note = getWeekData(weekId, `note-${di}-${mi}-${idx}`) || '';
+                
+                content += `
+                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px; padding:6px 10px; background:${eaten ? '#f0fdf4' : '#fef2f2'}; border-radius:6px; border:1px solid ${eaten ? '#bbf7d0' : '#fecaca'};">
+                        <input type="checkbox" 
+                               data-week="${weekId}" 
+                               data-idx="${idx}"
+                               ${eaten ? 'checked' : ''}
+                               onchange="toggleMealItem(this, '${weekId}', ${di}, ${mi})"
+                               style="width:18px; height:18px; cursor:pointer; accent-color:${eaten ? '#16a34a' : '#dc2626'}; flex-shrink:0;">
+                        <span style="flex:1; font-size:13px; ${!eaten ? 'text-decoration:line-through; color:#94a3b8;' : 'color:#1e293b;'}">${item}</span>
+                        ${!eaten ? `<input type="text" 
+                            data-week="${weekId}" 
+                            data-key="note-${di}-${mi}-${idx}"
+                            value="${note.replace(/"/g, '&quot;')}"
+                            oninput="saveNutrition()"
+                            placeholder="что вместо?" 
+                            style="flex:1; min-width:120px; padding:4px 8px; border:1px solid #cbd5e1; border-radius:4px; font-size:12px; background:white;">` : ''}
+                    </div>
+                `;
+            });
+            content += `</div>`;
+        } else {
+            content = `<div style="color:#94a3b8; font-size:13px; font-style:italic; padding:4px 10px;">Список продуктов не указан</div>`;
+        }
     } else {
-        // Для перекусов и остального оставляем старый вид (список или варианты)
+        // Для перекусов и остального оставляем старый вид
         if(m.items) content=`<ul>${m.items.map(i=>`<li>${i}</li>`).join('')}</ul>`;
         else if(m.choices) content=m.choices.map(c=>`<div class="or-choice"><span class="or-label">${c.label}</span> ${c.items.join(', ')}</div>`).join('');
     }
@@ -1235,6 +1259,19 @@ function setStars(el, rating) {
         s.classList.toggle('active', parseInt(s.dataset.rating) <= newVal);
     });
     saveNutrition();
+}
+
+function toggleMealItem(checkbox, weekId, di, mi) {
+    const idx = checkbox.dataset.idx;
+    const week = nutritionData.weeks.find(w => w.id === weekId);
+    if (!week) return;
+    if (!week.data) week.data = {};
+    
+    // Сохраняем состояние чекбокса
+    week.data[`eaten-${di}-${mi}-${idx}`] = checkbox.checked ? '1' : '0';
+    
+    // Перерисовываем день, чтобы показать/скрыть поле "что вместо?"
+    renderDays();
 }
 
 function updateTotals(weekId, di) {
