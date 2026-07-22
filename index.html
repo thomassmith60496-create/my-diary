@@ -455,6 +455,29 @@
         .nav-actions { margin-left: 0; width: 100%; }
     }
    .hidden { display: none; }
+   /* ===== Finance Dashboard Styles ===== */
+   #main-tab-finance .sub-tab-content { padding-top: 14px; }
+   .fin-month-selector {
+       background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 12px;
+       padding: 12px 16px; margin-bottom: 16px;
+       display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+   }
+   .fin-month-selector label { font-size: 12px; font-weight: 700; color: #7e22ce; white-space: nowrap; }
+   .fin-month-selector select {
+       flex: 1; min-width: 180px; padding: 8px 10px; border: 1.5px solid #d8b4fe;
+       border-radius: 8px; background: white; color: #1e293b; font-size: 13px; font-family: inherit; cursor: pointer;
+   }
+   .fin-month-selector select:focus { outline: none; border-color: #a855f7; box-shadow: 0 0 0 2px rgba(168,85,247,0.15); }
+   .fin-section-title {
+       font-size: 15px; font-weight: 700; color: #7e22ce; margin: 0 0 12px;
+       padding-bottom: 8px; border-bottom: 2px solid #e9d5ff;
+   }
+   .fin-section-title .sub { font-weight: 400; font-size: 12px; color: #a855f7; }
+   .fin-cumulative-badge {
+       display: inline-block; background: #7e22ce; color: white;
+       padding: 2px 10px; border-radius: 12px; font-size: 10px; font-weight: 700;
+       margin-left: 8px; vertical-align: middle;
+   }
    /* ===== Finance Modal Styles ===== */
    .modal-header.finance { background: linear-gradient(135deg, #7e22ce 0%, #a855f7 100%); }
    .modal-footer.finance { border-color: #e9d5ff; background: #faf5ff; }
@@ -636,7 +659,13 @@
        
        <!-- Подвкладка: Дашборд -->
        <div class="sub-tab-content active" id="fin-sub-dashboard">
-           <div class="toolbar">
+           <div class="fin-month-selector">
+               <label>📅 Месяц:</label>
+               <select id="fin-month-select" onchange="renderFinanceDashboard()">
+                   <option value="all">📊 Все месяцы (накопительно)</option>
+               </select>
+           </div>
+           <div class="toolbar" style="margin-top:0;">
                <button class="btn primary" style="background:#a855f7; border-color:#7e22ce; color:white;" onclick="openFinanceModal()">➕ Добавить операцию</button>
                <button class="btn" onclick="document.getElementById('import-excel-file').click()">📂 Импорт из Excel</button>
                <button class="btn" onclick="renderFinanceDashboard()">🔄 Обновить</button>
@@ -2753,9 +2782,44 @@ function renderFinanceDashboard() {
         return;
     }
     
-    // Собираем данные по месяцам
-    const monthlyData = {};
+    // === ЗАПОЛНЯЕМ СЕЛЕКТОР МЕСЯЦЕВ ДИНАМИЧЕСКИ ===
+    const monthSelect = document.getElementById('fin-month-select');
+    const allMonthsSet = new Set();
     financeData.transactions.forEach(t => {
+        const m = t.date.slice(0, 7);
+        allMonthsSet.add(m);
+    });
+    const sortedMonths = Array.from(allMonthsSet).sort();
+    const currentMonthValue = monthSelect.value;
+    monthSelect.innerHTML = '<option value="all">📊 Все месяцы (накопительно)</option>' +
+        sortedMonths.map(m => {
+            const [y, mo] = m.split('-');
+            const monthNames = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+            const label = `${monthNames[parseInt(mo) - 1]} ${y}`;
+            return `<option value="${m}">${label}</option>`;
+        }).join('');
+    if(currentMonthValue && (currentMonthValue === 'all' || allMonthsSet.has(currentMonthValue))) {
+        monthSelect.value = currentMonthValue;
+    }
+    financeSelectedMonth = monthSelect.value;
+    
+    // === ФИЛЬТРУЕМ ТРАНЗАКЦИИ ПО ВЫБРАННОМУ МЕСЯЦУ ===
+    let filteredTransactions = [...financeData.transactions];
+    if(financeSelectedMonth !== 'all') {
+        filteredTransactions = filteredTransactions.filter(t => t.date.startsWith(financeSelectedMonth));
+    }
+    if(filteredTransactions.length === 0) {
+        container.innerHTML = `<div class="empty-state">
+            <div class="empty-state-icon">📭</div>
+            <div class="empty-state-title">Нет операций за выбранный период</div>
+            <div class="empty-state-text">Попробуйте выбрать другой месяц</div>
+        </div>`;
+        return;
+    }
+    
+    // Собираем данные по месяцам (из отфильтрованных)
+    const monthlyData = {};
+    filteredTransactions.forEach(t => {
         const month = t.date.slice(0, 7);
         if(!monthlyData[month]) monthlyData[month] = { income: 0, expense: 0, count: 0 };
         if(t.type === 'income') monthlyData[month].income += Math.abs(t.amount);
@@ -2765,9 +2829,9 @@ function renderFinanceDashboard() {
     
     const months = Object.keys(monthlyData).sort();
     
-    // Собираем данные по категориям
+    // Собираем данные по категориям (из отфильтрованных)
     const catTotals = {};
-    financeData.transactions.filter(t => t.type === 'expense').forEach(t => {
+    filteredTransactions.filter(t => t.type === 'expense').forEach(t => {
         const cat = financeData.categories.find(c => c.id === t.category);
         const catName = cat ? cat.name : 'Без категории';
         if(!catTotals[catName]) catTotals[catName] = 0;
@@ -2843,8 +2907,8 @@ function renderFinanceDashboard() {
         const legendHtml = sectors.map((s, i) =>
             `<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
                 <div style="width:12px;height:12px;border-radius:3px;background:${s.color};flex-shrink:0;"></div>
-                <span style="font-size:12px;color:#334155;">${s.name}</span>
-                <span style="font-size:12px;font-weight:700;color:#7e22ce;margin-left:auto;">${Math.round(s.value).toLocaleString('ru-RU')} ₽ (${s.pct}%)</span>
+                <span style="font-size:12px;color:#1e293b;">${s.name}</span>
+                <span style="font-size:12px;font-weight:700;color:#1e293b;margin-left:auto;">${Math.round(s.value).toLocaleString('ru-RU')} ₽ (${s.pct}%)</span>
             </div>`
         ).join('');
         
