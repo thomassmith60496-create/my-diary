@@ -2295,36 +2295,25 @@ function updateFinanceCategoryOptions() {
     const catSelect = document.getElementById('f-fin-category');
     const type = typeSelect.value;
     
-    let cats = [];
-    if(type === 'expense') {
-        cats = financeData.categories.filter(c => c.name !== 'Зарплата' && c.name !== 'Фриланс' && c.name !== 'Кэшбэк' && c.name !== 'Прочие доходы');
-    } else {
-        // Для доходов показываем специальные категории или все
-        cats = financeData.categories.filter(c =>
-            ['Зарплата', 'Фриланс', 'Кэшбэк', 'Прочие доходы'].includes(c.name)
-        );
-    }
+    // Фильтруем категории по полю type (а не по имени)
+    let cats = financeData.categories.filter(c => c.type === type);
     
-    if(cats.length === 0) {
-        // Создаём стандартные категории для доходов если их нет
-        if(type === 'income') {
-            const incomeCats = ['Зарплата', 'Фриланс', 'Кэшбэк', 'Прочие доходы'];
-            incomeCats.forEach(name => {
-                if(!financeData.categories.find(c => c.name === name)) {
-                    financeData.categories.push({
-                        id: 'cat-' + name.toLowerCase().replace(/\s/g, ''),
-                        name: name,
-                        limit: 0,
-                        subcategories: []
-                    });
-                }
-            });
-            cats = financeData.categories.filter(c =>
-                ['Зарплата', 'Фриланс', 'Кэшбэк', 'Прочие доходы'].includes(c.name)
-            );
-        } else {
-            cats = financeData.categories;
-        }
+    // Если категорий с таким типом нет, создаём стандартные для дохода
+    if(cats.length === 0 && type === 'income') {
+        const incomeCats = ['Зарплата', 'Фриланс', 'Кэшбэк', 'Прочие доходы'];
+        incomeCats.forEach(name => {
+            if(!financeData.categories.find(c => c.name === name)) {
+                financeData.categories.push({
+                    id: 'cat-' + name.toLowerCase().replace(/\s/g, ''),
+                    name: name,
+                    type: 'income',
+                    limit: 0,
+                    subcategories: [],
+                    subcategoryLimits: {}
+                });
+            }
+        });
+        cats = financeData.categories.filter(c => c.type === 'income');
     }
     
     catSelect.innerHTML = '<option value="">— выбрать —</option>' +
@@ -2347,9 +2336,8 @@ function updateFinanceSubcategoryOptions() {
 
 function updatePlanCategoryOptions() {
     const catSelect = document.getElementById('f-plan-category');
-    const expenseCats = financeData.categories.filter(c =>
-        c.name !== 'Зарплата' && c.name !== 'Фриланс' && c.name !== 'Кэшбэк' && c.name !== 'Прочие доходы'
-    );
+    // Показываем только категории расходов (type === 'expense')
+    const expenseCats = financeData.categories.filter(c => c.type === 'expense');
     catSelect.innerHTML = '<option value="">— выбрать —</option>' +
         expenseCats.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
     updatePlanSubcategoryOptions();
@@ -2993,6 +2981,35 @@ function renderFinanceDashboard() {
                 .reduce((s, t) => s + Math.abs(t.amount), 0);
             const pct = Math.min(100, (spent / c.limit) * 100);
             const barColor = pct > 90 ? '#dc2626' : (pct > 70 ? '#d97706' : '#16a34a');
+            
+            // Подкатегории с их лимитами и расходами
+            let subcatsHtml = '';
+            if(c.subcategories && c.subcategories.length > 0) {
+                const subcatsWithSpending = c.subcategories.map(sc => {
+                    const scSpent = filteredTransactions
+                        .filter(t => t.type === 'expense' && t.category === c.id && t.subcategory === sc)
+                        .reduce((s, t) => s + Math.abs(t.amount), 0);
+                    const scLimit = c.subcategoryLimits && c.subcategoryLimits[sc] ? parseFloat(c.subcategoryLimits[sc]) : 0;
+                    return { name: sc, spent: scSpent, limit: scLimit };
+                });
+                
+                subcatsHtml = subcatsWithSpending.map(sc => {
+                    const scPct = sc.limit > 0 ? Math.min(100, (sc.spent / sc.limit) * 100) : 0;
+                    const scBarColor = scPct > 90 ? '#dc2626' : (scPct > 70 ? '#d97706' : '#a855f7');
+                    const limitDisplay = sc.limit > 0 ? `${Math.round(sc.spent).toLocaleString('ru-RU')} / ${sc.limit.toLocaleString('ru-RU')} ₽` : `${Math.round(sc.spent).toLocaleString('ru-RU')} ₽`;
+                    const barHtml = sc.limit > 0 ? `<div style="height:6px;background:#f3e8ff;border-radius:3px;overflow:hidden;margin-top:2px;">
+                        <div style="height:100%;width:${scPct}%;background:${scBarColor};border-radius:3px;transition:width 0.3s;"></div>
+                    </div>` : '';
+                    return `<div style="padding:4px 0 2px 12px;font-size:11px;">
+                        <div style="display:flex;justify-content:space-between;">
+                            <span style="color:#a855f7;">📂 ${sc.name}</span>
+                            <span style="color:#64748b;font-weight:600;">${limitDisplay}</span>
+                        </div>
+                        ${barHtml}
+                    </div>`;
+                }).join('');
+            }
+            
             return `<div style="margin-bottom:10px;">
                 <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;">
                     <span style="font-weight:600;color:#7e22ce;">${c.name}</span>
@@ -3001,6 +3018,7 @@ function renderFinanceDashboard() {
                 <div style="height:8px;background:#e9d5ff;border-radius:4px;overflow:hidden;">
                     <div style="height:100%;width:${pct}%;background:${barColor};border-radius:4px;transition:width 0.3s;"></div>
                 </div>
+                ${subcatsHtml}
             </div>`;
         }).join('');
     
