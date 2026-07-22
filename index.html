@@ -655,6 +655,7 @@
        <div class="sub-tab-content" id="fin-sub-transactions">
            <div class="toolbar">
                <button class="btn primary" style="background:#a855f7; border-color:#7e22ce; color:white;" onclick="openFinanceModal()">➕ Добавить операцию</button>
+               <button class="btn danger" onclick="deleteAllFinanceTransactions()">🗑 Очистить все</button>
            </div>
            <div id="finance-transactions-list">
                <div class="empty-state">
@@ -2489,7 +2490,46 @@ function deleteFinanceItem(type, id) {
         financeData.savings = financeData.savings.filter(s => s.id !== id);
     } else if(type === 'planned') {
         financeData.planned = financeData.planned.filter(p => p.id !== id);
+    } else if(type === 'category') {
+        // Также удаляем ID категории из транзакций (ставим пустую категорию)
+        financeData.transactions.forEach(t => { if(t.category === id) t.category = ''; });
+        financeData.planned.forEach(p => { if(p.category === id) p.category = ''; });
+        financeData.categories = financeData.categories.filter(c => c.id !== id);
     }
+    saveFinance();
+    renderCurrentFinanceTab();
+    updateFinanceStats();
+}
+
+function editFinanceTransaction(id) {
+    const t = financeData.transactions.find(x => x.id === id);
+    if(!t) return;
+    
+    document.getElementById('f-fin-date').value = t.date;
+    document.getElementById('f-fin-amount').value = Math.abs(t.amount);
+    document.getElementById('f-fin-type').value = t.type;
+    document.getElementById('f-fin-comment').value = t.comment || '';
+    
+    document.getElementById('finance-modal-title').textContent = '✏️ Редактировать операцию';
+    window._editingTransactionId = id;
+    
+    updateFinanceCategoryOptions();
+    // После обновления категорий устанавливаем выбранную
+    setTimeout(() => {
+        document.getElementById('f-fin-category').value = t.category || '';
+        updateFinanceSubcategoryOptions();
+        setTimeout(() => {
+            document.getElementById('f-fin-subcategory').value = t.subcategory || '';
+        }, 50);
+    }, 50);
+    
+    document.getElementById('finance-modal').classList.add('visible');
+}
+
+function deleteAllFinanceTransactions() {
+    if(!confirm('Удалить ВСЕ операции? Это нельзя отменить.')) return;
+    if(!confirm('Вы уверены? Будет удалено ' + financeData.transactions.length + ' операций.')) return;
+    financeData.transactions = [];
     saveFinance();
     renderCurrentFinanceTab();
     updateFinanceStats();
@@ -2541,27 +2581,67 @@ function importFinanceExcel(input) {
                 
                 if(!dateRaw || !amountRaw || !categoryName) continue;
                 
+                // Если имя категории — это просто число, значит колонки съехали — пропускаем
+                if(/^\d+([.,]\d+)?$/.test(categoryName) && !isNaN(parseFloat(categoryName))) {
+                    errors++; continue;
+                }
+                
                 // Парсим дату
-                let date = dateRaw;
-                // Если дата в числовом формате Excel
-                if(!isNaN(Date.parse(dateRaw))) {
-                    date = new Date(dateRaw).toISOString().slice(0,10);
-                } else if(/^\d{1,2}\.\d{1,2}\.\d{2,4}$/.test(dateRaw)) {
+                let date = '';
+                const dateNum = parseFloat(dateRaw);
+                
+                // 1. Excel serial date (число дней с 30.12.1899)
+                if(!isNaN(dateNum) && dateNum > 1 && dateNum < 200000 && /^[\d.]+$/.test(String(dateRaw).trim())) {
+                    const excelEpoch = new Date(1899, 11, 30);
+                    const parsed = new Date(excelEpoch.getTime() + dateNum * 86400000);
+                    date = parsed.toISOString().slice(0,10);
+                }
+                // 2. ДД.ММ.ГГГГ или ДД.ММ.ГГ
+                else if(/^\d{1,2}\.\d{1,2}\.\d{2,4}$/.test(dateRaw)) {
                     const parts = dateRaw.split('.');
                     const d = parts[0].padStart(2,'0');
                     const m = parts[1].padStart(2,'0');
                     const y = parts[2].length === 2 ? '20' + parts[2] : parts[2];
                     date = `${y}-${m}-${d}`;
-                } else if(/^\d{1,2}\.\d{1,2}$/.test(dateRaw)) {
-                    // Если указаны только день и месяц — добавляем текущий год
+                }
+                // 3. ДД/ММ/ГГГГ или ДД/ММ/ГГ
+                else if(/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(dateRaw)) {
+                    const parts = dateRaw.split('/');
+                    const d = parts[0].padStart(2,'0');
+                    const m = parts[1].padStart(2,'0');
+                    const y = parts[2].length === 2 ? '20' + parts[2] : parts[2];
+                    date = `${y}-${m}-${d}`;
+                }
+                // 4. ДД-ММ-ГГГГ или ДД-ММ-ГГ
+                else if(/^\d{1,2}\-\d{1,2}\-\d{2,4}$/.test(dateRaw)) {
+                    const parts = dateRaw.split('-');
+                    const d = parts[0].padStart(2,'0');
+                    const m = parts[1].padStart(2,'0');
+                    const y = parts[2].length === 2 ? '20' + parts[2] : parts[2];
+                    date = `${y}-${m}-${d}`;
+                }
+                // 5. ДД.ММ (без года, подставляем текущий год)
+                else if(/^\d{1,2}\.\d{1,2}$/.test(dateRaw)) {
                     const parts = dateRaw.split('.');
                     const d = parts[0].padStart(2,'0');
                     const m = parts[1].padStart(2,'0');
                     const y = new Date().getFullYear();
                     date = `${y}-${m}-${d}`;
                 }
+                // 6. ISO YYYY-MM-DD
+                else if(/^\d{4}-\d{2}-\d{2}$/.test(dateRaw)) {
+                    date = dateRaw;
+                }
+                // 7. Последняя попытка — через Date()
+                else {
+                    const d = new Date(dateRaw);
+                    if(!isNaN(d.getTime())) {
+                        date = d.toISOString().slice(0,10);
+                    }
+                }
                 
                 // Проверяем валидность даты
+                if(!date) { errors++; continue; }
                 const dateObj = new Date(date);
                 if(isNaN(dateObj.getTime())) { errors++; continue; }
                 date = dateObj.toISOString().slice(0,10);
@@ -2919,7 +2999,8 @@ function renderFinanceTransactions() {
                 <td style="padding:8px 10px;">${isExpense ? '📉' : '📈'}</td>
                 <td style="padding:8px 10px;color:#334155;">${catName}${subcatHtml}${commentHtml}</td>
                 <td style="padding:8px 10px;text-align:right;font-weight:700;${isExpense ? 'color:#dc2626;' : 'color:#16a34a;'}">${isExpense ? '−' : '+'}${Math.abs(t.amount).toLocaleString('ru-RU')} ₽</td>
-                <td style="padding:8px 10px;text-align:center;">
+                <td style="padding:8px 10px;text-align:center;white-space:nowrap;">
+                    <button onclick="editFinanceTransaction('${t.id}')" style="padding:3px 8px;font-size:11px;background:white;color:#7e22ce;border:1px solid #d8b4fe;border-radius:4px;cursor:pointer;">✏️</button>
                     <button onclick="deleteFinanceItem('transaction','${t.id}')" style="padding:3px 8px;font-size:11px;background:white;color:#dc2626;border:1px solid #fecaca;border-radius:4px;cursor:pointer;">🗑</button>
                 </td>
             </tr>`;
