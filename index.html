@@ -31,6 +31,11 @@
         background: linear-gradient(135deg, #9a3412 0%, #ea580c 100%);
         color: white; box-shadow: 0 -4px 15px rgba(234, 88, 12, 0.2);
     }
+   .main-tab-btn.finance { background: #581c87; color: rgba(255,255,255,0.6); }
+   .main-tab-btn.finance.active {
+        background: linear-gradient(135deg, #7e22ce 0%, #a855f7 100%);
+        color: white; box-shadow: 0 -4px 15px rgba(168, 85, 247, 0.2);
+   }
     .main-tab-content { display: none; }
     .main-tab-content.active { display: block; }
     .sub-tabs { display: flex; gap: 0; margin-bottom: 0; background: #eff6ff; border-radius: 12px 12px 0 0; padding: 8px 8px 0; }
@@ -456,6 +461,7 @@
     <div class="main-tabs">
         <button class="main-tab-btn food active" onclick="switchMainTab('food')">📘 Питание</button>
         <button class="main-tab-btn train" onclick="switchMainTab('train')">🏋️ Тренировки</button>
+        <button class="main-tab-btn finance" onclick="switchMainTab('finance')">💰 Финансы</button>
     </div>
 
     <div class="main-tab-content active" id="main-tab-food">
@@ -594,6 +600,96 @@
         <div class="workouts-list" id="workouts-list"></div>
     </div>
 </div>
+
+   <div class="main-tab-content" id="main-tab-finance">
+        <header style="background: linear-gradient(135deg, #7e22ce 0%, #a855f7 100%); box-shadow: 0 10px 30px rgba(168, 85, 247, 0.25);">
+           <h1>💰 ФИНАНСЫ</h1>
+           <div class="subtitle">Учёт доходов, расходов и накоплений</div>
+           <div class="macros">
+               <div class="macro-badge" id="fin-stat-balance">💵 Баланс: 0 ₽</div>
+               <div class="macro-badge" id="fin-stat-income">📈 Доходы: 0 ₽</div>
+               <div class="macro-badge" id="fin-stat-expense">📉 Расходы: 0 ₽</div>
+           </div>
+       </header>
+       <div class="sub-tabs">
+           <button class="sub-tab-btn active" onclick="switchFinanceSubTab('dashboard', event)">📊 Дашборд</button>
+           <button class="sub-tab-btn" onclick="switchFinanceSubTab('transactions', event)">💸 Операции</button>
+           <button class="sub-tab-btn" onclick="switchFinanceSubTab('savings', event)">🏦 Накопления</button>
+           <button class="sub-tab-btn" onclick="switchFinanceSubTab('planned', event)">📅 Планируемые</button>
+           <button class="sub-tab-btn" onclick="switchFinanceSubTab('categories', event)">🏷 Категории</button>
+       </div>
+       
+       <!-- Подвкладка: Дашборд -->
+       <div class="sub-tab-content active" id="fin-sub-dashboard">
+           <div class="toolbar">
+               <button class="btn primary" style="background:#a855f7; border-color:#7e22ce; color:white;" onclick="openFinanceModal()">➕ Добавить операцию</button>
+               <button class="btn" onclick="renderFinanceDashboard()">🔄 Обновить</button>
+           </div>
+           <div id="finance-dashboard-content">
+               <div class="empty-state">
+                   <div class="empty-state-icon">💰</div>
+                   <div class="empty-state-title">Дашборд финансов</div>
+                   <div class="empty-state-text">Здесь будут графики расходов, категории и статус лимитов</div>
+               </div>
+           </div>
+       </div>
+       
+       <!-- Подвкладка: Операции -->
+       <div class="sub-tab-content" id="fin-sub-transactions">
+           <div class="toolbar">
+               <button class="btn primary" style="background:#a855f7; border-color:#7e22ce; color:white;" onclick="openFinanceModal()">➕ Добавить операцию</button>
+           </div>
+           <div id="finance-transactions-list">
+               <div class="empty-state">
+                   <div class="empty-state-icon">💸</div>
+                   <div class="empty-state-title">Нет операций</div>
+                   <div class="empty-state-text">Нажмите «➕ Добавить операцию» чтобы начать</div>
+               </div>
+           </div>
+       </div>
+       
+       <!-- Подвкладка: Накопления -->
+       <div class="sub-tab-content" id="fin-sub-savings">
+           <div class="toolbar">
+               <button class="btn primary" style="background:#a855f7; border-color:#7e22ce; color:white;" onclick="openSavingsModal()">➕ Добавить накопление</button>
+           </div>
+           <div id="finance-savings-list">
+               <div class="empty-state">
+                   <div class="empty-state-icon">🏦</div>
+                   <div class="empty-state-title">Нет накоплений</div>
+                   <div class="empty-state-text">Отслеживайте свои финансовые цели</div>
+               </div>
+           </div>
+       </div>
+       
+       <!-- Подвкладка: Планируемые -->
+       <div class="sub-tab-content" id="fin-sub-planned">
+           <div class="toolbar">
+               <button class="btn primary" style="background:#a855f7; border-color:#7e22ce; color:white;" onclick="openPlannedModal()">➕ Добавить планируемый расход</button>
+           </div>
+           <div id="finance-planned-list">
+               <div class="empty-state">
+                   <div class="empty-state-icon">📅</div>
+                   <div class="empty-state-title">Нет планируемых расходов</div>
+                   <div class="empty-state-text">Запланируйте будущие траты</div>
+               </div>
+           </div>
+       </div>
+       
+       <!-- Подвкладка: Категории -->
+       <div class="sub-tab-content" id="fin-sub-categories">
+           <div class="toolbar">
+               <button class="btn primary" style="background:#a855f7; border-color:#7e22ce; color:white;" onclick="openCategoryModal()">➕ Добавить категорию</button>
+           </div>
+           <div id="finance-categories-list">
+               <div class="empty-state">
+                   <div class="empty-state-icon">🏷</div>
+                   <div class="empty-state-title">Нет категорий</div>
+                   <div class="empty-state-text">Создайте категории расходов и установите лимиты</div>
+               </div>
+           </div>
+       </div>
+   </div>
 
 <div class="modal-overlay" id="nutrition-modal" onclick="if(event.target===this)closeAllModals()">
     <div class="modal">
@@ -846,13 +942,33 @@ function switchMainTab(tab) {
     document.querySelector(`.main-tab-btn.${tab}`).classList.add('active');
     document.getElementById(`main-tab-${tab}`).classList.add('active');
     if(tab === 'train') renderTrainAll();
+    if(tab === 'finance') renderFinanceDashboard();
 }
+   
 function switchSubTab(tab, event) {
     document.querySelectorAll('.sub-tab-btn').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.sub-tab-content').forEach(c => c.classList.remove('active'));
     event.target.classList.add('active');
     document.getElementById(`sub-tab-${tab}`).classList.add('active');
     if(tab === 'dashboard') renderDashboard();
+}
+
+function switchFinanceSubTab(tab, event) {
+    // Убираем active со всех подвкладок финансов
+    const financeContent = document.getElementById('main-tab-finance');
+    financeContent.querySelectorAll('.sub-tab-btn').forEach(b => b.classList.remove('active'));
+    financeContent.querySelectorAll('.sub-tab-content').forEach(c => c.classList.remove('active'));
+    
+    // Добавляем active к выбранной
+    event.target.classList.add('active');
+    document.getElementById(`fin-sub-${tab}`).classList.add('active');
+    
+    // Рендерим контент при переключении
+    if(tab === 'dashboard') renderFinanceDashboard();
+    if(tab === 'transactions') renderFinanceTransactions();
+    if(tab === 'savings') renderFinanceSavings();
+    if(tab === 'planned') renderFinancePlanned();
+    if(tab === 'categories') renderFinanceCategories();
 }
 
 // === МОДАЛКИ ===
