@@ -605,7 +605,32 @@
                     <input type="email" id="auth-email" placeholder="your@email.com" autocomplete="email">
                 </div>
                 <div class="form-field">
-                    <label>🔒 Пароль</label
+                    <label>🔒 Пароль</label>
+                    <input type="password" id="auth-password" placeholder="••••••" autocomplete="current-password">
+                </div>
+                <button class="auth-btn" id="auth-btn" onclick="loginUser()">Войти</button>
+                <div class="auth-error" id="auth-error"></div>
+                <div class="auth-success" id="auth-success"></div>
+                <div class="auth-forgot"><a onclick="alert('Свяжитесь с администратором для сброса пароля')">Забыли пароль?</a></div>
+            </div>
+            <!-- Форма регистрации -->
+            <div class="auth-form-content" id="auth-form-register">
+                <div class="form-field">
+                    <label>📧 Email</label>
+                    <input type="email" id="auth-reg-email" placeholder="your@email.com" autocomplete="email">
+                </div>
+                <div class="form-field">
+                    <label>🔒 Пароль (мин. 6 символов)</label>
+                    <input type="password" id="auth-reg-password" placeholder="••••••" autocomplete="new-password">
+                </div>
+                <button class="auth-btn" onclick="registerUser()">Зарегистрироваться</button>
+                <div class="auth-error" id="auth-reg-error"></div>
+                <div class="auth-success" id="auth-reg-success"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
     <div id="user-bar-container"></div>
     <div id="read-only-banner-container"></div>
     <div class="main-tabs">
