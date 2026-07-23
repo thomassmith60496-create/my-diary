@@ -196,6 +196,9 @@ function initUserSession(uid) {
             currentUserRole = userData.role || 'admin';
             viewingUserId = userData.ownerUid || uid;
             
+            // Check if migration was already completed
+            var migrationCompleted = userData.migration && userData.migration.completed === true;
+            
             if (currentUserRole === 'reader') {
                 const ownerUid = userData.ownerUid;
                 if (ownerUid) {
@@ -204,6 +207,21 @@ function initUserSession(uid) {
                 }
             } else {
                 viewingUserId = uid;
+                
+                // If migration not completed yet, run it before loading data
+                if (!migrationCompleted) {
+                    migrateOldData(uid).then(() => {
+                        switchDataContext(uid);
+                        renderUserBar();
+                        applyReadOnlyState();
+                    }).catch(() => {
+                        switchDataContext(uid);
+                        renderUserBar();
+                        applyReadOnlyState();
+                    });
+                    return;
+                }
+                
                 switchDataContext(uid);
             }
         } else {
@@ -235,108 +253,320 @@ function migrateOldData(uid) {
     return new Promise(function(resolve, reject) {
         var oldDiaryRef = db.ref('lera_diary_v1');
         var oldFinanceRef = db.ref('lera_finance_v1');
-        var firebaseHasData = false;
+        var diaryPath = 'lera_diary_v1/' + uid;
+        var financePath = 'lera_finance_v1/' + uid;
+        var promises = [];
+        var diaryMigrated = false;
+        var financeMigrated = false;
         
-        oldDiaryRef.once('value').then(function(snap) {
-            var oldData = snap.val();
-            var hasDiaryData = oldData && oldData.nutrition && oldData.nutrition.weeks && oldData.nutrition.weeks.length > 0;
+        // Step 1: Read existing user data (to not overwrite)
+        Promise.all([
+            db.ref(diaryPath).once('value'),
+            db.ref(financePath).once('value'),
+            oldDiaryRef.once('value'),
+            oldFinanceRef.once('value')
+        ]).then(function(results) {
+            var userDiarySnap = results[0];
+            var userFinanceSnap = results[1];
+            var oldDiarySnap = results[2];
+            var oldFinanceSnap = results[3];
             
-            oldFinanceRef.once('value').then(function(finSnap) {
-                var oldFinData = finSnap.val();
-                var hasFinanceData = oldFinData && oldFinData.transactions && oldFinData.transactions.length > 0;
-                firebaseHasData = hasDiaryData || hasFinanceData;
+            var userDiaryData = userDiarySnap.val();
+            var userFinanceData = userFinanceSnap.val();
+            var oldDiaryData = oldDiarySnap.val();
+            var oldFinData = oldFinanceSnap.val();
+            
+            // ======================================================
+            // MIGRATE FROM ROOT FIREBASE NODE (lera_diary_v1 root)
+            // ======================================================
+            if (oldDiaryData && oldDiaryData.nutrition && oldDiaryData.nutrition.weeks && oldDiaryData.nutrition.weeks.length > 0) {
+                // Check if user already has data — merge, don't overwrite
+                var targetNutrition = (userDiaryData && userDiaryData.nutrition) ? 
+                    mergeNutritionData(userDiaryData.nutrition, oldDiaryData.nutrition) : 
+                    oldDiaryData.nutrition;
+                var targetWorkouts = (userDiaryData && userDiaryData.workouts && userDiaryData.workouts.length > 0) ?
+                    mergeWorkoutsData(userDiaryData.workouts, oldDiaryData.workouts || []) :
+                    (oldDiaryData.workouts || []);
+                var targetProgress = (userDiaryData && userDiaryData.progress) ?
+                    mergeProgressData(userDiaryData.progress, oldDiaryData.progress || {}) :
+                    (oldDiaryData.progress || {});
                 
-                var diaryPath = 'lera_diary_v1/' + uid;
-                var financePath = 'lera_finance_v1/' + uid;
-                var promises = [];
-                
-                if (hasDiaryData) {
-                    var migrationData = {
-                        nutrition: oldData.nutrition,
-                        workouts: oldData.workouts || [],
-                        progress: oldData.progress || {},
-                        migratedFrom: 'root',
-                        migratedAt: Date.now(),
-                        lastUpdated: Date.now()
-                    };
-                    promises.push(db.ref(diaryPath).set(migrationData));
-                    console.log('Migrating Firebase diary data for user:', uid);
-                }
+                promises.push(db.ref(diaryPath).update({
+                    nutrition: targetNutrition,
+                    workouts: targetWorkouts,
+                    progress: targetProgress,
+                    lastUpdated: Date.now()
+                }));
+                diaryMigrated = true;
+                console.log('Migrating root Firebase diary data to user:', uid);
+            }
+            
+            // ======================================================
+            // MIGRATE FROM ROOT FIREBASE NODE (lera_finance_v1 root)
+            // ======================================================
+            if (oldFinData) {
+                var hasFinanceData = (
+                    (oldFinData.transactions && oldFinData.transactions.length > 0) ||
+                    (oldFinData.savings && oldFinData.savings.length > 0) ||
+                    (oldFinData.planned && oldFinData.planned.length > 0)
+                );
                 
                 if (hasFinanceData) {
-                    promises.push(db.ref(financePath).set({
-                        transactions: oldFinData.transactions || [],
-                        savings: oldFinData.savings || [],
-                        planned: oldFinData.planned || [],
-                        categories: oldFinData.categories || [],
-                        migratedFrom: 'root',
-                        migratedAt: Date.now(),
-                        lastUpdated: Date.now()
-                    }));
-                    console.log('Migrating Firebase finance data for user:', uid);
-                }
-                
-                if (!firebaseHasData) {
-                    var lsNutrition = localStorage.getItem('nutrition-data');
-                    var lsWorkouts = localStorage.getItem('workouts-data');
-                    var lsProgress = localStorage.getItem('exercise-progress');
+                    var targetFinance = {};
                     
-                    if (lsNutrition || lsWorkouts) {
-                        var lsData = { nutrition: null, workouts: [], progress: {} };
-                        try {
-                            if (lsNutrition) {
-                                var parsed = JSON.parse(lsNutrition);
-                                if (parsed && parsed.weeks && parsed.weeks.length > 0) {
-                                    lsData.nutrition = parsed;
-                                }
+                    if (userFinanceData && userFinanceData.transactions && userFinanceData.transactions.length > 0) {
+                        targetFinance.transactions = mergeFinanceTransactions(userFinanceData.transactions, oldFinData.transactions || []);
+                    } else {
+                        targetFinance.transactions = oldFinData.transactions || [];
+                    }
+                    
+                    if (userFinanceData && userFinanceData.savings && userFinanceData.savings.length > 0) {
+                        targetFinance.savings = mergeById(userFinanceData.savings, oldFinData.savings || []);
+                    } else {
+                        targetFinance.savings = oldFinData.savings || [];
+                    }
+                    
+                    if (userFinanceData && userFinanceData.planned && userFinanceData.planned.length > 0) {
+                        targetFinance.planned = mergeById(userFinanceData.planned, oldFinData.planned || []);
+                    } else {
+                        targetFinance.planned = oldFinData.planned || [];
+                    }
+                    
+                    targetFinance.categories = oldFinData.categories || [];
+                    targetFinance.lastUpdated = Date.now();
+                    
+                    promises.push(db.ref(financePath).update(targetFinance));
+                    financeMigrated = true;
+                    console.log('Migrating root Firebase finance data to user:', uid);
+                }
+            }
+            
+            // ======================================================
+            // MIGRATE FROM localStorage (if no Firebase root data)
+            // ======================================================
+            if (!diaryMigrated) {
+                var lsNutrition = localStorage.getItem('nutrition-data');
+                var lsWorkouts = localStorage.getItem('workouts-data');
+                var lsProgress = localStorage.getItem('exercise-progress');
+                
+                if (lsNutrition || lsWorkouts) {
+                    var lsData = { nutrition: null, workouts: [], progress: {} };
+                    try {
+                        if (lsNutrition) {
+                            var parsed = JSON.parse(lsNutrition);
+                            if (parsed && parsed.weeks && parsed.weeks.length > 0) {
+                                lsData.nutrition = parsed;
                             }
-                            if (lsWorkouts) {
-                                var parsed2 = JSON.parse(lsWorkouts);
-                                if (parsed2 && parsed2.workouts) {
-                                    lsData.workouts = parsed2.workouts;
-                                }
+                        }
+                        if (lsWorkouts) {
+                            var parsed2 = JSON.parse(lsWorkouts);
+                            if (parsed2 && parsed2.workouts) {
+                                lsData.workouts = parsed2.workouts;
                             }
-                            if (lsProgress) {
-                                lsData.progress = JSON.parse(lsProgress);
+                        }
+                        if (lsProgress) {
+                            lsData.progress = JSON.parse(lsProgress);
+                        }
+                        
+                        if (lsData.nutrition || lsData.workouts.length > 0) {
+                            // Merge with existing user data
+                            var targetNutrition = lsData.nutrition || { weeks: [], currentWeekId: null };
+                            var targetWorkouts = lsData.workouts || [];
+                            var targetProgress = lsData.progress || {};
+                            
+                            if (userDiaryData && userDiaryData.nutrition) {
+                                targetNutrition = mergeNutritionData(userDiaryData.nutrition, targetNutrition);
+                            }
+                            if (userDiaryData && userDiaryData.workouts && userDiaryData.workouts.length > 0) {
+                                targetWorkouts = mergeWorkoutsData(userDiaryData.workouts, targetWorkouts);
+                            }
+                            if (userDiaryData && userDiaryData.progress) {
+                                targetProgress = mergeProgressData(userDiaryData.progress, targetProgress);
                             }
                             
-                            if (lsData.nutrition || lsData.workouts.length > 0) {
-                                promises.push(db.ref(diaryPath).set({
-                                    nutrition: lsData.nutrition || { weeks: [], currentWeekId: null },
-                                    workouts: lsData.workouts || [],
-                                    progress: lsData.progress || {},
-                                    migratedFrom: 'localStorage',
-                                    migratedAt: Date.now(),
-                                    lastUpdated: Date.now()
-                                }));
-                                console.log('Migrating localStorage diary data for user:', uid);
-                                if (lsData.nutrition) nutritionData = lsData.nutrition;
-                                if (lsData.workouts.length > 0) workouts = lsData.workouts;
-                                if (lsData.progress) localStorage.setItem('exercise-progress', JSON.stringify(lsData.progress));
+                            promises.push(db.ref(diaryPath).update({
+                                nutrition: targetNutrition,
+                                workouts: targetWorkouts,
+                                progress: targetProgress,
+                                lastUpdated: Date.now()
+                            }));
+                            diaryMigrated = true;
+                            console.log('Migrating localStorage diary data for user:', uid);
+                            
+                            // Also update in-memory data
+                            if (lsData.nutrition) {
+                                nutritionData = targetNutrition;
                             }
-                        } catch(e) {
-                            console.error('Error parsing localStorage data:', e);
+                            if (lsData.workouts.length > 0) {
+                                workouts = targetWorkouts;
+                            }
+                            if (lsData.progress) {
+                                localStorage.setItem('exercise-progress', JSON.stringify(lsData.progress));
+                            }
                         }
+                    } catch(e) {
+                        console.error('Error parsing localStorage data:', e);
                     }
                 }
-                
-                if (promises.length === 0) {
-                    console.log('No old data to migrate');
-                    resolve();
-                    return;
+            }
+            
+            // ======================================================
+            // MIGRATE localStorage finance (if no Firebase root finance)
+            // ======================================================
+            if (!financeMigrated) {
+                var lsFinance = localStorage.getItem('finance-data');
+                if (lsFinance) {
+                    try {
+                        var parsedFinance = JSON.parse(lsFinance);
+                        var hasLsFinance = (
+                            (parsedFinance.transactions && parsedFinance.transactions.length > 0) ||
+                            (parsedFinance.savings && parsedFinance.savings.length > 0) ||
+                            (parsedFinance.planned && parsedFinance.planned.length > 0)
+                        );
+                        
+                        if (hasLsFinance) {
+                            var targetFinance = {
+                                transactions: parsedFinance.transactions || [],
+                                savings: parsedFinance.savings || [],
+                                planned: parsedFinance.planned || [],
+                                categories: parsedFinance.categories || [],
+                                lastUpdated: Date.now()
+                            };
+                            
+                            // Merge with existing user finance data
+                            if (userFinanceData && userFinanceData.transactions && userFinanceData.transactions.length > 0) {
+                                targetFinance.transactions = mergeFinanceTransactions(userFinanceData.transactions, targetFinance.transactions);
+                            }
+                            if (userFinanceData && userFinanceData.savings && userFinanceData.savings.length > 0) {
+                                targetFinance.savings = mergeById(userFinanceData.savings, targetFinance.savings);
+                            }
+                            if (userFinanceData && userFinanceData.planned && userFinanceData.planned.length > 0) {
+                                targetFinance.planned = mergeById(userFinanceData.planned, targetFinance.planned);
+                            }
+                            if (userFinanceData && userFinanceData.categories) {
+                                targetFinance.categories = userFinanceData.categories;
+                            }
+                            
+                            promises.push(db.ref(financePath).update(targetFinance));
+                            financeMigrated = true;
+                            console.log('Migrating localStorage finance data for user:', uid);
+                        }
+                    } catch(e) {
+                        console.error('Error parsing localStorage finance data:', e);
+                    }
                 }
+            }
+            
+            if (promises.length === 0) {
+                console.log('No old data to migrate');
+                resolve();
+                return;
+            }
+            
+            Promise.all(promises).then(function() {
+                console.log('Old data migrated to user:', uid);
+                showSyncStatus('✅ Старые данные перенесены в ваш аккаунт!', 'success');
                 
-                Promise.all(promises).then(function() {
-                    console.log('Old data migrated to user:', uid);
-                    showSyncStatus('✅ Старые данные перенесены в ваш аккаунт!', 'success');
-                    resolve();
-                }).catch(function(error) {
-                    console.error('Migration error:', error);
-                    reject(error);
-                });
-            }).catch(function(error) { reject(error); });
+                // Mark migration as completed in user profile
+                usersRef.child(uid).child('migration').update({
+                    completed: true,
+                    diaryMigrated: diaryMigrated,
+                    financeMigrated: financeMigrated,
+                    migratedAt: Date.now()
+                }).catch(console.error);
+                
+                resolve();
+            }).catch(function(error) {
+                console.error('Migration error:', error);
+                reject(error);
+            });
         }).catch(function(error) { reject(error); });
     });
+}
+
+// ============ MERGE HELPERS ============
+
+function mergeNutritionData(existing, incoming) {
+    if (!existing || !existing.weeks) return incoming;
+    if (!incoming || !incoming.weeks) return existing;
+    
+    var existingIds = {};
+    existing.weeks.forEach(function(w) { existingIds[w.id] = true; });
+    
+    var merged = {
+        weeks: existing.weeks.slice(),
+        currentWeekId: existing.currentWeekId || incoming.currentWeekId,
+        data: Object.assign({}, incoming.data || {}, existing.data || {})
+    };
+    
+    incoming.weeks.forEach(function(w) {
+        if (!existingIds[w.id]) {
+            merged.weeks.push(w);
+        } else {
+            // Merge week data
+            var existingWeek = merged.weeks.find(function(ew) { return ew.id === w.id; });
+            if (existingWeek && w.data) {
+                existingWeek.data = Object.assign({}, w.data, existingWeek.data || {});
+            }
+        }
+    });
+    
+    return merged;
+}
+
+function mergeWorkoutsData(existing, incoming) {
+    var existingIds = {};
+    existing.forEach(function(w) { existingIds[w.id] = true; });
+    var merged = existing.slice();
+    incoming.forEach(function(w) {
+        if (!existingIds[w.id]) {
+            merged.push(w);
+        }
+    });
+    return merged;
+}
+
+function mergeProgressData(existing, incoming) {
+    var merged = Object.assign({}, incoming || {}, existing || {});
+    // Deep merge: for each exercise name, merge by workoutId
+    Object.keys(merged).forEach(function(exName) {
+        if (existing && existing[exName] && incoming && incoming[exName]) {
+            var existingWorkoutIds = {};
+            existing[exName].forEach(function(e) { existingWorkoutIds[e.workoutId] = true; });
+            var mergedEntries = existing[exName].slice();
+            incoming[exName].forEach(function(e) {
+                if (!existingWorkoutIds[e.workoutId]) {
+                    mergedEntries.push(e);
+                }
+            });
+            merged[exName] = mergedEntries;
+        }
+    });
+    return merged;
+}
+
+function mergeFinanceTransactions(existing, incoming) {
+    var existingIds = {};
+    existing.forEach(function(t) { existingIds[t.id] = true; });
+    var merged = existing.slice();
+    incoming.forEach(function(t) {
+        if (t.id && !existingIds[t.id]) {
+            merged.push(t);
+        }
+    });
+    return merged;
+}
+
+function mergeById(existing, incoming) {
+    var existingIds = {};
+    existing.forEach(function(item) { existingIds[item.id] = true; });
+    var merged = existing.slice();
+    incoming.forEach(function(item) {
+        if (item.id && !existingIds[item.id]) {
+            merged.push(item);
+        }
+    });
+    return merged;
 }
 
 function switchDataContext(uid) {
