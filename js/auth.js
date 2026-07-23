@@ -230,31 +230,28 @@ function initUserSession(uid) {
 }
 
 // ============ MIGRATION ============
+
 function migrateOldData(uid) {
-    return new Promise((resolve, reject) => {
-        // 1. Сначала проверяем Firebase (старые корневые пути)
-        const oldDiaryRef = db.ref('lera_diary_v1');
-        const oldFinanceRef = db.ref('lera_finance_v1');
+    return new Promise(function(resolve, reject) {
+        var oldDiaryRef = db.ref('lera_diary_v1');
+        var oldFinanceRef = db.ref('lera_finance_v1');
+        var firebaseHasData = false;
         
-        let firebaseHasData = false;
-        
-        oldDiaryRef.once('value').then((snap) => {
-            const oldData = snap.val();
-            const hasDiaryData = oldData && oldData.nutrition && oldData.nutrition.weeks && oldData.nutrition.weeks.length > 0;
+        oldDiaryRef.once('value').then(function(snap) {
+            var oldData = snap.val();
+            var hasDiaryData = oldData && oldData.nutrition && oldData.nutrition.weeks && oldData.nutrition.weeks.length > 0;
             
-            oldFinanceRef.once('value').then((finSnap) => {
-                const oldFinData = finSnap.val();
-                const hasFinanceData = oldFinData && oldFinData.transactions && oldFinData.transactions.length > 0;
-                
+            oldFinanceRef.once('value').then(function(finSnap) {
+                var oldFinData = finSnap.val();
+                var hasFinanceData = oldFinData && oldFinData.transactions && oldFinData.transactions.length > 0;
                 firebaseHasData = hasDiaryData || hasFinanceData;
                 
-                const diaryPath = `lera_diary_v1/${uid}`;
-                const financePath = `lera_finance_v1/${uid}`;
-                
-                const promises = [];
+                var diaryPath = 'lera_diary_v1/' + uid;
+                var financePath = 'lera_finance_v1/' + uid;
+                var promises = [];
                 
                 if (hasDiaryData) {
-                    const migrationData = {
+                    var migrationData = {
                         nutrition: oldData.nutrition,
                         workouts: oldData.workouts || [],
                         progress: oldData.progress || {},
@@ -263,7 +260,7 @@ function migrateOldData(uid) {
                         lastUpdated: Date.now()
                     };
                     promises.push(db.ref(diaryPath).set(migrationData));
-                    console.log('📦 Migrating Firebase diary data for user:', uid);
+                    console.log('Migrating Firebase diary data for user:', uid);
                 }
                 
                 if (hasFinanceData) {
@@ -276,28 +273,27 @@ function migrateOldData(uid) {
                         migratedAt: Date.now(),
                         lastUpdated: Date.now()
                     }));
-                    console.log('📦 Migrating Firebase finance data for user:', uid);
+                    console.log('Migrating Firebase finance data for user:', uid);
                 }
                 
-                // 2. Проверяем localStorage (если данные там есть и нет в Firebase)
                 if (!firebaseHasData) {
-                    const lsNutrition = localStorage.getItem('nutrition-data');
-                    const lsWorkouts = localStorage.getItem('workouts-data');
-                    const lsProgress = localStorage.getItem('exercise-progress');
+                    var lsNutrition = localStorage.getItem('nutrition-data');
+                    var lsWorkouts = localStorage.getItem('workouts-data');
+                    var lsProgress = localStorage.getItem('exercise-progress');
                     
                     if (lsNutrition || lsWorkouts) {
-                        let lsData = { nutrition: null, workouts: [], progress: {} };
+                        var lsData = { nutrition: null, workouts: [], progress: {} };
                         try {
                             if (lsNutrition) {
-                                const parsed = JSON.parse(lsNutrition);
+                                var parsed = JSON.parse(lsNutrition);
                                 if (parsed && parsed.weeks && parsed.weeks.length > 0) {
                                     lsData.nutrition = parsed;
                                 }
                             }
                             if (lsWorkouts) {
-                                const parsed = JSON.parse(lsWorkouts);
-                                if (parsed && parsed.workouts) {
-                                    lsData.workouts = parsed.workouts;
+                                var parsed2 = JSON.parse(lsWorkouts);
+                                if (parsed2 && parsed2.workouts) {
+                                    lsData.workouts = parsed2.workouts;
                                 }
                             }
                             if (lsProgress) {
@@ -313,55 +309,54 @@ function migrateOldData(uid) {
                                     migratedAt: Date.now(),
                                     lastUpdated: Date.now()
                                 }));
-                                
-                                console.log('📦 Migrating localStorage diary data for user:', uid);
-                                
-                                // Загружаем данные сразу в память
+                                console.log('Migrating localStorage diary data for user:', uid);
                                 if (lsData.nutrition) nutritionData = lsData.nutrition;
                                 if (lsData.workouts.length > 0) workouts = lsData.workouts;
                                 if (lsData.progress) localStorage.setItem('exercise-progress', JSON.stringify(lsData.progress));
                             }
                         } catch(e) {
-                            console.error('❌ Error parsing localStorage data:', e);
+                            console.error('Error parsing localStorage data:', e);
                         }
                     }
                 }
                 
                 if (promises.length === 0) {
-                    console.log('ℹ️ No old data to migrate');
+                    console.log('No old data to migrate');
                     resolve();
                     return;
                 }
                 
-                Promise.all(promises).then(() => {
-                    console.log('✅ Old data migrated to user:', uid);
-                    showSyncStatus('📦 Старые данные перенесены в ваш аккаунт!', 'success');
+                Promise.all(promises).then(function() {
+                    console.log('Old data migrated to user:', uid);
+                    showSyncStatus('Starye dannye pereneseny v vash akkaunt!', 'success');
                     resolve();
-                }).catch((error) => {
-                    console.error('❌ Migration error:', error);
+                }).catch(function(error) {
+                    console.error('Migration error:', error);
                     reject(error);
                 });
-            }).catch(reject);
-        }).catch(reject);
+            }).catch(function(error) { reject(error); });
+        }).catch(function(error) { reject(error); });
     });
 }
 
 function switchDataContext(uid) {
-    window._activeDiaryRef = db.ref(`lera_diary_v1/${uid}`);
-    window._activeFinanceRef = db.ref(`lera_finance_v1/${uid}`);
+    window._activeDiaryRef = db.ref('lera_diary_v1/' + uid);
+    window._activeFinanceRef = db.ref('lera_finance_v1/' + uid);
     loadDataForUser(uid);
 }
 
 function loadDataForUser(uid) {
-    const diaryPath = `lera_diary_v1/${uid}`;
-    const financePath = `lera_finance_v1/${uid}`;
+    var diaryPath = 'lera_diary_v1/' + uid;
+    var financePath = 'lera_finance_v1/' + uid;
     
-    const diaryLoad = db.ref(diaryPath).once('value');
-    const financeLoad = db.ref(financePath).once('value');
+    var diaryLoad = db.ref(diaryPath).once('value');
+    var financeLoad = db.ref(financePath).once('value');
     
-    Promise.all([diaryLoad, financeLoad]).then(([diarySnap, financeSnap]) => {
-        const diaryData = diarySnap.val();
-        const financeDataSnap = financeSnap.val();
+    Promise.all([diaryLoad, financeLoad]).then(function(results) {
+        var diarySnap = results[0];
+        var financeSnap = results[1];
+        var diaryData = diarySnap.val();
+        var financeDataSnap = financeSnap.val();
         
         if (diaryData) {
             if (diaryData.nutrition) nutritionData = diaryData.nutrition;
@@ -384,8 +379,8 @@ function loadDataForUser(uid) {
         renderTrainAll();
         renderFinanceDashboard();
         updateFinanceStats();
-    }).catch((error) => {
-        console.error('❌ Load data error:', error);
+    }).catch(function(error) {
+        console.error('Load data error:', error);
         isInitialLoad = false;
     });
 }
@@ -393,47 +388,50 @@ function loadDataForUser(uid) {
 // ============ ACCESS MANAGEMENT ============
 
 function openAccessModal() {
-    const uid = currentUserId;
+    var uid = currentUserId;
     if (!uid) return;
     
-    usersRef.child(uid).once('value').then((snap) => {
-        const userData = snap.val() || { readers: {} };
-        const readers = userData.readers || {};
+    usersRef.child(uid).once('value').then(function(snap) {
+        var userData = snap.val() || { readers: {} };
+        var readers = userData.readers || {};
         
-        let html = `<div class="modal-overlay visible" id="access-modal" onclick="if(event.target===this)closeAccessModal()">
-            <div class="modal">
-                <div class="modal-header">
-                    <h3 class="modal-title">👥 Управление доступом</h3>
-                    <button class="modal-close" onclick="closeAccessModal()">✕</button>
-                </div>
-                <div class="modal-body reader-modal">
-                    <h4 style="margin:0 0 12px;color:#7e22ce;">📋 Список читателей</h4>`;
+        var html = '<div class="modal-overlay visible" id="access-modal" onclick="if(event.target===this)closeAccessModal()">\
+            <div class="modal">\
+                <div class="modal-header">\
+                    <h3 class="modal-title">👥 Upravlenie dostupom</h3>\
+                    <button class="modal-close" onclick="closeAccessModal()">✕</button>\
+                </div>\
+                <div class="modal-body reader-modal">\
+                    <h4 style="margin:0 0 12px;color:#7e22ce;">Spisok chitateley</h4>';
         
-        const readerKeys = Object.keys(readers);
+        var readerKeys = Object.keys(readers);
         if (readerKeys.length === 0) {
-            html += `<p style="color:#94a3b8;font-size:13px;">Нет добавленных читателей</p>`;
+            html += '<p style="color:#94a3b8;font-size:13px;">Net dobavlennykh chitateley</p>';
         } else {
-            readerKeys.forEach(rUid => {
-                const rEmail = readers[rUid] || 'Неизвестно';
-                html += `<div class="reader-item">
-                    <span>📧 ${rEmail}</span>
-                    <button class="remove-reader" onclick="removeReader('${rUid}')">🗑 Удалить</button>
-                </div>`;
-            });
+            for (var i = 0; i < readerKeys.length; i++) {
+                var rUid = readerKeys[i];
+                var rEmail = readers[rUid] || 'Neizvestno';
+                html += '<div class="reader-item">\
+                    <span>📧 ' + rEmail + '</span>\
+                    <button class="remove-reader" onclick="removeReader(\'' + rUid + '\')">🗑 Udalit</button>\
+                </div>';
+            }
         }
         
-        html += `<h4 style="margin:16px 0 8px;color:#7e22ce;">➕ Добавить читателя</h4>
-                    <div class="add-reader-row">
-                        <input type="email" id="add-reader-email" placeholder="Email читателя">
-                        <button onclick="addReader()">➕ Добавить</button>
-                    </div>
-                    <div id="add-reader-error" style="color:#dc2626;font-size:12px;margin-top:6px;display:none;"></div>
-                <div class="modal-footer">
-                    <button class="btn" onclick="closeAccessModal()">Закрыть</button>
-                </div>
-        </div>`;
+        html += '<h4 style="margin:16px 0 8px;color:#7e22ce;">Dobavit chitatelya</h4>\
+                    <div class="add-reader-row">\
+                        <input type="email" id="add-reader-email" placeholder="Email chitatelya">\
+                        <button onclick="addReader()">Dobavit</button>\
+                    </div>\
+                    <div id="add-reader-error" style="color:#dc2626;font-size:12px;margin-top:6px;display:none;"></div>\
+                </div>\
+                <div class="modal-footer">\
+                    <button class="btn" onclick="closeAccessModal()">Zakryt</button>\
+                </div>\
+            </div>\
+        </div>';
         
-        const old = document.getElementById('access-modal');
+        var old = document.getElementById('access-modal');
         if (old) old.remove();
         
         document.body.insertAdjacentHTML('beforeend', html);
@@ -441,84 +439,47 @@ function openAccessModal() {
 }
 
 function closeAccessModal() {
-    const modal = document.getElementById('access-modal');
+    var modal = document.getElementById('access-modal');
     if (modal) modal.remove();
 }
 
 function addReader() {
-    const email = document.getElementById('add-reader-email').value.trim();
-    const errorEl = document.getElementById('add-reader-error');
+    var email = document.getElementById('add-reader-email').value.trim();
+    var errorEl = document.getElementById('add-reader-error');
     errorEl.style.display = 'none';
     
-    if (!email) { errorEl.textContent = '❌ Введите email'; errorEl.style.display = 'block'; return; }
+    if (!email) { errorEl.textContent = 'Vvedite email'; errorEl.style.display = 'block'; return; }
     
-    usersRef.orderByChild('email').equalTo(email).once('value').then((snap) => {
-        let foundUid = null;
-        snap.forEach(child => {
-            const data = child.val();
-            if (data.role === 'reader' && data.ownerUid === currentUserId) {
-                foundUid = child.key;
-            }
-        });
-        
-        firebase.auth().fetchSignInMethodsForEmail(email).then((methods) => {
-            if (methods.length > 0) {
-                usersRef.orderByChild('email').equalTo(email).once('value').then((snap2) => {
-                    let existingUid = null;
-                    snap2.forEach(child => {
-                        existingUid = child.key;
-                    });
-                    
-                    if (existingUid) {
-                        usersRef.child(existingUid).update({
-                            role: 'reader',
-                            ownerUid: currentUserId
-                        }).then(() => {
-                            usersRef.child(currentUserId).child('readers').child(existingUid).set(email);
-                            showSyncStatus('✅ Читатель добавлен!', 'success');
-                            closeAccessModal();
-                            openAccessModal();
-                        });
-                    } else {
-                        createReaderUser(email);
-                    }
-                });
-            } else {
-                createReaderUser(email);
-            }
-        }).catch(() => {
-            createReaderUser(email);
-        });
-    });
+    createReaderUser(email);
 }
 
 function createReaderUser(email) {
-    const tempUid = 'reader-' + email.replace(/[^a-zA-Z0-9]/g, '');
+    var tempUid = 'reader-' + email.replace(/[^a-zA-Z0-9]/g, '');
     usersRef.child(tempUid).set({
         email: email,
         role: 'reader',
         ownerUid: currentUserId,
         createdAt: firebase.database.ServerValue.TIMESTAMP
-    }).then(() => {
+    }).then(function() {
         usersRef.child(currentUserId).child('readers').child(tempUid).set(email);
-        showSyncStatus('✅ Читатель добавлен!', 'success');
+        showSyncStatus('Chitatel dobavlen!', 'success');
         closeAccessModal();
         openAccessModal();
-    }).catch((error) => {
-        document.getElementById('add-reader-error').textContent = '❌ Ошибка: ' + error.message;
+    }).catch(function(error) {
+        document.getElementById('add-reader-error').textContent = 'Oshibka: ' + error.message;
         document.getElementById('add-reader-error').style.display = 'block';
     });
 }
 
 function removeReader(readerUid) {
-    if (!confirm('Удалить читателя?')) return;
+    if (!confirm('Udalit chitatelya?')) return;
     
-    usersRef.child(currentUserId).child('readers').child(readerUid).remove().then(() => {
+    usersRef.child(currentUserId).child('readers').child(readerUid).remove().then(function() {
         usersRef.child(readerUid).update({
             role: 'reader',
             ownerUid: null
         }).catch(console.error);
-        showSyncStatus('✅ Читатель удалён', 'success');
+        showSyncStatus('Chitatel udalen', 'success');
         closeAccessModal();
         openAccessModal();
     });
@@ -529,11 +490,12 @@ function toggleViewMode() {
     isReadOnlyMode = !isReadOnlyMode;
     renderUserBar();
     applyReadOnlyState();
-    showSyncStatus(isReadOnlyMode ? '👁 Режим просмотра' : '✏️ Режим редактирования', 'success');
+    showSyncStatus(isReadOnlyMode ? 'Rezhim prosmotra' : 'Rezhim redaktirovaniya', 'success');
 }
 
 // ============ AUTH STATE LISTENER ============
-firebase.auth().onAuthStateChanged((user) => {
+
+firebase.auth().onAuthStateChanged(function(user) {
     currentUser = user;
     if (user) {
         currentUserId = user.uid;
