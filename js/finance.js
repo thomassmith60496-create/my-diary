@@ -181,14 +181,65 @@ function parseAmountFormula(val) {
     if(typeof val === 'string' && val.trim().startsWith('=')) {
         try {
             const expr = val.trim().substring(1);
+            // Safe math parser — only allows +, -, *, /, parentheses, numbers, and decimals
             const sanitized = expr.replace(/[^0-9+\-*/().,\s]/g, '').replace(',', '.');
-            const result = Function('"use strict"; return (' + sanitized + ')')();
+            const result = safeEval(sanitized);
             if(typeof result === 'number' && isFinite(result) && result > 0) {
                 return Math.round(result * 100) / 100;
             }
         } catch(e) {}
     }
     return parseFloat(val);
+}
+
+function safeEval(expr) {
+    // Simple recursive descent parser for basic arithmetic
+    const tokens = expr.match(/(\d+\.?\d*|[+\-*/().])/g) || [];
+    let pos = 0;
+    
+    function peek() { return tokens[pos] || ''; }
+    function consume() { return tokens[pos++]; }
+    
+    function parseAddSub() {
+        let left = parseMulDiv();
+        while (peek() === '+' || peek() === '-') {
+            const op = consume();
+            const right = parseMulDiv();
+            if (op === '+') left += right;
+            else left -= right;
+        }
+        return left;
+    }
+    
+    function parseMulDiv() {
+        let left = parsePrimary();
+        while (peek() === '*' || peek() === '/') {
+            const op = consume();
+            const right = parsePrimary();
+            if (op === '*') left *= right;
+            else if (right === 0) throw new Error('Division by zero');
+            else left /= right;
+        }
+        return left;
+    }
+    
+    function parsePrimary() {
+        if (peek() === '(') {
+            consume(); // '('
+            const val = parseAddSub();
+            if (peek() === ')') consume(); // ')'
+            return val;
+        }
+        if (peek() === '-') {
+            consume();
+            return -parsePrimary();
+        }
+        const num = parseFloat(consume());
+        if (isNaN(num)) throw new Error('Invalid number');
+        return num;
+    }
+    
+    return parseAddSub();
 }
 
 // --- SAVE FUNCTIONS ---
@@ -359,14 +410,17 @@ function editFinanceTransaction(id) {
     document.getElementById('finance-modal-title').textContent = '✏️ Редактировать операцию';
     window._editingTransactionId = id;
     
+    // Set category and subcategory after modal is visible and options are rendered
     updateFinanceCategoryOptions();
-    setTimeout(() => {
+    
+    // Use a single requestAnimationFrame to wait for DOM update
+    requestAnimationFrame(function() {
         document.getElementById('f-fin-category').value = t.category || '';
         updateFinanceSubcategoryOptions();
-        setTimeout(() => {
+        requestAnimationFrame(function() {
             document.getElementById('f-fin-subcategory').value = t.subcategory || '';
-        }, 50);
-    }, 50);
+        });
+    });
     
     document.getElementById('finance-modal').classList.add('visible');
 }
@@ -989,16 +1043,32 @@ function renderFinanceCategories() {
 }
 
 function saveFinance() {
-    financeRef.set({
-        transactions: financeData.transactions,
-        savings: financeData.savings,
-        planned: financeData.planned,
-        categories: financeData.categories,
-        lastUpdated: Date.now()
-    }).then(() => {
-        console.log('✅ Finance saved');
-    }).catch((error) => {
-        console.error('❌ Finance save error:', error);
-    });
+    const targetUid = viewingUserId || currentUserId;
+    if (targetUid) {
+        db.ref(`lera_finance_v1/${targetUid}`).set({
+            transactions: financeData.transactions,
+            savings: financeData.savings,
+            planned: financeData.planned,
+            categories: financeData.categories,
+            lastUpdated: Date.now()
+        }).then(() => {
+            console.log('✅ Finance saved for user:', targetUid);
+        }).catch((error) => {
+            console.error('❌ Finance save error:', error);
+        });
+    } else {
+        // Fallback to root path if no user context
+        financeRef.set({
+            transactions: financeData.transactions,
+            savings: financeData.savings,
+            planned: financeData.planned,
+            categories: financeData.categories,
+            lastUpdated: Date.now()
+        }).then(() => {
+            console.log('✅ Finance saved (root fallback)');
+        }).catch((error) => {
+            console.error('❌ Finance save error:', error);
+        });
+    }
 }
 

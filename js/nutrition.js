@@ -127,7 +127,7 @@ function renderDays() {
                         <div class="morning-title">🌅 Утренние показатели</div>
                         <div class="morning-field">
                             <label>⚖️ Вес утром, кг:</label>
-                            <input type="number" step="0.1" data-week="${week.id}" data-key="weight-${di}" data-day="${di}" data-field="weight" oninput="saveNutrition()" placeholder="65.4" value="${getWeekData(week.id, `weight-${di}`) || ''}">
+                            <input type="number" step="0.1" data-week="${week.id}" data-key="weight-${di}" data-day="${di}" data-field="weight" oninput="saveNutrition()" placeholder="65.4" value="${getWeekData(week.id, `weight-${di}`) !== '' ? getWeekData(week.id, `weight-${di}`) : ''}">
                         </div>
                     </div>
                     ${mealsHtml}

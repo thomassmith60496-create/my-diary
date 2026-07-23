@@ -328,7 +328,7 @@ function migrateOldData(uid) {
                 
                 Promise.all(promises).then(function() {
                     console.log('Old data migrated to user:', uid);
-                    showSyncStatus('Starye dannye pereneseny v vash akkaunt!', 'success');
+                    showSyncStatus('✅ Старые данные перенесены в ваш аккаунт!', 'success');
                     resolve();
                 }).catch(function(error) {
                     console.error('Migration error:', error);
@@ -398,35 +398,36 @@ function openAccessModal() {
         var html = '<div class="modal-overlay visible" id="access-modal" onclick="if(event.target===this)closeAccessModal()">\
             <div class="modal">\
                 <div class="modal-header">\
-                    <h3 class="modal-title">👥 Upravlenie dostupom</h3>\
+                    <h3 class="modal-title">👥 Управление доступом</h3>\
                     <button class="modal-close" onclick="closeAccessModal()">✕</button>\
                 </div>\
                 <div class="modal-body reader-modal">\
-                    <h4 style="margin:0 0 12px;color:#7e22ce;">Spisok chitateley</h4>';
+                    <h4 style="margin:0 0 12px;color:#7e22ce;">Список читателей</h4>';
         
         var readerKeys = Object.keys(readers);
         if (readerKeys.length === 0) {
-            html += '<p style="color:#94a3b8;font-size:13px;">Net dobavlennykh chitateley</p>';
+            html += '<p style="color:#94a3b8;font-size:13px;">Нет добавленных читателей</p>';
         } else {
             for (var i = 0; i < readerKeys.length; i++) {
                 var rUid = readerKeys[i];
-                var rEmail = readers[rUid] || 'Neizvestno';
+                var rEmail = readers[rUid] || 'Неизвестно';
                 html += '<div class="reader-item">\
                     <span>📧 ' + rEmail + '</span>\
-                    <button class="remove-reader" onclick="removeReader(\'' + rUid + '\')">🗑 Udalit</button>\
+                    <button class="remove-reader" onclick="removeReader(\'' + rUid + '\')">🗑 Удалить</button>\
                 </div>';
             }
         }
         
-        html += '<h4 style="margin:16px 0 8px;color:#7e22ce;">Dobavit chitatelya</h4>\
+        html += '<h4 style="margin:16px 0 8px;color:#7e22ce;">Добавить читателя</h4>\
                     <div class="add-reader-row">\
-                        <input type="email" id="add-reader-email" placeholder="Email chitatelya">\
-                        <button onclick="addReader()">Dobavit</button>\
+                        <input type="email" id="add-reader-email" placeholder="Email читателя">\
+                        <button onclick="addReader()">Добавить</button>\
                     </div>\
                     <div id="add-reader-error" style="color:#dc2626;font-size:12px;margin-top:6px;display:none;"></div>\
+                    <div style="font-size:11px;color:#7e22ce;margin-top:8px;">ℹ️ Читатель должен быть зарегистрирован в приложении. Введите его email.</div>\
                 </div>\
                 <div class="modal-footer">\
-                    <button class="btn" onclick="closeAccessModal()">Zakryt</button>\
+                    <button class="btn" onclick="closeAccessModal()">Закрыть</button>\
                 </div>\
             </div>\
         </div>';
@@ -448,38 +449,64 @@ function addReader() {
     var errorEl = document.getElementById('add-reader-error');
     errorEl.style.display = 'none';
     
-    if (!email) { errorEl.textContent = 'Vvedite email'; errorEl.style.display = 'block'; return; }
+    if (!email) { errorEl.textContent = 'Введите email'; errorEl.style.display = 'block'; return; }
     
     createReaderUser(email);
 }
 
 function createReaderUser(email) {
-    var tempUid = 'reader-' + email.replace(/[^a-zA-Z0-9]/g, '');
-    usersRef.child(tempUid).set({
-        email: email,
-        role: 'reader',
-        ownerUid: currentUserId,
-        createdAt: firebase.database.ServerValue.TIMESTAMP
-    }).then(function() {
-        usersRef.child(currentUserId).child('readers').child(tempUid).set(email);
-        showSyncStatus('Chitatel dobavlen!', 'success');
-        closeAccessModal();
-        openAccessModal();
+    // Find if user exists in Firebase Auth by searching users db
+    var errorEl = document.getElementById('add-reader-error');
+    
+    usersRef.orderByChild('email').equalTo(email).once('value', function(snap) {
+        var found = false;
+        snap.forEach(function(childSnap) {
+            var userData = childSnap.val();
+            var existingUid = childSnap.key;
+            
+            // Check this user is not already a reader for current admin
+            if (existingUid === currentUserId) {
+                errorEl.textContent = '❌ Это ваш собственный аккаунт';
+                errorEl.style.display = 'block';
+                found = true;
+                return;
+            }
+            
+            // Set role to reader and link to current admin
+            usersRef.child(existingUid).update({
+                role: 'reader',
+                ownerUid: currentUserId
+            }).then(function() {
+                usersRef.child(currentUserId).child('readers').child(existingUid).set(email);
+                showSyncStatus('✅ Читатель добавлен!', 'success');
+                closeAccessModal();
+                openAccessModal();
+            }).catch(function(error) {
+                errorEl.textContent = '❌ Ошибка: ' + error.message;
+                errorEl.style.display = 'block';
+            });
+            found = true;
+        });
+        
+        if (!found) {
+            errorEl.textContent = '❌ Пользователь с таким email не найден. Убедитесь, что он зарегистрирован в приложении.';
+            errorEl.style.display = 'block';
+        }
     }).catch(function(error) {
-        document.getElementById('add-reader-error').textContent = 'Oshibka: ' + error.message;
-        document.getElementById('add-reader-error').style.display = 'block';
+        errorEl.textContent = '❌ Ошибка: ' + error.message;
+        errorEl.style.display = 'block';
     });
 }
 
 function removeReader(readerUid) {
-    if (!confirm('Udalit chitatelya?')) return;
+    if (!confirm('Удалить читателя?')) return;
     
     usersRef.child(currentUserId).child('readers').child(readerUid).remove().then(function() {
         usersRef.child(readerUid).update({
             role: 'reader',
             ownerUid: null
         }).catch(console.error);
-        showSyncStatus('Chitatel udalen', 'success');
+        showSyncStatus('✅ Читатель удалён', 'success');
         closeAccessModal();
         openAccessModal();
     });
@@ -490,7 +517,7 @@ function toggleViewMode() {
     isReadOnlyMode = !isReadOnlyMode;
     renderUserBar();
     applyReadOnlyState();
-    showSyncStatus(isReadOnlyMode ? 'Rezhim prosmotra' : 'Rezhim redaktirovaniya', 'success');
+    showSyncStatus(isReadOnlyMode ? '👁 Режим просмотра' : '✏️ Режим редактирования', 'success');
 }
 
 // ============ AUTH STATE LISTENER ============

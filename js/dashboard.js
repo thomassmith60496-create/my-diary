@@ -80,9 +80,9 @@ function renderSVGLineChart(data, field, unit, color) {
     const values = data.map(d => d[field]);
     const minVal = Math.min(...values);
     const maxVal = Math.max(...values);
-    const valRange = maxVal - minVal || 1;
-    const yMin = Math.max(0, minVal - valRange * 0.1);
-    const yMax = maxVal + valRange * 0.15;
+    const valRange = Math.max(maxVal - minVal, 0.01); // Prevent division by zero
+    const yMin = Math.max(0, minVal - Math.max(valRange * 0.1, 0.5));
+    const yMax = maxVal + Math.max(valRange * 0.15, 0.5);
     const xStep = data.length > 1 ? chartW / (data.length - 1) : chartW / 2;
     const points = data.map((d, i) => {
         const x = padding.left + (data.length > 1 ? i * xStep : chartW / 2);

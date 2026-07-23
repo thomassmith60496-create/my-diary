@@ -80,6 +80,8 @@ function saveExerciseProgress(workout) {
         allProgress[ex.name].push({ date: workout.date, workoutId: workout.id, sets: ex.sets.length, maxWeight, totalReps, volume });
     });
     localStorage.setItem('exercise-progress', JSON.stringify(allProgress));
+    // Also sync to Firebase immediately so progress isn't lost
+    syncToCloud();
 }
 
 function removeProgressByWorkout(workoutId) {
