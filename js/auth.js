@@ -232,8 +232,11 @@ function initUserSession(uid) {
 // ============ MIGRATION ============
 function migrateOldData(uid) {
     return new Promise((resolve, reject) => {
+        // 1. Сначала проверяем Firebase (старые корневые пути)
         const oldDiaryRef = db.ref('lera_diary_v1');
         const oldFinanceRef = db.ref('lera_finance_v1');
+        
+        let firebaseHasData = false;
         
         oldDiaryRef.once('value').then((snap) => {
             const oldData = snap.val();
@@ -243,11 +246,7 @@ function migrateOldData(uid) {
                 const oldFinData = finSnap.val();
                 const hasFinanceData = oldFinData && oldFinData.transactions && oldFinData.transactions.length > 0;
                 
-                if (!hasDiaryData && !hasFinanceData) {
-                    console.log('ℹ️ No old data to migrate');
-                    resolve();
-                    return;
-                }
+                firebaseHasData = hasDiaryData || hasFinanceData;
                 
                 const diaryPath = `lera_diary_v1/${uid}`;
                 const financePath = `lera_finance_v1/${uid}`;
@@ -264,6 +263,7 @@ function migrateOldData(uid) {
                         lastUpdated: Date.now()
                     };
                     promises.push(db.ref(diaryPath).set(migrationData));
+                    console.log('📦 Migrating Firebase diary data for user:', uid);
                 }
                 
                 if (hasFinanceData) {
@@ -276,6 +276,61 @@ function migrateOldData(uid) {
                         migratedAt: Date.now(),
                         lastUpdated: Date.now()
                     }));
+                    console.log('📦 Migrating Firebase finance data for user:', uid);
+                }
+                
+                // 2. Проверяем localStorage (если данные там есть и нет в Firebase)
+                if (!firebaseHasData) {
+                    const lsNutrition = localStorage.getItem('nutrition-data');
+                    const lsWorkouts = localStorage.getItem('workouts-data');
+                    const lsProgress = localStorage.getItem('exercise-progress');
+                    
+                    if (lsNutrition || lsWorkouts) {
+                        let lsData = { nutrition: null, workouts: [], progress: {} };
+                        try {
+                            if (lsNutrition) {
+                                const parsed = JSON.parse(lsNutrition);
+                                if (parsed && parsed.weeks && parsed.weeks.length > 0) {
+                                    lsData.nutrition = parsed;
+                                }
+                            }
+                            if (lsWorkouts) {
+                                const parsed = JSON.parse(lsWorkouts);
+                                if (parsed && parsed.workouts) {
+                                    lsData.workouts = parsed.workouts;
+                                }
+                            }
+                            if (lsProgress) {
+                                lsData.progress = JSON.parse(lsProgress);
+                            }
+                            
+                            if (lsData.nutrition || lsData.workouts.length > 0) {
+                                promises.push(db.ref(diaryPath).set({
+                                    nutrition: lsData.nutrition || { weeks: [], currentWeekId: null },
+                                    workouts: lsData.workouts || [],
+                                    progress: lsData.progress || {},
+                                    migratedFrom: 'localStorage',
+                                    migratedAt: Date.now(),
+                                    lastUpdated: Date.now()
+                                }));
+                                
+                                console.log('📦 Migrating localStorage diary data for user:', uid);
+                                
+                                // Загружаем данные сразу в память
+                                if (lsData.nutrition) nutritionData = lsData.nutrition;
+                                if (lsData.workouts.length > 0) workouts = lsData.workouts;
+                                if (lsData.progress) localStorage.setItem('exercise-progress', JSON.stringify(lsData.progress));
+                            }
+                        } catch(e) {
+                            console.error('❌ Error parsing localStorage data:', e);
+                        }
+                    }
+                }
+                
+                if (promises.length === 0) {
+                    console.log('ℹ️ No old data to migrate');
+                    resolve();
+                    return;
                 }
                 
                 Promise.all(promises).then(() => {
@@ -373,11 +428,9 @@ function openAccessModal() {
                         <button onclick="addReader()">➕ Добавить</button>
                     </div>
                     <div id="add-reader-error" style="color:#dc2626;font-size:12px;margin-top:6px;display:none;"></div>
-                </div>
                 <div class="modal-footer">
                     <button class="btn" onclick="closeAccessModal()">Закрыть</button>
                 </div>
-            </div>
         </div>`;
         
         const old = document.getElementById('access-modal');
@@ -497,4 +550,3 @@ firebase.auth().onAuthStateChanged((user) => {
         applyReadOnlyState();
     }
 });
-
