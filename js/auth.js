@@ -1,5 +1,17 @@
 // ============ AUTH FUNCTIONS ============
 
+function showMigrationStatus(message, type) {
+    var el = document.getElementById('migration-status');
+    if (!el) return;
+    el.textContent = message;
+    el.style.display = 'block';
+    el.style.background = type === 'success' ? '#f0fdf4' : (type === 'error' ? '#fef2f2' : '#fffbeb');
+    el.style.color = type === 'success' ? '#166534' : (type === 'error' ? '#991b1b' : '#92400e');
+    el.style.border = '1px solid ' + (type === 'success' ? '#bbf7d0' : (type === 'error' ? '#fecaca' : '#fde68a'));
+    console.log('[MIGRATION] ' + message);
+    setTimeout(function() { el.style.display = 'none'; }, 8000);
+}
+
 function renderUserBar() {
     const container = document.getElementById('user-bar-container');
     if (!currentUser) {
@@ -16,6 +28,7 @@ function renderUserBar() {
     
     if (currentUserRole === 'admin') {
         html += `<button class="user-bar-btn access" onclick="openAccessModal()">👥 Доступ</button>`;
+        html += `<button class="user-bar-btn view" onclick="forceMigrateOldData()" title="Перенести старые данные в аккаунт">🔄 Migrate</button>`;
         if (isReadOnlyMode) {
             html += `<button class="user-bar-btn view active" onclick="toggleViewMode()">👁 Просмотр</button>`;
         } else {
@@ -248,6 +261,29 @@ function initUserSession(uid) {
 }
 
 // ============ MIGRATION ============
+
+function forceMigrateOldData() {
+    var uid = currentUserId || viewingUserId;
+    if (!uid) {
+        showMigrationStatus('❌ Сначала войдите в аккаунт', 'error');
+        return;
+    }
+    showMigrationStatus('⏳ Проверяю старые данные...', 'info');
+    console.log('[MIGRATION] Manual migration triggered for user:', uid);
+    
+    // Reset migration flag so it runs again
+    usersRef.child(uid).child('migration').update({ completed: false }).then(function() {
+        migrateOldData(uid).then(function() {
+            showMigrationStatus('✅ Миграция завершена! Перезагружаю данные...', 'success');
+            // Reload data
+            switchDataContext(uid);
+        }).catch(function(error) {
+            showMigrationStatus('❌ Ошибка миграции: ' + error.message, 'error');
+        });
+    }).catch(function(error) {
+        showMigrationStatus('❌ Ошибка: ' + error.message, 'error');
+    });
+}
 
 function migrateOldData(uid) {
     return new Promise(function(resolve, reject) {

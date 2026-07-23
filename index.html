@@ -62,6 +62,8 @@
 
     <div id="user-bar-container"></div>
     <div id="read-only-banner-container"></div>
+    <div id="sync-status" class="sync-status"></div>
+    <div id="migration-status" style="display:none;padding:8px 16px;margin:0 16px;border-radius:8px;font-size:13px;"></div>
     <div class="main-tabs">
         <button class="main-tab-btn food active" onclick="switchMainTab('food')">📘 Питание</button>
         <button class="main-tab-btn train" onclick="switchMainTab('train')">🏋️ Тренировки</button>
@@ -591,7 +593,6 @@
 </div>
 
 <div id="print-area" style="display:none;"></div>
-<div id="sync-status" class="sync-status"></div>
 
 <!-- JavaScript -->
 <script src="js/firebase-config.js"></script>
