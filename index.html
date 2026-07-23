@@ -7,6 +7,7 @@
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 <!-- SheetJS for Excel import -->
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <style>
@@ -492,11 +493,102 @@
    .subcat-input-row input:focus { outline: none; border-color: #a855f7; }
    .subcat-input-row button { padding: 6px 12px; background: #a855f7; color: white; border: none; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; }
    .subcat-input-row button:hover { background: #7e22ce; }
+   /* ===== Auth Styles ===== */
+   .auth-overlay {
+       position: fixed; inset: 0; background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%);
+       display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 20px;
+   }
+   .auth-overlay.hidden { display: none; }
+   .auth-box {
+       background: white; border-radius: 24px; max-width: 420px; width: 100%;
+       box-shadow: 0 25px 80px rgba(0,0,0,0.5); overflow: hidden;
+   }
+   .auth-header {
+       background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+       color: white; padding: 30px; text-align: center;
+   }
+   .auth-header h1 { margin: 0 0 6px; font-size: 26px; }
+   .auth-header p { margin: 0; opacity: 0.8; font-size: 14px; }
+   .auth-tabs { display: flex; border-bottom: 1px solid #e2e8f0; }
+   .auth-tab {
+       flex: 1; padding: 14px; border: none; background: transparent;
+       font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit;
+       color: #94a3b8; transition: all 0.2s;
+   }
+   .auth-tab.active { color: #1e3a8a; box-shadow: inset 0 -3px 0 #2563eb; background: #f8faff; }
+   .auth-form { padding: 24px 30px 30px; }
+   .auth-form .form-field { margin-bottom: 16px; }
+   .auth-form .form-field label { display: block; font-size: 12px; font-weight: 700; color: #1e40af; margin-bottom: 4px; }
+   .auth-form .form-field input {
+       width: 100%; padding: 10px 12px; border: 1.5px solid #bfdbfe; border-radius: 8px;
+       font-size: 14px; background: #f8faff; color: #1e293b; font-family: inherit;
+   }
+   .auth-form .form-field input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.15); }
+   .auth-form .auth-btn {
+       width: 100%; padding: 12px; background: #2563eb; color: white; border: none;
+       border-radius: 10px; font-size: 16px; font-weight: 700; cursor: pointer; font-family: inherit;
+       transition: background 0.2s; margin-top: 4px;
+   }
+   .auth-form .auth-btn:hover { background: #1e3a8a; }
+   .auth-form .auth-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+   .auth-error { color: #dc2626; font-size: 13px; font-weight: 600; margin-top: 8px; text-align: center; display: none; }
+   .auth-success { color: #16a34a; font-size: 13px; font-weight: 600; margin-top: 8px; text-align: center; display: none; }
+   .auth-forgot { text-align: center; margin-top: 12px; }
+   .auth-forgot a { color: #2563eb; font-size: 13px; cursor: pointer; text-decoration: none; }
+   .auth-forgot a:hover { text-decoration: underline; }
+   .user-bar {
+       display: flex; align-items: center; gap: 12px; padding: 8px 16px;
+       background: white; border-radius: 12px; margin-bottom: 16px;
+       box-shadow: 0 2px 8px rgba(30, 58, 138, 0.06); border: 1px solid #e0e7ff;
+       flex-wrap: wrap;
+   }
+   .user-bar-email { font-size: 13px; font-weight: 600; color: #1e3a8a; flex: 1; }
+   .user-bar-role {
+       font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 12px;
+       text-transform: uppercase; letter-spacing: 0.3px;
+   }
+   .user-bar-role.admin { background: #dbeafe; color: #1e40af; }
+   .user-bar-role.reader { background: #fef3c7; color: #92400e; }
+   .user-bar-btn {
+       padding: 5px 12px; border-radius: 6px; font-size: 12px; font-weight: 600;
+       cursor: pointer; border: 1px solid; font-family: inherit; transition: all 0.2s;
+   }
+   .user-bar-btn.logout { background: white; color: #dc2626; border-color: #fca5a5; }
+   .user-bar-btn.logout:hover { background: #fee2e2; }
+   .user-bar-btn.access { background: white; color: #7e22ce; border-color: #d8b4fe; }
+   .user-bar-btn.access:hover { background: #faf5ff; }
+   .user-bar-btn.view { background: white; color: #065f46; border-color: #a7f3d0; }
+   .user-bar-btn.view:hover { background: #ecfdf5; }
+   .user-bar-btn.view.active { background: #10b981; color: white; border-color: #10b981; }
+   .reader-modal .modal-body { max-height: 400px; overflow-y: auto; }
+   .reader-item {
+       display: flex; align-items: center; justify-content: space-between;
+       padding: 8px 12px; border: 1px solid #e9d5ff; border-radius: 8px; margin-bottom: 6px;
+   }
+   .reader-item span { font-size: 13px; color: #1e293b; }
+   .reader-item .remove-reader {
+       padding: 3px 8px; font-size: 11px; background: white; color: #dc2626;
+       border: 1px solid #fecaca; border-radius: 4px; cursor: pointer; font-family: inherit;
+   }
+   .reader-item .remove-reader:hover { background: #fee2e2; }
+   .add-reader-row { display: flex; gap: 8px; margin-top: 12px; }
+   .add-reader-row input { flex: 1; padding: 8px 10px; border: 1.5px solid #d8b4fe; border-radius: 6px; font-size: 13px; font-family: inherit; background: #faf5ff; }
+   .add-reader-row input:focus { outline: none; border-color: #a855f7; }
+   .add-reader-row button { padding: 8px 14px; background: #a855f7; color: white; border: none; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; }
+   .add-reader-row button:hover { background: #7e22ce; }
+   .read-only-banner {
+       background: #fef3c7; border: 1px solid #fbbf24; border-radius: 10px;
+       padding: 10px 16px; margin-bottom: 16px; font-size: 13px; font-weight: 600;
+       color: #92400e; text-align: center;
+   }
+   .read-only-input { pointer-events: none; opacity: 0.6; }
 </style>
 </head>
 <body>
 
 <div class="container">
+    <div id="user-bar-container"></div>
+    <div id="read-only-banner-container"></div>
     <div class="main-tabs">
         <button class="main-tab-btn food active" onclick="switchMainTab('food')">📘 Питание</button>
         <button class="main-tab-btn train" onclick="switchMainTab('train')">🏋️ Тренировки</button>
@@ -669,9 +761,9 @@
                <button class="btn primary" style="background:#a855f7; border-color:#7e22ce; color:white;" onclick="openFinanceModal()">➕ Добавить операцию</button>
                <button class="btn" onclick="document.getElementById('import-excel-file').click()">📂 Импорт из Excel</button>
                <button class="btn" onclick="renderFinanceDashboard()">🔄 Обновить</button>
-               <input type="file" id="import-excel-file" accept=".xlsx,.xls,.csv" style="display:none;" onchange="importFinanceExcel(this)">
+    <input type="file" id="import-excel-file" accept=".xlsx,.xls,.csv" style="display:none;" onchange="importFinanceExcel(this)">
            </div>
-           <div id="finance-dashboard-content">
+       <div id="finance-dashboard-content">
                <div class="empty-state">
                    <div class="empty-state-icon">💰</div>
                    <div class="empty-state-title">Дашборд финансов</div>
@@ -1053,6 +1145,544 @@ let editingWorkoutId = null;
 let currentKbjuMetric = 'cal';
 let currentTrainMetric = 'weight';
 const formStarsData = {};
+// ============ AUTH GLOBALS ============
+let currentUser = null;
+let currentUserRole = 'admin'; // 'admin' or 'reader'
+let currentUserId = null;
+let isReadOnlyMode = false; // Принудительный режим просмотра
+let viewingUserId = null; // Чей дневник смотрит админ
+const usersRef = firebase.database().ref('lera_diary_users');
+// ======================================
+
+// ============ AUTH FUNCTIONS ============
+
+function renderUserBar() {
+    const container = document.getElementById('user-bar-container');
+    if (!currentUser) {
+        container.innerHTML = '';
+        return;
+    }
+    const roleLabel = currentUserRole === 'admin' ? '👑 Админ' : '👁 Читатель';
+    const roleClass = currentUserRole === 'admin' ? 'admin' : 'reader';
+    const isReader = currentUserRole === 'reader';
+    
+    let html = `<div class="user-bar">
+        <span class="user-bar-email">📧 ${currentUser.email}</span>
+        <span class="user-bar-role ${roleClass}">${roleLabel}</span>`;
+    
+    // Админ: кнопки управления доступом и просмотра
+    if (currentUserRole === 'admin') {
+        html += `<button class="user-bar-btn access" onclick="openAccessModal()">👥 Доступ</button>`;
+        if (isReadOnlyMode) {
+            html += `<button class="user-bar-btn view active" onclick="toggleViewMode()">👁 Просмотр</button>`;
+        } else {
+            html += `<button class="user-bar-btn view" onclick="toggleViewMode()">✏️ Редактирование</button>`;
+        }
+    }
+    
+    html += `<button class="user-bar-btn logout" onclick="logoutUser()">🚪 Выйти</button>
+    </div>`;
+    container.innerHTML = html;
+    
+    renderReadOnlyBanner();
+}
+
+function renderReadOnlyBanner() {
+    const container = document.getElementById('read-only-banner-container');
+    if (currentUserRole === 'reader' || (currentUserRole === 'admin' && isReadOnlyMode)) {
+        const msg = currentUserRole === 'reader' 
+            ? '👁 Вы просматриваете дневник в режиме «только чтение»'
+            : '👁 Режим просмотра — изменения не будут сохранены';
+        container.innerHTML = `<div class="read-only-banner">${msg}</div>`;
+    } else {
+        container.innerHTML = '';
+    }
+}
+
+function applyReadOnlyState() {
+    const isReadOnly = currentUserRole === 'reader' || isReadOnlyMode;
+    // Блокируем все вводные поля
+    document.querySelectorAll('input:not([type="file"]), textarea, select, button:not(.user-bar-btn):not(.main-tab-btn):not(.sub-tab-btn)').forEach(el => {
+        if (isReadOnly) {
+            el.classList.add('read-only-input');
+            el.disabled = true;
+        } else {
+            el.classList.remove('read-only-input');
+            el.disabled = false;
+        }
+    });
+    // Скрываем кнопки добавления/удаления для читателя
+    document.querySelectorAll('.admin-only').forEach(el => {
+        el.style.display = isReadOnly ? 'none' : '';
+    });
+}
+
+function registerUser() {
+    const email = document.getElementById('auth-email').value.trim();
+    const password = document.getElementById('auth-password').value;
+    const errorEl = document.getElementById('auth-error');
+    const successEl = document.getElementById('auth-success');
+    errorEl.style.display = 'none';
+    successEl.style.display = 'none';
+    
+    if (!email || !password) { errorEl.textContent = '❌ Заполните email и пароль'; errorEl.style.display = 'block'; return; }
+    if (password.length < 6) { errorEl.textContent = '❌ Пароль должен быть минимум 6 символов'; errorEl.style.display = 'block'; return; }
+    
+    const btn = document.getElementById('auth-btn');
+    btn.disabled = true;
+    btn.textContent = '⏳ Регистрация...';
+    
+    firebase.auth().createUserWithEmailAndPassword(email, password)
+        .then((cred) => {
+            const uid = cred.user.uid;
+            // Создаём запись пользователя как admin
+            return usersRef.child(uid).set({
+                email: email,
+                role: 'admin',
+                ownerUid: uid,
+                readers: {},
+                createdAt: firebase.database.ServerValue.TIMESTAMP
+            }).then(() => {
+                currentUserId = uid;
+                currentUserRole = 'admin';
+                isReadOnlyMode = false;
+                viewingUserId = uid;
+                console.log('✅ User registered as admin:', uid);
+                successEl.textContent = '✅ Регистрация успешна!';
+                successEl.style.display = 'block';
+                btn.disabled = false;
+                btn.textContent = 'Зарегистрироваться';
+                // Закрываем auth overlay
+                document.getElementById('auth-overlay').classList.add('hidden');
+                // Перезагружаем данные пользователя
+                initUserSession(uid);
+            });
+        })
+        .catch((error) => {
+            console.error('❌ Register error:', error);
+            errorEl.textContent = '❌ ' + translateFirebaseError(error.code);
+            errorEl.style.display = 'block';
+            btn.disabled = false;
+            btn.textContent = 'Зарегистрироваться';
+        });
+}
+
+function loginUser() {
+    const email = document.getElementById('auth-email').value.trim();
+    const password = document.getElementById('auth-password').value;
+    const errorEl = document.getElementById('auth-error');
+    const successEl = document.getElementById('auth-success');
+    errorEl.style.display = 'none';
+    successEl.style.display = 'none';
+    
+    if (!email || !password) { errorEl.textContent = '❌ Введите email и пароль'; errorEl.style.display = 'block'; return; }
+    
+    const btn = document.getElementById('auth-btn');
+    btn.disabled = true;
+    btn.textContent = '⏳ Вход...';
+    
+    firebase.auth().signInWithEmailAndPassword(email, password)
+        .then((cred) => {
+            const uid = cred.user.uid;
+            console.log('✅ User logged in:', uid);
+            successEl.textContent = '✅ Вход выполнен!';
+            successEl.style.display = 'block';
+            btn.disabled = false;
+            btn.textContent = 'Войти';
+            document.getElementById('auth-overlay').classList.add('hidden');
+            initUserSession(uid);
+        })
+        .catch((error) => {
+            console.error('❌ Login error:', error);
+            errorEl.textContent = '❌ ' + translateFirebaseError(error.code);
+            errorEl.style.display = 'block';
+            btn.disabled = false;
+            btn.textContent = 'Войти';
+        });
+}
+
+function logoutUser() {
+    firebase.auth().signOut().then(() => {
+        currentUser = null;
+        currentUserRole = 'admin';
+        currentUserId = null;
+        isReadOnlyMode = false;
+        viewingUserId = null;
+        document.getElementById('auth-overlay').classList.remove('hidden');
+        renderUserBar();
+        applyReadOnlyState();
+        console.log('✅ User logged out');
+    }).catch((error) => {
+        console.error('❌ Logout error:', error);
+    });
+}
+
+function translateFirebaseError(code) {
+    const map = {
+        'auth/user-not-found': 'Пользователь не найден',
+        'auth/wrong-password': 'Неверный пароль',
+        'auth/email-already-in-use': 'Email уже используется',
+        'auth/invalid-email': 'Неверный формат email',
+        'auth/weak-password': 'Слишком простой пароль',
+        'auth/too-many-requests': 'Слишком много попыток. Попробуйте позже',
+        'auth/user-disabled': 'Пользователь заблокирован',
+        'auth/invalid-credential': 'Неверный email или пароль'
+    };
+    return map[code] || code;
+}
+
+function switchAuthTab(tab) {
+    document.querySelectorAll('.auth-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+    document.querySelectorAll('.auth-form-content').forEach(f => f.classList.toggle('active', f.id === 'auth-form-' + tab));
+    
+    const btn = document.getElementById('auth-btn');
+    const errorEl = document.getElementById('auth-error');
+    const successEl = document.getElementById('auth-success');
+    errorEl.style.display = 'none';
+    successEl.style.display = 'none';
+    
+    if (tab === 'login') {
+        btn.textContent = 'Войти';
+        btn.onclick = loginUser;
+    } else {
+        btn.textContent = 'Зарегистрироваться';
+        btn.onclick = registerUser;
+    }
+}
+
+function initUserSession(uid) {
+    currentUserId = uid;
+    // Загружаем данные пользователя
+    usersRef.child(uid).once('value').then((snap) => {
+        const userData = snap.val();
+        if (userData) {
+            currentUserRole = userData.role || 'admin';
+            viewingUserId = userData.ownerUid || uid;
+            
+            // Если пользователь читатель — загружаем данные владельца
+            if (currentUserRole === 'reader') {
+                const ownerUid = userData.ownerUid;
+                if (ownerUid) {
+                    viewingUserId = ownerUid;
+                    switchDataContext(ownerUid);
+                }
+            } else {
+                viewingUserId = uid;
+                switchDataContext(uid);
+            }
+        } else {
+            // Нет записи — создаём как admin
+            currentUserRole = 'admin';
+            viewingUserId = uid;
+            usersRef.child(uid).set({
+                email: currentUser.email,
+                role: 'admin',
+                ownerUid: uid,
+                readers: {},
+                createdAt: firebase.database.ServerValue.TIMESTAMP
+            });
+            switchDataContext(uid);
+        }
+        
+        renderUserBar();
+        applyReadOnlyState();
+    });
+}
+
+function switchDataContext(uid) {
+    // Переключаем Firebase references на конкретного пользователя
+    const newDiaryRef = db.ref(`lera_diary_v1/${uid}`);
+    const newFinanceRef = db.ref(`lera_finance_v1/${uid}`);
+    
+    // Переопределяем syncToCloud и loadFromCloud для работы с новыми путями
+    window._activeDiaryRef = newDiaryRef;
+    window._activeFinanceRef = newFinanceRef;
+    
+    // Загружаем данные нового пользователя
+    loadDataForUser(uid);
+}
+
+function loadDataForUser(uid) {
+    const diaryPath = `lera_diary_v1/${uid}`;
+    const financePath = `lera_finance_v1/${uid}`;
+    
+    const diaryLoad = db.ref(diaryPath).once('value');
+    const financeLoad = db.ref(financePath).once('value');
+    
+    Promise.all([diaryLoad, financeLoad]).then(([diarySnap, financeSnap]) => {
+        const diaryData = diarySnap.val();
+        const financeDataSnap = financeSnap.val();
+        
+        if (diaryData) {
+            if (diaryData.nutrition) nutritionData = diaryData.nutrition;
+            if (diaryData.workouts) workouts = diaryData.workouts;
+            if (diaryData.progress) localStorage.setItem('exercise-progress', JSON.stringify(diaryData.progress));
+        } else {
+            nutritionData = { weeks: [], currentWeekId: null };
+            workouts = [];
+        }
+        
+        if (financeDataSnap) {
+            if (financeDataSnap.transactions) financeData.transactions = financeDataSnap.transactions;
+            if (financeDataSnap.savings) financeData.savings = financeDataSnap.savings;
+            if (financeDataSnap.planned) financeData.planned = financeDataSnap.planned;
+            if (financeDataSnap.categories) financeData.categories = financeDataSnap.categories;
+        }
+        
+        isInitialLoad = false;
+        renderNutritionAll();
+        renderTrainAll();
+        renderFinanceDashboard();
+        updateFinanceStats();
+    }).catch((error) => {
+        console.error('❌ Load data error:', error);
+        isInitialLoad = false;
+    });
+}
+
+// Override syncToCloud to use per-user paths
+const _originalSyncToCloud = syncToCloud;
+syncToCloud = function() {
+    if(syncTimeout) clearTimeout(syncTimeout);
+    const statusEl = document.getElementById('sync-status');
+    if(statusEl && !statusEl.classList.contains('visible')) {
+        showSyncStatus('💾 Сохранение...', 'syncing');
+    }
+    syncTimeout = setTimeout(() => {
+        const targetUid = viewingUserId || currentUserId;
+        if (!targetUid) return;
+        
+        const data = {
+            nutrition: nutritionData,
+            workouts: workouts,
+            progress: JSON.parse(localStorage.getItem('exercise-progress') || '{}'),
+            lastUpdated: Date.now()
+        };
+        
+        db.ref(`lera_diary_v1/${targetUid}`).set(data);
+        
+        db.ref(`lera_finance_v1/${targetUid}`).set({
+            transactions: financeData.transactions,
+            savings: financeData.savings,
+            planned: financeData.planned,
+            categories: financeData.categories,
+            lastUpdated: Date.now()
+        })
+            .then(() => {
+                console.log(`✅ Data saved to Firebase for user ${targetUid}`);
+                showSyncStatus('✅ Сохранено!', 'success');
+            })
+            .catch((error) => {
+                console.error('❌ Firebase error:', error);
+                showSyncStatus('❌ Ошибка сохранения', 'error');
+            });
+    }, 5000);
+};
+
+// Override loadFromCloud to use per-user paths
+const _originalLoadFromCloud = loadFromCloud;
+loadFromCloud = function() {
+    // This will be called after auth — data loads through initUserSession
+    console.log('ℹ️ loadFromCloud deferred to auth session');
+};
+
+// Override resetAllData to use per-user paths
+const _originalResetAllData = resetAllData;
+resetAllData = function() {
+    if(confirm('Удалить ВСЕ данные (питание + тренировки + финансы)? Это нельзя отменить.')) {
+        const targetUid = viewingUserId || currentUserId;
+        if (targetUid) {
+            db.ref(`lera_diary_v1/${targetUid}`).remove().catch(console.error);
+            db.ref(`lera_finance_v1/${targetUid}`).remove().catch(console.error);
+        }
+        localStorage.removeItem('nutrition-data');
+        localStorage.removeItem('workouts-data');
+        localStorage.removeItem('exercise-progress');
+        nutritionData = { weeks: [], currentWeekId: null };
+        workouts = [];
+        financeData = { transactions: [], savings: [], planned: [], categories: [] };
+        renderNutritionAll();
+        renderTrainAll();
+        renderCurrentFinanceTab();
+        updateFinanceStats();
+    }
+};
+
+// ============ ACCESS MANAGEMENT ============
+
+function openAccessModal() {
+    const uid = currentUserId;
+    if (!uid) return;
+    
+    usersRef.child(uid).once('value').then((snap) => {
+        const userData = snap.val() || { readers: {} };
+        const readers = userData.readers || {};
+        
+        let html = `<div class="modal-overlay visible" id="access-modal" onclick="if(event.target===this)closeAccessModal()">
+            <div class="modal">
+                <div class="modal-header">
+                    <h3 class="modal-title">👥 Управление доступом</h3>
+                    <button class="modal-close" onclick="closeAccessModal()">✕</button>
+                </div>
+                <div class="modal-body reader-modal">
+                    <h4 style="margin:0 0 12px;color:#7e22ce;">📋 Список читателей</h4>`;
+        
+        const readerKeys = Object.keys(readers);
+        if (readerKeys.length === 0) {
+            html += `<p style="color:#94a3b8;font-size:13px;">Нет добавленных читателей</p>`;
+        } else {
+            readerKeys.forEach(rUid => {
+                const rEmail = readers[rUid] || 'Неизвестно';
+                html += `<div class="reader-item">
+                    <span>📧 ${rEmail}</span>
+                    <button class="remove-reader" onclick="removeReader('${rUid}')">🗑 Удалить</button>
+                </div>`;
+            });
+        }
+        
+        html += `<h4 style="margin:16px 0 8px;color:#7e22ce;">➕ Добавить читателя</h4>
+                    <div class="add-reader-row">
+                        <input type="email" id="add-reader-email" placeholder="Email читателя">
+                        <button onclick="addReader()">➕ Добавить</button>
+                    </div>
+                    <div id="add-reader-error" style="color:#dc2626;font-size:12px;margin-top:6px;display:none;"></div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn" onclick="closeAccessModal()">Закрыть</button>
+                </div>
+            </div>
+        </div>`;
+        
+        // Удаляем старую модалку если есть
+        const old = document.getElementById('access-modal');
+        if (old) old.remove();
+        
+        document.body.insertAdjacentHTML('beforeend', html);
+    });
+}
+
+function closeAccessModal() {
+    const modal = document.getElementById('access-modal');
+    if (modal) modal.remove();
+}
+
+function addReader() {
+    const email = document.getElementById('add-reader-email').value.trim();
+    const errorEl = document.getElementById('add-reader-error');
+    errorEl.style.display = 'none';
+    
+    if (!email) { errorEl.textContent = '❌ Введите email'; errorEl.style.display = 'block'; return; }
+    
+    // Ищем пользователя по email в узле lera_diary_users
+    usersRef.orderByChild('email').equalTo(email).once('value').then((snap) => {
+        let foundUid = null;
+        snap.forEach(child => {
+            const data = child.val();
+            // Не добавляем самого себя и существующих читателей
+            if (data.role === 'reader' && data.ownerUid === currentUserId) {
+                foundUid = child.key;
+            }
+        });
+        
+        // Если не нашли — создаём читателя
+        // Проверяем, есть ли пользователь с таким email в auth (поищем в users)
+        firebase.auth().fetchSignInMethodsForEmail(email).then((methods) => {
+            if (methods.length > 0) {
+                // Пользователь существует, ищем его UID
+                usersRef.orderByChild('email').equalTo(email).once('value').then((snap2) => {
+                    let existingUid = null;
+                    snap2.forEach(child => {
+                        existingUid = child.key;
+                    });
+                    
+                    if (existingUid) {
+                        // Обновляем роль на reader
+                        usersRef.child(existingUid).update({
+                            role: 'reader',
+                            ownerUid: currentUserId
+                        }).then(() => {
+                            // Добавляем в список читателей админа
+                            usersRef.child(currentUserId).child('readers').child(existingUid).set(email);
+                            showSyncStatus('✅ Читатель добавлен!', 'success');
+                            closeAccessModal();
+                            openAccessModal();
+                        });
+                    } else {
+                        createReaderUser(email);
+                    }
+                });
+            } else {
+                createReaderUser(email);
+            }
+        }).catch(() => {
+            createReaderUser(email);
+        });
+    });
+}
+
+function createReaderUser(email) {
+    // Создаём запись читателя с временным UID на основе email
+    const tempUid = 'reader-' + email.replace(/[^a-zA-Z0-9]/g, '');
+    usersRef.child(tempUid).set({
+        email: email,
+        role: 'reader',
+        ownerUid: currentUserId,
+        createdAt: firebase.database.ServerValue.TIMESTAMP
+    }).then(() => {
+        usersRef.child(currentUserId).child('readers').child(tempUid).set(email);
+        showSyncStatus('✅ Читатель добавлен!', 'success');
+        closeAccessModal();
+        openAccessModal();
+    }).catch((error) => {
+        document.getElementById('add-reader-error').textContent = '❌ Ошибка: ' + error.message;
+        document.getElementById('add-reader-error').style.display = 'block';
+    });
+}
+
+function removeReader(readerUid) {
+    if (!confirm('Удалить читателя?')) return;
+    
+    usersRef.child(currentUserId).child('readers').child(readerUid).remove().then(() => {
+        // Сбрасываем роль читателя
+        usersRef.child(readerUid).update({
+            role: 'reader',
+            ownerUid: null
+        }).catch(console.error);
+        showSyncStatus('✅ Читатель удалён', 'success');
+        closeAccessModal();
+        openAccessModal();
+    });
+}
+
+function toggleViewMode() {
+    if (currentUserRole !== 'admin') return;
+    isReadOnlyMode = !isReadOnlyMode;
+    renderUserBar();
+    applyReadOnlyState();
+    showSyncStatus(isReadOnlyMode ? '👁 Режим просмотра' : '✏️ Режим редактирования', 'success');
+}
+
+// ============ AUTH STATE LISTENER ============
+firebase.auth().onAuthStateChanged((user) => {
+    currentUser = user;
+    if (user) {
+        currentUserId = user.uid;
+        document.getElementById('auth-overlay').classList.add('hidden');
+        initUserSession(user.uid);
+    } else {
+        currentUser = null;
+        currentUserId = null;
+        currentUserRole = 'admin';
+        isReadOnlyMode = false;
+        viewingUserId = null;
+        document.getElementById('auth-overlay').classList.remove('hidden');
+        renderUserBar();
+        applyReadOnlyState();
+    }
+});
+
+// ==============================================
+
 let syncTimeout = null;
 let isInitialLoad = true;
 let financeData = {
