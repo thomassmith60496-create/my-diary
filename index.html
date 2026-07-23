@@ -586,7 +586,26 @@
 </head>
 <body>
 
-<div class="container">
+<!-- ===== AUTH OVERLAY ===== -->
+<div class="auth-overlay" id="auth-overlay">
+    <div class="auth-box">
+        <div class="auth-header">
+            <h1>📘 Дневник</h1>
+            <p>Войдите или зарегистрируйтесь</p>
+        </div>
+        <div class="auth-tabs">
+            <button class="auth-tab active" data-tab="login" onclick="switchAuthTab('login')">🔑 Вход</button>
+            <button class="auth-tab" data-tab="register" onclick="switchAuthTab('register')">📝 Регистрация</button>
+        </div>
+        <div class="auth-form">
+            <!-- Форма входа -->
+            <div class="auth-form-content active" id="auth-form-login">
+                <div class="form-field">
+                    <label>📧 Email</label>
+                    <input type="email" id="auth-email" placeholder="your@email.com" autocomplete="email">
+                </div>
+                <div class="form-field">
+                    <label>🔒 Пароль</label
     <div id="user-bar-container"></div>
     <div id="read-only-banner-container"></div>
     <div class="main-tabs">
