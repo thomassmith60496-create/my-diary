@@ -17,6 +17,8 @@ function switchMainTab(tab) {
         // Navigate to today's date after rendering
         setTimeout(() => scrollToToday(), 100);
     }
+    // Re-apply read-only state after rendering dynamic content
+    setTimeout(() => applyReadOnlyState(), 50);
 }
    
 function switchSubTab(tab, event) {
@@ -25,6 +27,8 @@ function switchSubTab(tab, event) {
     event.target.classList.add('active');
     document.getElementById(`sub-tab-${tab}`).classList.add('active');
     if(tab === 'dashboard') renderDashboard();
+    // Re-apply read-only state after rendering dynamic content
+    setTimeout(() => applyReadOnlyState(), 50);
 }
 
 function switchFinanceSubTab(tab, event) {
@@ -40,6 +44,8 @@ function switchFinanceSubTab(tab, event) {
     if(tab === 'savings') renderFinanceSavings();
     if(tab === 'planned') renderFinancePlanned();
     if(tab === 'categories') renderFinanceCategories();
+    // Re-apply read-only state after rendering dynamic content
+    setTimeout(() => applyReadOnlyState(), 50);
 }
 
 // === МОДАЛКИ ===

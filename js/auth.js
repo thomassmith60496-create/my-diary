@@ -120,7 +120,13 @@ function applyReadOnlyState() {
             el.disabled = false;
         });
         
-        // 11. Экспорт/импорт - кнопки экспорта в любой вкладке
+        // 11. Кнопка "Наверх" (scroll to top)
+        document.querySelectorAll('.btn-scroll-top').forEach(el => {
+            el.classList.remove('read-only-input');
+            el.disabled = false;
+        });
+        
+        // 12. Экспорт/импорт - кнопки экспорта в любой вкладке
         document.querySelectorAll('button[onclick*="exportAllData"], button[onclick*="exportMenuAsText"], button[onclick*="printMenu"]').forEach(el => {
             el.classList.remove('read-only-input');
             el.disabled = false;
@@ -350,6 +356,9 @@ function loadDataForUser(uid) {
         if(homeTab && homeTab.classList.contains('active')) {
             renderHomePage();
         }
+        
+        // Apply read-only state AFTER all rendering is done
+        applyReadOnlyState();
     }).catch(function(error) {
         console.error('Load data error:', error);
         isInitialLoad = false;
