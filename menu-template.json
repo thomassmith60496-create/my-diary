@@ -2,7 +2,7 @@
   "menu": [
     {
       "day": "Понедельник",
-      "date": "24.07",
+      "date": "24.07.2026",
       "training": false,
       "meals": [
         {
@@ -52,7 +52,7 @@
     },
     {
       "day": "Вторник",
-      "date": "25.07",
+      "date": "25.07.2026",
       "training": true,
       "meals": [
         {

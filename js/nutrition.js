@@ -3,11 +3,17 @@
 // ============================================
 
 function downloadMenuTemplate() {
+    const today = new Date();
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - today.getDay() + 1);
+    const tuesday = new Date(monday);
+    tuesday.setDate(monday.getDate() + 1);
+    
     const template = {
         "menu": [
             {
                 "day": "Понедельник",
-                "date": "24.07",
+                "date": formatDateShort(monday.toISOString().slice(0,10)),
                 "training": false,
                 "meals": [
                     {
@@ -57,7 +63,7 @@ function downloadMenuTemplate() {
             },
             {
                 "day": "Вторник",
-                "date": "25.07",
+                "date": formatDateShort(tuesday.toISOString().slice(0,10)),
                 "training": true,
                 "meals": [
                     {
