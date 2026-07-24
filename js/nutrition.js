@@ -316,7 +316,26 @@ function saveNutrition() {
         week.data[key] = inp.value;
     });
     
-    syncToCloud();
+    // Save immediately to Firebase instead of waiting for debounced syncToCloud
+    const targetUid = getTargetUid();
+    const data = {
+        nutrition: nutritionData,
+        workouts: workouts,
+        progress: getProgressData(),
+        lastUpdated: Date.now()
+    };
+    
+    const savePromise = targetUid
+        ? db.ref(`lera_diary_v1/${targetUid}`).set(data)
+        : diaryRef.set(data);
+    
+    savePromise.then(() => {
+        console.log('✅ Nutrition data saved immediately');
+        showSyncStatus('✅ Сохранено!', 'success');
+    }).catch((error) => {
+        console.error('❌ Save error:', error);
+        showSyncStatus('❌ Ошибка сохранения', 'error');
+    });
 }
 
 function exportMenuAsText() {

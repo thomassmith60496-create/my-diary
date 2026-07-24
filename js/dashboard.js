@@ -709,23 +709,23 @@ function renderWeeklyAvg() {
         return;
     }
     
-    // Render weekly averages
-    let html = '<div class="weekly-avg-grid">';
+    // Render weekly averages as a table
+    let html = '<table class="weekly-table">';
+    html += '<thead><tr><th>Неделя</th><th>Дней</th><th>Калории</th><th>Белки</th><th>Жиры</th><th>Углеводы</th></tr></thead>';
+    html += '<tbody>';
     weeklyData.forEach(week => {
         html += `
-            <div class="weekly-avg-card">
-                <div class="weekly-avg-title">${week.title}</div>
-                <div class="weekly-avg-days">${week.days} дн. с данными</div>
-                <div class="weekly-avg-values">
-                    <div class="avg-item cal"><span class="avg-value">${week.cal}</span><span class="avg-label">ккал</span></div>
-                    <div class="avg-item prot"><span class="avg-value">${week.prot}г</span><span class="avg-label">Б</span></div>
-                    <div class="avg-item fat"><span class="avg-value">${week.fat}г</span><span class="avg-label">Ж</span></div>
-                    <div class="avg-item carb"><span class="avg-value">${week.carb}г</span><span class="avg-label">У</span></div>
-                </div>
-            </div>
+            <tr>
+                <td>${week.title}</td>
+                <td>${week.days}</td>
+                <td class="cal">${week.cal} ккал</td>
+                <td class="prot">${week.prot}г</td>
+                <td class="fat">${week.fat}г</td>
+                <td class="carb">${week.carb}г</td>
+            </tr>
         `;
     });
-    html += '</div>';
+    html += '</tbody></table>';
     
     container.innerHTML = html;
 }
