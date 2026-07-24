@@ -170,6 +170,42 @@ function formatDateShort(dateStr) {
     return `${d.getDate().toString().padStart(2,'0')}.${(d.getMonth()+1).toString().padStart(2,'0')}.${d.getFullYear()}`;
 }
 
+function migrateNutritionDates() {
+    if (!nutritionData || !nutritionData.weeks) return;
+    
+    let needsUpdate = false;
+    const currentYear = new Date().getFullYear();
+    
+    nutritionData.weeks.forEach(week => {
+        // Update week title if it doesn't have year
+        if (week.title && !week.title.match(/\d{4}/)) {
+            const startDate = new Date(week.startDate || week.menu[0]?.date + '.' + currentYear);
+            const endDate = new Date(week.endDate || week.menu[week.menu.length - 1]?.date + '.' + currentYear);
+            week.title = `Неделя ${formatDateShort(startDate.toISOString().slice(0,10))} – ${formatDateShort(endDate.toISOString().slice(0,10))}`;
+            needsUpdate = true;
+        }
+        
+        // Update menu dates if they don't have year
+        if (week.menu) {
+            week.menu.forEach(day => {
+                if (day.date && !day.date.match(/\.\d{4}$/)) {
+                    // Date is in format "DD.MM" without year, add current year
+                    const [dayPart, monthPart] = day.date.split('.');
+                    if (dayPart && monthPart) {
+                        day.date = `${dayPart}.${monthPart}.${currentYear}`;
+                        needsUpdate = true;
+                    }
+                }
+            });
+        }
+    });
+    
+    if (needsUpdate) {
+        console.log('✅ Даты мигрированы к формату с годом');
+        saveNutrition();
+    }
+}
+
 function switchWeek() {
     nutritionData.currentWeekId = document.getElementById('week-select').value;
     saveNutrition();

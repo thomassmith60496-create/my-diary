@@ -253,6 +253,11 @@ function loadDataForUser(uid) {
             workouts = [];
         }
         
+        // Migrate old dates to include year
+        if (typeof migrateNutritionDates === 'function') {
+            migrateNutritionDates();
+        }
+        
         if (financeDataSnap) {
             if (financeDataSnap.transactions) financeData.transactions = financeDataSnap.transactions;
             if (financeDataSnap.savings) financeData.savings = financeDataSnap.savings;

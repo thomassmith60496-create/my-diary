@@ -281,6 +281,11 @@ function saveTrainings() {
 // === ИНИЦИАЛИЗАЦИЯ ===
 
 (function init() {
+    // Migrate old nutrition dates to include year
+    if (typeof migrateNutritionDates === 'function') {
+        migrateNutritionDates();
+    }
+    
     // Render with initial data (auth state will reload if needed)
     renderHomePage();
     if (!currentUser) {
