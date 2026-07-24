@@ -59,13 +59,14 @@ function renderFinanceDashboard() {
             return `<option value="${m}">${label}</option>`;
         }).join('');
     
-    // Default to current month (if it has data), otherwise most recent month
+    // Restore previously selected month, or default to current month
     const today = new Date();
     const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
-    if(allMonthsSet.has(currentMonth)) {
+    if (currentMonthValue && currentMonthValue !== '') {
+        monthSelect.value = currentMonthValue;
+    } else if(allMonthsSet.has(currentMonth)) {
         monthSelect.value = currentMonth;
     } else if(sortedMonths.length > 0) {
-        // If current month has no data, select the most recent month
         monthSelect.value = sortedMonths[sortedMonths.length - 1];
     }
     financeSelectedMonth = monthSelect.value;
@@ -251,6 +252,11 @@ function renderFinanceDashboard() {
     }
     
     container.innerHTML = html;
+    
+    // Re-apply read-only state after re-rendering
+    if (typeof applyReadOnlyState === 'function') {
+        applyReadOnlyState();
+    }
 }
 
 function renderFinanceTransactions() {
