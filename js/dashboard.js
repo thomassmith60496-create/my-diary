@@ -245,7 +245,13 @@ function normalizeDate(dateStr) {
         return dateStr;
     }
     
-    // If in DD.MM format, add current year
+    // If in DD.MM.YYYY format, convert to YYYY-MM-DD
+    if(dateStr.includes('.') && dateStr.length === 10) {
+        const [day, month, year] = dateStr.split('.');
+        return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+    
+    // If in DD.MM format (legacy), add current year
     if(dateStr.includes('.') && dateStr.length === 5) {
         const [day, month] = dateStr.split('.');
         const year = new Date().getFullYear();
