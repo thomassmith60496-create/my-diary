@@ -2,6 +2,29 @@
 // 💰 FINANCE SAVE FUNCTIONS
 // ============================================
 
+function saveFinance() {
+    const targetUid = getTargetUid();
+    const data = {
+        transactions: financeData.transactions,
+        savings: financeData.savings,
+        planned: financeData.planned,
+        categories: financeData.categories,
+        lastUpdated: Date.now()
+    };
+    
+    const savePromise = targetUid
+        ? db.ref(`lera_finance_v1/${targetUid}`).set(data)
+        : financeRef.set(data);
+    
+    savePromise.then(() => {
+        console.log('✅ Finance data saved' + (targetUid ? ` for user ${targetUid}` : ' (root)'));
+        showSyncStatus('✅ Финансы сохранены!', 'success');
+    }).catch((error) => {
+        console.error('❌ Firebase finance save error:', error);
+        showSyncStatus('❌ Ошибка сохранения финансов', 'error');
+    });
+}
+
 function saveFinanceTransaction() {
     const date = document.getElementById('f-fin-date').value;
     const amountRaw = document.getElementById('f-fin-amount').value;
@@ -14,7 +37,28 @@ function saveFinanceTransaction() {
     if(!date) { alert('Укажите дату'); return; }
     if(!amount || amount <= 0) { alert('Укажите сумму'); return; }
     
-    const txn = {
+    // Check if we're editing an existing transaction
+    if(window._editingTransactionId) {
+        const txn = financeData.transactions.find(t => t.id === window._editingTransactionId);
+        if(txn) {
+            txn.date = date;
+            txn.amount = type === 'expense' ? -Math.abs(amount) : Math.abs(amount);
+            txn.type = type;
+            txn.category = catId;
+            txn.subcategory = subcat;
+            txn.comment = comment;
+            window._editingTransactionId = null;
+            saveFinance();
+            closeAllModals();
+            renderCurrentFinanceTab();
+            updateFinanceStats();
+            alert('✅ Операция обновлена');
+            return;
+        }
+    }
+    
+    // Create new transaction
+    const newTxn = {
         id: 'txn-' + Date.now(),
         date,
         type,
@@ -25,7 +69,7 @@ function saveFinanceTransaction() {
         createdAt: Date.now()
     };
     
-    financeData.transactions.push(txn);
+    financeData.transactions.push(newTxn);
     saveFinance();
     closeAllModals();
     renderCurrentFinanceTab();
