@@ -193,16 +193,21 @@ function getTodayNutrition(dateStr) {
     let fat = 0;
     let carbs = 0;
     
+    console.log('🔍 Looking for meals for date:', dateStr);
+    
     if(nutritionData.weeks && nutritionData.weeks.length > 0) {
         // Search through ALL weeks to find today's meals
-        nutritionData.weeks.forEach(week => {
+        nutritionData.weeks.forEach((week, weekIndex) => {
             if(week && week.menu) {
                 week.menu.forEach((day, dayIndex) => {
                     // Normalize dates for comparison (handle both "20.07" and "2026-07-20" formats)
                     const normalizedDayDate = normalizeDate(day.date);
                     const normalizedToday = normalizeDate(dateStr);
                     
+                    console.log(`  Week ${weekIndex}, Day ${dayIndex}: ${day.date} -> ${normalizedDayDate} (today: ${normalizedToday})`);
+                    
                     if(normalizedDayDate === normalizedToday && day.meals && day.meals.length > 0) {
+                        console.log(`    ✅ MATCH! Found ${day.meals.length} meals`);
                         // Count all meals that exist in today's menu
                         mealsCount += day.meals.length;
                         
@@ -232,6 +237,8 @@ function getTodayNutrition(dateStr) {
             }
         });
     }
+    
+    console.log('📊 Total meals found:', mealsCount, 'calories:', calories);
     
     return { mealsCount, calories: Math.round(calories), protein: Math.round(protein), fat: Math.round(fat), carbs: Math.round(carbs) };
 }
