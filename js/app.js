@@ -282,6 +282,7 @@ function saveTrainings() {
 
 (function init() {
     // Render with initial data (auth state will reload if needed)
+    renderHomePage();
     if (!currentUser) {
         renderNutritionAll();
         renderTrainAll();
