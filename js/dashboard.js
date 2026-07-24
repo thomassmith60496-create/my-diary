@@ -193,28 +193,30 @@ function getTodayNutrition(dateStr) {
     let fat = 0;
     let carbs = 0;
     
-    if(nutritionData.weeks && nutritionData.weeks.length > 0 && nutritionData.currentWeekId) {
-        const week = nutritionData.weeks.find(w => w.id === nutritionData.currentWeekId);
-        if(week && week.menu) {
-            week.menu.forEach((day, dayIndex) => {
-                if(day.date === dateStr && day.meals) {
-                    day.meals.forEach((meal, mealIndex) => {
-                        mealsCount++;
-                        const calKey = `m-${dayIndex}-${mealIndex}-cal`;
-                        const protKey = `m-${dayIndex}-${mealIndex}-prot`;
-                        const fatKey = `m-${dayIndex}-${mealIndex}-fat`;
-                        const carbKey = `m-${dayIndex}-${mealIndex}-carb`;
-                        
-                        if(week.data) {
-                            calories += parseFloat(week.data[calKey]) || 0;
-                            protein += parseFloat(week.data[protKey]) || 0;
-                            fat += parseFloat(week.data[fatKey]) || 0;
-                            carbs += parseFloat(week.data[carbKey]) || 0;
-                        }
-                    });
-                }
-            });
-        }
+    if(nutritionData.weeks && nutritionData.weeks.length > 0) {
+        // Search through ALL weeks to find today's meals
+        nutritionData.weeks.forEach(week => {
+            if(week && week.menu) {
+                week.menu.forEach((day, dayIndex) => {
+                    if(day.date === dateStr && day.meals) {
+                        day.meals.forEach((meal, mealIndex) => {
+                            mealsCount++;
+                            const calKey = `m-${dayIndex}-${mealIndex}-cal`;
+                            const protKey = `m-${dayIndex}-${mealIndex}-prot`;
+                            const fatKey = `m-${dayIndex}-${mealIndex}-fat`;
+                            const carbKey = `m-${dayIndex}-${mealIndex}-carb`;
+                            
+                            if(week.data) {
+                                calories += parseFloat(week.data[calKey]) || 0;
+                                protein += parseFloat(week.data[protKey]) || 0;
+                                fat += parseFloat(week.data[fatKey]) || 0;
+                                carbs += parseFloat(week.data[carbKey]) || 0;
+                            }
+                        });
+                    }
+                });
+            }
+        });
     }
     
     return { mealsCount, calories: Math.round(calories), protein: Math.round(protein), fat: Math.round(fat), carbs: Math.round(carbs) };
@@ -455,11 +457,14 @@ function getRecentActivity() {
                 week.menu.forEach((day, dayIndex) => {
                     if(day.meals) {
                         day.meals.forEach((meal, mealIndex) => {
-                            allMeals.push({
-                                name: meal.name,
-                                date: day.date,
-                                calories: week.data ? parseFloat(week.data[`m-${dayIndex}-${mealIndex}-cal`]) || 0 : 0
-                            });
+                            // Only add meal if it has a name
+                            if(meal.name) {
+                                allMeals.push({
+                                    name: meal.name,
+                                    date: day.date,
+                                    calories: week.data ? parseFloat(week.data[`m-${dayIndex}-${mealIndex}-cal`]) || 0 : 0
+                                });
+                            }
                         });
                     }
                 });
