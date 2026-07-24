@@ -213,9 +213,10 @@ function renderTrainSVGChart(entries, values, unit, metricLabel) {
     const minVal = Math.min(...values), maxVal = Math.max(...values);
     const valRange = maxVal - minVal || 1;
     const yMin = Math.max(0, minVal - valRange * 0.1), yMax = maxVal + valRange * 0.15;
-    const xStep = entries.length > 1 ? chartW / (entries.length - 1) : chartW / 2;
+    const xOffset = 15;
+    const xStep = entries.length > 1 ? (chartW - xOffset * 2) / (entries.length - 1) : chartW / 2;
     const points = entries.map((e, i) => {
-        const x = padding.left + (entries.length > 1 ? i * xStep : chartW / 2);
+        const x = padding.left + xOffset + (entries.length > 1 ? i * xStep : chartW / 2);
         const y = padding.top + chartH - ((values[i] - yMin) / (yMax - yMin)) * chartH;
         return { x, y, value: values[i], date: e.date };
     });

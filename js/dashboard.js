@@ -83,9 +83,10 @@ function renderSVGLineChart(data, field, unit, color) {
     const valRange = Math.max(maxVal - minVal, 0.01); // Prevent division by zero
     const yMin = Math.max(0, minVal - Math.max(valRange * 0.1, 0.5));
     const yMax = maxVal + Math.max(valRange * 0.15, 0.5);
-    const xStep = data.length > 1 ? chartW / (data.length - 1) : chartW / 2;
+    const xOffset = 15;
+    const xStep = data.length > 1 ? (chartW - xOffset * 2) / (data.length - 1) : chartW / 2;
     const points = data.map((d, i) => {
-        const x = padding.left + (data.length > 1 ? i * xStep : chartW / 2);
+        const x = padding.left + xOffset + (data.length > 1 ? i * xStep : chartW / 2);
         const y = padding.top + chartH - ((d[field] - yMin) / (yMax - yMin)) * chartH;
         return { x, y, value: d[field], date: d.date };
     });

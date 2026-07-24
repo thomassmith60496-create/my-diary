@@ -754,12 +754,16 @@ function renderFinanceDashboard() {
             return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
         }
         
-        const pieHtml = sectors.map(s => {
-            const cx = 120, cy = 120, r = 90;
-            const start = polarToCartesian(cx, cy, r, s.startAngle);
-            const end = polarToCartesian(cx, cy, r, s.startAngle + s.angle);
+        // Donut chart: outer radius 90, inner radius 50
+        const outerR = 90, innerR = 50;
+        const donutHtml = sectors.map(s => {
+            const cx = 120, cy = 120;
+            const startOuter = polarToCartesian(cx, cy, outerR, s.startAngle);
+            const endOuter = polarToCartesian(cx, cy, outerR, s.startAngle + s.angle);
+            const startInner = polarToCartesian(cx, cy, innerR, s.startAngle + s.angle);
+            const endInner = polarToCartesian(cx, cy, innerR, s.startAngle);
             const largeArc = s.angle > 180 ? 1 : 0;
-            return `<path d="M ${cx} ${cy} L ${start.x} ${start.y} A ${r} ${r} 0 ${largeArc} 1 ${end.x} ${end.y} Z" fill="${s.color}" stroke="white" stroke-width="1.5"/>`;
+            return `<path d="M ${startOuter.x} ${startOuter.y} A ${outerR} ${outerR} 0 ${largeArc} 1 ${endOuter.x} ${endOuter.y} L ${startInner.x} ${startInner.y} A ${innerR} ${innerR} 0 ${largeArc} 0 ${endInner.x} ${endInner.y} Z" fill="${s.color}" stroke="white" stroke-width="1.5"/>`;
         }).join('');
         
         const legendHtml = sectors.map((s, i) =>
@@ -771,11 +775,11 @@ function renderFinanceDashboard() {
         ).join('');
         
         html += `<h3 style="color:#7e22ce;margin:0 0 12px;font-size:15px;">🥧 Расходы по категориям</h3>
-        <div class="dashboard-chart" style="background:#faf5ff;border-color:#e9d5ff;display:flex;flex-wrap:wrap;gap:20px;align-items:center;">
+        <div class="dashboard-chart" style="background:#faf5ff;border-color:#e9d5ff;display:flex;flex-wrap:wrap;gap:20px;align-items:center;min-height:260px;">
             <svg width="240" height="240" viewBox="0 0 240 240">
-                ${pieHtml}
-                <text x="120" y="115" text-anchor="middle" font-size="13" font-weight="700" fill="#1e293b">${totalExpense.toLocaleString('ru-RU')}</text>
-                <text x="120" y="132" text-anchor="middle" font-size="10" fill="#1e293b">всего расходов</text>
+                ${donutHtml}
+                <text x="120" y="112" text-anchor="middle" font-size="15" font-weight="800" fill="#1e293b">${totalExpense.toLocaleString('ru-RU')}</text>
+                <text x="120" y="132" text-anchor="middle" font-size="11" fill="#1e293b">всего расходов</text>
             </svg>
             <div style="flex:1;min-width:150px;">${legendHtml}</div>
         </div>`;
