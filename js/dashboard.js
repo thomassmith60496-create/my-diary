@@ -208,8 +208,6 @@ function getTodayNutrition(dateStr) {
                     
                     if(normalizedDayDate === normalizedToday && day.meals && day.meals.length > 0) {
                         console.log(`    ✅ MATCH! Found ${day.meals.length} meals`);
-                        // Count all meals that exist in today's menu
-                        mealsCount += day.meals.length;
                         
                         // Add nutritional data if it exists
                         if(week.data) {
@@ -229,6 +227,7 @@ function getTodayNutrition(dateStr) {
                                     protein += !isNaN(protVal) ? protVal : 0;
                                     fat += !isNaN(fatVal) ? fatVal : 0;
                                     carbs += !isNaN(carbVal) ? carbVal : 0;
+                                    mealsCount++; // Count only meals with actual data
                                 }
                             });
                         }
