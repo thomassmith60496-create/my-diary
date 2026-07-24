@@ -198,7 +198,11 @@ function getTodayNutrition(dateStr) {
         nutritionData.weeks.forEach(week => {
             if(week && week.menu) {
                 week.menu.forEach((day, dayIndex) => {
-                    if(day.date === dateStr && day.meals && day.meals.length > 0) {
+                    // Normalize dates for comparison (handle both "20.07" and "2026-07-20" formats)
+                    const normalizedDayDate = normalizeDate(day.date);
+                    const normalizedToday = normalizeDate(dateStr);
+                    
+                    if(normalizedDayDate === normalizedToday && day.meals && day.meals.length > 0) {
                         // Count all meals that exist in today's menu
                         mealsCount += day.meals.length;
                         
@@ -230,6 +234,25 @@ function getTodayNutrition(dateStr) {
     }
     
     return { mealsCount, calories: Math.round(calories), protein: Math.round(protein), fat: Math.round(fat), carbs: Math.round(carbs) };
+}
+
+// Helper function to normalize dates for comparison
+function normalizeDate(dateStr) {
+    if(!dateStr) return '';
+    
+    // If already in YYYY-MM-DD format, return as is
+    if(dateStr.includes('-') && dateStr.length === 10) {
+        return dateStr;
+    }
+    
+    // If in DD.MM format, add current year
+    if(dateStr.includes('.') && dateStr.length === 5) {
+        const [day, month] = dateStr.split('.');
+        const year = new Date().getFullYear();
+        return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+    
+    return dateStr;
 }
 
 // === КАРТОЧКА ТРЕНИРОВОК ===
@@ -473,7 +496,7 @@ function getRecentActivity() {
                                 const calVal = calData ? parseFloat(calData) : NaN;
                                 allMeals.push({
                                     name: meal.name,
-                                    date: day.date,
+                                    date: normalizeDate(day.date),
                                     calories: !isNaN(calVal) ? calVal : 0
                                 });
                             }
