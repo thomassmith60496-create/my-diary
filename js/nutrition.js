@@ -167,7 +167,7 @@ function createEmptyWeek() {
 
 function formatDateShort(dateStr) {
     const d = new Date(dateStr);
-    return `${d.getDate().toString().padStart(2,'0')}.${(d.getMonth()+1).toString().padStart(2,'0')}`;
+    return `${d.getDate().toString().padStart(2,'0')}.${(d.getMonth()+1).toString().padStart(2,'0')}.${d.getFullYear()}`;
 }
 
 function switchWeek() {
