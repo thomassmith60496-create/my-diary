@@ -58,8 +58,17 @@ function renderFinanceDashboard() {
             const label = `${monthNames[parseInt(mo) - 1]} ${y}`;
             return `<option value="${m}">${label}</option>`;
         }).join('');
+    
+    // Set default to current month if no previous selection or if previous selection is invalid
+    const today = new Date();
+    const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
     if(currentMonthValue && (currentMonthValue === 'all' || allMonthsSet.has(currentMonthValue))) {
         monthSelect.value = currentMonthValue;
+    } else if(allMonthsSet.has(currentMonth)) {
+        monthSelect.value = currentMonth;
+    } else if(sortedMonths.length > 0) {
+        // If current month has no data, select the most recent month
+        monthSelect.value = sortedMonths[sortedMonths.length - 1];
     }
     financeSelectedMonth = monthSelect.value;
     
@@ -322,11 +331,12 @@ function renderFinanceTransactions() {
     html += filtered.map(t => {
         const cat = financeData.categories.find(c => c.id === t.category);
         const catName = cat ? cat.name : '—';
+        const catColor = cat ? (cat.color || '#7e22ce') : '#7e22ce';
         const isExpense = t.type === 'expense';
         return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:white;border-radius:8px;border:1px solid #e9d5ff;margin-bottom:6px;flex-wrap:wrap;">
             <span style="font-size:12px;font-weight:600;color:#64748b;min-width:70px;">${formatFinanceDate(t.date)}</span>
             <span style="font-size:13px;font-weight:700;color:${isExpense ? '#dc2626' : '#16a34a'};min-width:80px;">${isExpense ? '−' : '+'}${Math.abs(t.amount).toLocaleString('ru-RU')} ₽</span>
-            <span style="font-size:12px;color:#7e22ce;font-weight:600;min-width:100px;">${catName}${t.subcategory ? ' › ' + t.subcategory : ''}</span>
+            <span style="font-size:12px;color:${catColor};font-weight:600;min-width:100px;">${catName}${t.subcategory ? ' › ' + t.subcategory : ''}</span>
             <span style="font-size:11px;color:#94a3b8;flex:1;">${t.comment || ''}</span>
             <button class="action-btn edit" onclick="editFinanceTransaction('${t.id}')" style="padding:3px 8px;font-size:11px;">✏️</button>
             <button class="action-btn delete" onclick="deleteFinanceItem('transaction','${t.id}')" style="padding:3px 8px;font-size:11px;">🗑</button>
@@ -423,13 +433,14 @@ function renderFinanceCategories() {
     container.innerHTML = financeData.categories.map(c => {
         const typeLabel = c.type === 'expense' ? '📉 Расход' : '📈 Доход';
         const limitDisplay = c.limit > 0 ? `${c.limit.toLocaleString('ru-RU')} ₽` : 'Без лимита';
+        const catColor = c.color || '#7e22ce'; // Use category color or default to purple
         const subcatsHtml = c.subcategories.length > 0 
             ? c.subcategories.map(sc => `<span class="subcat-tag" style="margin:2px;">${sc}</span>`).join('')
             : '<span style="color:#94a3b8;font-size:11px;">Нет подкатегорий</span>';
-        return `<div style="background:white;border-radius:10px;border:1px solid #e9d5ff;padding:12px 14px;margin-bottom:8px;">
+        return `<div style="background:white;border-radius:10px;border-left:4px solid ${catColor};padding:12px 14px;margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:6px;">
                 <div>
-                    <span style="font-weight:700;color:#7e22ce;">${c.name}</span>
+                    <span style="font-weight:700;color:${catColor};">${c.name}</span>
                     <span style="font-size:11px;color:#94a3b8;margin-left:6px;">${typeLabel}</span>
                 </div>
                 <div style="display:flex;align-items:center;gap:8px;">

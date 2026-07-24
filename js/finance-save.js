@@ -166,13 +166,18 @@ function saveCategory() {
             alert('Такая категория уже существует');
             return;
         }
+        // Assign a color based on category index
+        const colors = ['#7e22ce', '#a855f7', '#c084fc', '#d8b4fe', '#9333ea', '#6366f1', '#3b82f6', '#06b6d4', '#14b8a6', '#22c55e'];
+        const colorIndex = financeData.categories.length % colors.length;
+        
         financeData.categories.push({
             id: 'cat-' + Date.now(),
             name,
             type,
             limit,
             subcategories,
-            subcategoryLimits
+            subcategoryLimits,
+            color: colors[colorIndex]
         });
     }
     

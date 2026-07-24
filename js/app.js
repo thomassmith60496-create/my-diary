@@ -12,6 +12,11 @@ function switchMainTab(tab) {
     if(tab === 'home') renderHomePage();
     if(tab === 'train') renderTrainAll();
     if(tab === 'finance') renderFinanceDashboard();
+    if(tab === 'food') {
+        renderNutritionAll();
+        // Navigate to today's date after rendering
+        setTimeout(() => scrollToToday(), 100);
+    }
 }
    
 function switchSubTab(tab, event) {
@@ -114,6 +119,29 @@ function toggleAllDays() {
     const cards = document.querySelectorAll('.day-card');
     const allCollapsed = Array.from(cards).every(c => c.classList.contains('collapsed'));
     cards.forEach(c => { if(allCollapsed) c.classList.remove('collapsed'); else c.classList.add('collapsed'); });
+}
+
+function scrollToToday() {
+    const today = new Date();
+    const todayStr = `${String(today.getDate()).padStart(2, '0')}.${String(today.getMonth() + 1).padStart(2, '0')}.${today.getFullYear()}`;
+    
+    // Find the day card that matches today's date
+    const dayCards = document.querySelectorAll('.day-card');
+    for (const card of dayCards) {
+        const dayDateEl = card.querySelector('.day-title');
+        if (dayDateEl && dayDateEl.textContent.includes(todayStr)) {
+            card.classList.remove('collapsed');
+            card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            card.style.transition = 'box-shadow 0.3s';
+            card.style.boxShadow = '0 0 0 3px #2563eb';
+            setTimeout(() => { card.style.boxShadow = ''; }, 1500);
+            break;
+        }
+    }
+}
+
+function scrollToTop() {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 // === FIREBASE SYNC FUNCTIONS ===
