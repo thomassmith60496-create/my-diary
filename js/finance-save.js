@@ -22,6 +22,13 @@ function migrateCategoryColors() {
 }
 
 function saveFinance() {
+    // Guard: block writes in read-only mode
+    const isReadOnly = currentUserRole === 'reader' || window.isReadOnlyMode;
+    if (isReadOnly) {
+        console.warn('⛔ Save blocked: read-only mode');
+        return;
+    }
+    
     const targetUid = getTargetUid();
     const data = {
         transactions: financeData.transactions,
@@ -40,7 +47,11 @@ function saveFinance() {
         showSyncStatus('✅ Финансы сохранены!', 'success');
     }).catch((error) => {
         console.error('❌ Firebase finance save error:', error);
-        showSyncStatus('❌ Ошибка сохранения финансов', 'error');
+        if (error.code === 'PERMISSION_DENIED') {
+            showSyncStatus('❌ Нет прав на запись. Проверьте правила БД Firebase.', 'error');
+        } else {
+            showSyncStatus('❌ Ошибка сохранения финансов', 'error');
+        }
     });
 }
 
