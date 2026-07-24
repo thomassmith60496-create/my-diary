@@ -265,6 +265,12 @@ function loadDataForUser(uid) {
         renderTrainAll();
         renderFinanceDashboard();
         updateFinanceStats();
+        
+        // Re-render home page if it's currently visible
+        const homeTab = document.getElementById('main-tab-home');
+        if(homeTab && homeTab.classList.contains('active')) {
+            renderHomePage();
+        }
     }).catch(function(error) {
         console.error('Load data error:', error);
         isInitialLoad = false;

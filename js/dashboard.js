@@ -198,21 +198,31 @@ function getTodayNutrition(dateStr) {
         nutritionData.weeks.forEach(week => {
             if(week && week.menu) {
                 week.menu.forEach((day, dayIndex) => {
-                    if(day.date === dateStr && day.meals) {
-                        day.meals.forEach((meal, mealIndex) => {
-                            mealsCount++;
-                            const calKey = `m-${dayIndex}-${mealIndex}-cal`;
-                            const protKey = `m-${dayIndex}-${mealIndex}-prot`;
-                            const fatKey = `m-${dayIndex}-${mealIndex}-fat`;
-                            const carbKey = `m-${dayIndex}-${mealIndex}-carb`;
-                            
-                            if(week.data) {
-                                calories += parseFloat(week.data[calKey]) || 0;
-                                protein += parseFloat(week.data[protKey]) || 0;
-                                fat += parseFloat(week.data[fatKey]) || 0;
-                                carbs += parseFloat(week.data[carbKey]) || 0;
-                            }
-                        });
+                    if(day.date === dateStr && day.meals && day.meals.length > 0) {
+                        // Count all meals that exist in today's menu
+                        mealsCount += day.meals.length;
+                        
+                        // Add nutritional data if it exists
+                        if(week.data) {
+                            day.meals.forEach((meal, mealIndex) => {
+                                const calKey = `m-${dayIndex}-${mealIndex}-cal`;
+                                const protKey = `m-${dayIndex}-${mealIndex}-prot`;
+                                const fatKey = `m-${dayIndex}-${mealIndex}-fat`;
+                                const carbKey = `m-${dayIndex}-${mealIndex}-carb`;
+                                
+                                const calVal = parseFloat(week.data[calKey]);
+                                const protVal = parseFloat(week.data[protKey]);
+                                const fatVal = parseFloat(week.data[fatKey]);
+                                const carbVal = parseFloat(week.data[carbKey]);
+                                
+                                if(!isNaN(calVal)) {
+                                    calories += calVal;
+                                    protein += !isNaN(protVal) ? protVal : 0;
+                                    fat += !isNaN(fatVal) ? fatVal : 0;
+                                    carbs += !isNaN(carbVal) ? carbVal : 0;
+                                }
+                            });
+                        }
                     }
                 });
             }
@@ -459,10 +469,12 @@ function getRecentActivity() {
                         day.meals.forEach((meal, mealIndex) => {
                             // Only add meal if it has a name
                             if(meal.name) {
+                                const calData = week.data ? week.data[`m-${dayIndex}-${mealIndex}-cal`] : undefined;
+                                const calVal = calData ? parseFloat(calData) : NaN;
                                 allMeals.push({
                                     name: meal.name,
                                     date: day.date,
-                                    calories: week.data ? parseFloat(week.data[`m-${dayIndex}-${mealIndex}-cal`]) || 0 : 0
+                                    calories: !isNaN(calVal) ? calVal : 0
                                 });
                             }
                         });
