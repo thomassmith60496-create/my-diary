@@ -119,44 +119,46 @@
             <div class="toolbar">
                 <button class="btn green primary" onclick="renderDashboard()">🔄 Обновить</button>
             </div>
-            <div class="dashboard-section">
-                <h2 class="dashboard-title">⚖️ Динамика веса</h2>
-                <div class="dashboard-controls">
-                    <div class="dashboard-select-wrap">
-                        <label>Период</label>
-                        <select class="dashboard-select" id="weight-period" onchange="renderWeightChart()">
-                            <option value="all">Все данные</option>
-                            <option value="4">Последние 4 недели</option>
-                            <option value="2">Последние 2 недели</option>
-                        </select>
-                    </div>
-                </div>
-                <div id="weight-chart-container"></div>
-                <div id="weight-stats-container"></div>
-            </div>
-            <div class="dashboard-section">
-                <h2 class="dashboard-title">🔥 КБЖУ по дням</h2>
-                <div class="dashboard-controls">
-                    <div class="dashboard-select-wrap">
-                        <label>Период</label>
-                        <select class="dashboard-select" id="kbju-period" onchange="renderKbjuChart()">
-                            <option value="all">Все данные</option>
-                            <option value="4">Последние 4 недели</option>
-                            <option value="2">Последние 2 недели</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label style="display:block;font-size:12px;font-weight:700;color:#065f46;margin-bottom:4px;">Показывать</label>
-                        <div class="metric-toggle">
-                            <button class="metric-btn active" data-metric="cal" onclick="setKbjuMetric('cal')">Калории</button>
-                            <button class="metric-btn" data-metric="prot" onclick="setKbjuMetric('prot')">Белки</button>
-                            <button class="metric-btn" data-metric="fat" onclick="setKbjuMetric('fat')">Жиры</button>
-                            <button class="metric-btn" data-metric="carb" onclick="setKbjuMetric('carb')">Углеводы</button>
+            <div style="display:flex;gap:16px;flex-wrap:wrap;">
+                <div class="dashboard-section" style="flex:1;min-width:350px;">
+                    <h2 class="dashboard-title">⚖️ Динамика веса</h2>
+                    <div class="dashboard-controls">
+                        <div class="dashboard-select-wrap">
+                            <label>Период</label>
+                            <select class="dashboard-select" id="weight-period" onchange="renderWeightChart()">
+                                <option value="all">Все данные</option>
+                                <option value="4">Последние 4 недели</option>
+                                <option value="2">Последние 2 недели</option>
+                            </select>
                         </div>
                     </div>
+                    <div id="weight-chart-container"></div>
+                    <div id="weight-stats-container"></div>
                 </div>
-                <div id="kbju-chart-container"></div>
-                <div id="kbju-stats-container"></div>
+                <div class="dashboard-section" style="flex:1;min-width:350px;">
+                    <h2 class="dashboard-title">🔥 КБЖУ по дням</h2>
+                    <div class="dashboard-controls">
+                        <div class="dashboard-select-wrap">
+                            <label>Период</label>
+                            <select class="dashboard-select" id="kbju-period" onchange="renderKbjuChart()">
+                                <option value="all">Все данные</option>
+                                <option value="4">Последние 4 недели</option>
+                                <option value="2">Последние 2 недели</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="display:block;font-size:12px;font-weight:700;color:#065f46;margin-bottom:4px;">Показывать</label>
+                            <div class="metric-toggle">
+                                <button class="metric-btn active" data-metric="cal" onclick="setKbjuMetric('cal')">Калории</button>
+                                <button class="metric-btn" data-metric="prot" onclick="setKbjuMetric('prot')">Белки</button>
+                                <button class="metric-btn" data-metric="fat" onclick="setKbjuMetric('fat')">Жиры</button>
+                                <button class="metric-btn" data-metric="carb" onclick="setKbjuMetric('carb')">Углеводы</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="kbju-chart-container"></div>
+                    <div id="kbju-stats-container"></div>
+                </div>
             </div>
             <div class="dashboard-section">
                 <h2 class="dashboard-title">📈 Среднее по неделям</h2>

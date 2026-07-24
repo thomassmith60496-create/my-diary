@@ -689,7 +689,16 @@ function renderFinanceDashboard() {
     
     let html = '';
     
-    if(months.length > 0) {
+    // Charts container: both charts side by side
+    const hasMonths = months.length > 0;
+    const hasCats = catNames.length > 0;
+    
+    if(hasMonths || hasCats) {
+        html += `<div style="display:flex;gap:16px;flex-wrap:wrap;">
+            <div style="flex:1;min-width:300px;">`;
+    }
+    
+    if(hasMonths) {
         const maxVal = Math.max(...months.map(m => Math.max(monthlyData[m].income, monthlyData[m].expense)));
         const chartHeight = 200;
         const totalBarsWidth = months.length * 80;
@@ -724,7 +733,11 @@ function renderFinanceDashboard() {
         </div>`;
     }
     
-    if(catNames.length > 0) {
+    if(hasMonths && hasCats) {
+        html += `</div><div style="flex:1;min-width:300px;">`;
+    }
+    
+    if(hasCats) {
         const colors = ['#7e22ce', '#a855f7', '#c084fc', '#d8b4fe', '#e9d5ff', '#f3e8ff', '#faf5ff'];
         let cumulativeAngle = 0;
         const sectors = catNames.slice(0, 7).map((name, i) => {
@@ -757,7 +770,7 @@ function renderFinanceDashboard() {
             </div>`
         ).join('');
         
-        html += `<h3 style="color:#7e22ce;margin:16px 0 12px;font-size:15px;">🥧 Расходы по категориям</h3>
+        html += `<h3 style="color:#7e22ce;margin:0 0 12px;font-size:15px;">🥧 Расходы по категориям</h3>
         <div class="dashboard-chart" style="background:#faf5ff;border-color:#e9d5ff;display:flex;flex-wrap:wrap;gap:20px;align-items:center;">
             <svg width="240" height="240" viewBox="0 0 240 240">
                 ${pieHtml}
@@ -766,6 +779,10 @@ function renderFinanceDashboard() {
             </svg>
             <div style="flex:1;min-width:150px;">${legendHtml}</div>
         </div>`;
+    }
+    
+    if(hasMonths || hasCats) {
+        html += `</div></div>`;
     }
     
     const limitHtml = financeData.categories
