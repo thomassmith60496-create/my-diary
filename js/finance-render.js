@@ -50,7 +50,10 @@ function renderFinanceDashboard() {
         allMonthsSet.add(m);
     });
     const sortedMonths = Array.from(allMonthsSet).sort();
-    const currentMonthValue = monthSelect.value;
+    
+    // Save currently selected value before rebuilding options
+    const previouslySelected = financeSelectedMonth || monthSelect.value;
+    
     monthSelect.innerHTML = '<option value="all">📊 Все месяцы (накопительно)</option>' +
         sortedMonths.map(m => {
             const [y, mo] = m.split('-');
@@ -59,11 +62,14 @@ function renderFinanceDashboard() {
             return `<option value="${m}">${label}</option>`;
         }).join('');
     
-    // Restore previously selected month, or default to current month
+    // Determine which month to select:
+    // 1. If a month was previously selected (by user), restore it
+    // 2. Otherwise, default to current month if it has data
+    // 3. Otherwise, default to most recent month with data
     const today = new Date();
     const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
-    if (currentMonthValue && currentMonthValue !== '') {
-        monthSelect.value = currentMonthValue;
+    if (previouslySelected && previouslySelected !== '' && allMonthsSet.has(previouslySelected)) {
+        monthSelect.value = previouslySelected;
     } else if(allMonthsSet.has(currentMonth)) {
         monthSelect.value = currentMonth;
     } else if(sortedMonths.length > 0) {
