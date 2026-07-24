@@ -44,7 +44,7 @@ let financeSelectedMonth = 'all';
 
 const mealIcons = {
     breakfast:"З", lunch:"О", dinner:"У", snack:"П", snack1:"П1", snack2:"П2",
-    prep:"🍳", preworkout:"💪", postworkout:"💪"
+    preworkout:"💪", postworkout:"💪"
 };
 const typeLabels = {
     strength: '💪 Силовая', cardio: '🏃 Кардио', hiit: '🔥 ВИИТ', flex: '🧘 Растяжка', mix: '🔄 Микс'

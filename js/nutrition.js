@@ -2,6 +2,122 @@
 // ПИТАНИЕ: ЛОГИКА
 // ============================================
 
+function downloadMenuTemplate() {
+    const template = {
+        "menu": [
+            {
+                "day": "Понедельник",
+                "date": "24.07",
+                "training": false,
+                "meals": [
+                    {
+                        "type": "breakfast",
+                        "name": "Завтрак",
+                        "items": [
+                            "Овсяная каша на воде",
+                            "Яблоко",
+                            "Кофе без сахара"
+                        ]
+                    },
+                    {
+                        "type": "snack",
+                        "name": "Перекус",
+                        "items": [
+                            "Греческий йогурт",
+                            "Горсть миндаля"
+                        ]
+                    },
+                    {
+                        "type": "lunch",
+                        "name": "Обед",
+                        "items": [
+                            "Куриная грудка на пару",
+                            "Рис бурый",
+                            "Салат из свежих овощей"
+                        ]
+                    },
+                    {
+                        "type": "snack",
+                        "name": "Перекус",
+                        "items": [
+                            "Творог 5%",
+                            "Банан"
+                        ]
+                    },
+                    {
+                        "type": "dinner",
+                        "name": "Ужин",
+                        "items": [
+                            "Запеченная рыба",
+                            "Брокколи на пару",
+                            "Картофель отварной"
+                        ]
+                    }
+                ]
+            },
+            {
+                "day": "Вторник",
+                "date": "25.07",
+                "training": true,
+                "meals": [
+                    {
+                        "type": "breakfast",
+                        "name": "Завтрак",
+                        "items": [
+                            "Яичница из 2 яиц",
+                            "Цельнозерновой хлеб",
+                            "Овощи"
+                        ]
+                    },
+                    {
+                        "type": "preworkout",
+                        "name": "Перед тренировкой",
+                        "items": [
+                            "Банан",
+                            "Кофе с корицей"
+                        ]
+                    },
+                    {
+                        "type": "lunch",
+                        "name": "Обед",
+                        "items": [
+                            "Тунец",
+                            "Паста цельнозерновая",
+                            "Салат"
+                        ]
+                    },
+                    {
+                        "type": "snack",
+                        "name": "Перекус",
+                        "items": [
+                            "Протеиновый коктейль",
+                            "Яблоко"
+                        ]
+                    },
+                    {
+                        "type": "dinner",
+                        "name": "Ужин",
+                        "items": [
+                            "Индейка",
+                            "Киноа",
+                            "Овощи гриль"
+                        ]
+                    }
+                ]
+            }
+        ]
+    };
+    
+    const blob = new Blob([JSON.stringify(template, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'menu-template.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    alert('✅ Шаблон меню скачан!');
+}
+
 function importMenu() {
     const startDate = document.getElementById('f-start-date').value;
     const endDate = document.getElementById('f-end-date').value;
@@ -172,7 +288,7 @@ function renderMeal(m, di, mi, weekId) {
     const prepClass = isPrep ? 'prep-block' : '';
     const showTime = !isPrep;
     let content = '';
-    const isEditable = (m.type === 'breakfast' || m.type === 'lunch' || m.type === 'dinner');
+    const isEditable = (m.type === 'breakfast' || m.type === 'lunch' || m.type === 'dinner' || m.type === 'preworkout' || m.type === 'postworkout' || m.type === 'snack');
     
     if (isEditable) {
         let itemsList = [];
@@ -222,7 +338,7 @@ function renderMeal(m, di, mi, weekId) {
     const starsVal = parseInt(getWeekData(weekId, `stars-${di}-${mi}`) || 0);
     const commentVal = getWeekData(weekId, `comment-${di}-${mi}`) || '';
     
-    const trackerHtml = isPrep ? '' : `
+    const trackerHtml = (isPrep && m.type === 'prep') ? '' : `
         <div class="meal-tracker">
             <div class="tracker-row">
                 <div class="kbju-group cal"><label>К</label><input type="number" data-week="${weekId}" data-day="${di}" data-meal="${mi}" data-field="cal" oninput="updateTotals('${weekId}',${di})" value="${getWeekData(weekId, `m-${di}-${mi}-cal`) || ''}"><span class="unit">ккал</span></div>
