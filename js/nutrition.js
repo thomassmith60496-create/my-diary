@@ -138,7 +138,7 @@ function importMenu() {
     const weekId = 'week-' + Date.now();
     nutritionData.weeks.push({
         id: weekId, startDate, endDate,
-        title: `Неделя ${formatDateShort(startDate)} – ${formatDateShort(endDate)}`,
+        title: `Неделя ${formatDateWithYear(startDate)} – ${formatDateWithYear(endDate)}`,
         menu, data: {}
     });
     nutritionData.currentWeekId = weekId;
@@ -159,11 +159,11 @@ function createEmptyWeek() {
     const menu = days.map((day, i) => {
         const date = new Date(startOfWeek);
         date.setDate(startOfWeek.getDate() + i);
-        return { day, date: formatDateShort(date.toISOString().slice(0,10)), training: false, meals: [] };
+        return { day, date: formatDateWithYear(date.toISOString().slice(0,10)), training: false, meals: [] };
     });
     nutritionData.weeks.push({
         id: weekId, startDate: startOfWeek.toISOString().slice(0,10), endDate: endOfWeek.toISOString().slice(0,10),
-        title: `Неделя ${formatDateShort(startOfWeek.toISOString().slice(0,10))} – ${formatDateShort(endOfWeek.toISOString().slice(0,10))}`,
+        title: `Неделя ${formatDateWithYear(startOfWeek.toISOString().slice(0,10))} – ${formatDateWithYear(endOfWeek.toISOString().slice(0,10))}`,
         menu, data: {}
     });
     nutritionData.currentWeekId = weekId;
@@ -172,6 +172,11 @@ function createEmptyWeek() {
 }
 
 function formatDateShort(dateStr) {
+    const d = new Date(dateStr);
+    return `${d.getDate().toString().padStart(2,'0')}.${(d.getMonth()+1).toString().padStart(2,'0')}.${d.getFullYear()}`;
+}
+
+function formatDateWithYear(dateStr) {
     const d = new Date(dateStr);
     return `${d.getDate().toString().padStart(2,'0')}.${(d.getMonth()+1).toString().padStart(2,'0')}.${d.getFullYear()}`;
 }
@@ -187,7 +192,7 @@ function migrateNutritionDates() {
         if (week.title && !week.title.match(/\d{4}/)) {
             const startDate = new Date(week.startDate || week.menu[0]?.date + '.' + currentYear);
             const endDate = new Date(week.endDate || week.menu[week.menu.length - 1]?.date + '.' + currentYear);
-            week.title = `Неделя ${formatDateShort(startDate.toISOString().slice(0,10))} – ${formatDateShort(endDate.toISOString().slice(0,10))}`;
+            week.title = `Неделя ${formatDateWithYear(startDate.toISOString().slice(0,10))} – ${formatDateWithYear(endDate.toISOString().slice(0,10))}`;
             needsUpdate = true;
         }
         
