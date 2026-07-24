@@ -51,8 +51,8 @@ function renderFinanceDashboard() {
     });
     const sortedMonths = Array.from(allMonthsSet).sort();
     
-    // Save currently selected value before rebuilding options
-    const previouslySelected = financeSelectedMonth || monthSelect.value;
+    // Save currently selected value from the DOM before rebuilding options
+    const previouslySelected = monthSelect.value || financeSelectedMonth || '';
     
     monthSelect.innerHTML = '<option value="all">📊 Все месяцы (накопительно)</option>' +
         sortedMonths.map(m => {
@@ -63,12 +63,15 @@ function renderFinanceDashboard() {
         }).join('');
     
     // Determine which month to select:
-    // 1. If a month was previously selected (by user), restore it
-    // 2. Otherwise, default to current month if it has data
-    // 3. Otherwise, default to most recent month with data
+    // 1. "all" — always valid (Все месяцы)
+    // 2. If a specific month was previously selected, restore it
+    // 3. Otherwise, default to current month if it has data
+    // 4. Otherwise, default to most recent month with data
     const today = new Date();
     const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
-    if (previouslySelected && previouslySelected !== '' && allMonthsSet.has(previouslySelected)) {
+    if (previouslySelected === 'all') {
+        monthSelect.value = 'all';
+    } else if (previouslySelected && previouslySelected !== '' && allMonthsSet.has(previouslySelected)) {
         monthSelect.value = previouslySelected;
     } else if(allMonthsSet.has(currentMonth)) {
         monthSelect.value = currentMonth;
@@ -258,11 +261,6 @@ function renderFinanceDashboard() {
     }
     
     container.innerHTML = html;
-    
-    // Re-apply read-only state after re-rendering
-    if (typeof applyReadOnlyState === 'function') {
-        applyReadOnlyState();
-    }
 }
 
 function renderFinanceTransactions() {
