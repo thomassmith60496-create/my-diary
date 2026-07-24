@@ -278,6 +278,7 @@ function toggleMealItem(checkbox, weekId, di, mi) {
     if (!week.data) week.data = {};
     week.data[`eaten-${di}-${mi}-${idx}`] = checkbox.checked ? '1' : '0';
     renderDays();
+    saveNutrition();
 }
 
 function updateTotals(weekId, di) {
@@ -295,7 +296,7 @@ function updateTotals(weekId, di) {
         const el = document.getElementById(`sum-${f}-${weekId}-${di}`);
         if(el) el.textContent = Math.round(s[f]);
     });
-    syncToCloud();
+    saveNutrition();
 }
 
 function saveNutrition() {
@@ -304,11 +305,22 @@ function saveNutrition() {
     
     if(!week.data) week.data = {};
     
+    // Collect data from form elements only (skip divs, spans, etc.)
     document.querySelectorAll(`[data-week="${week.id}"]`).forEach(el => {
         const key = el.dataset.key;
         if(!key) return;
-        let value = el.type === 'checkbox' ? (el.checked ? '1' : '0') : el.value;
-        week.data[key] = value;
+        
+        // Only process INPUT, SELECT, and TEXTAREA elements (skip DIVs with data-key)
+        const tagName = el.tagName;
+        if (tagName === 'INPUT' || tagName === 'SELECT' || tagName === 'TEXTAREA') {
+            let value;
+            if (el.type === 'checkbox') {
+                value = el.checked ? '1' : '0';
+            } else {
+                value = el.value;
+            }
+            week.data[key] = value;
+        }
     });
     
     document.querySelectorAll(`input[data-week="${week.id}"][data-field]`).forEach(inp => {
@@ -316,26 +328,8 @@ function saveNutrition() {
         week.data[key] = inp.value;
     });
     
-    // Save immediately to Firebase instead of waiting for debounced syncToCloud
-    const targetUid = getTargetUid();
-    const data = {
-        nutrition: nutritionData,
-        workouts: workouts,
-        progress: getProgressData(),
-        lastUpdated: Date.now()
-    };
-    
-    const savePromise = targetUid
-        ? db.ref(`lera_diary_v1/${targetUid}`).set(data)
-        : diaryRef.set(data);
-    
-    savePromise.then(() => {
-        console.log('✅ Nutrition data saved immediately');
-        showSyncStatus('✅ Сохранено!', 'success');
-    }).catch((error) => {
-        console.error('❌ Save error:', error);
-        showSyncStatus('❌ Ошибка сохранения', 'error');
-    });
+    // Use syncToCloud for consistent saving
+    syncToCloud();
 }
 
 function exportMenuAsText() {
