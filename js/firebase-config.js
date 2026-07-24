@@ -31,13 +31,13 @@ let financeData = {
     savings: [],
     planned: [],
     categories: [
-        { id: 'cat-food', name: 'Еда', type: 'expense', limit: 20000, subcategories: ['Продукты', 'Доставка', 'Фастфуд', 'Кафе'], subcategoryLimits: {} },
-        { id: 'cat-transport', name: 'Транспорт', type: 'expense', limit: 3000, subcategories: ['Такси', 'Общественный транспорт', 'Бензин'], subcategoryLimits: {} },
-        { id: 'cat-connection', name: 'Связь', type: 'expense', limit: 1000, subcategories: ['Интернет', 'Мобильная связь'], subcategoryLimits: {} },
-        { id: 'cat-marketplace', name: 'Маркетплейсы', type: 'expense', limit: 5000, subcategories: ['ВБ', 'Озон', 'Яндекс Маркет'], subcategoryLimits: {} },
-        { id: 'cat-sport', name: 'Спорт', type: 'expense', limit: 5000, subcategories: ['Тренер', 'Абонемент', 'Экипировка'], subcategoryLimits: {} },
-        { id: 'cat-education', name: 'Обучение', type: 'expense', limit: 15000, subcategories: ['Автошкола', 'Курсы', 'Книги'], subcategoryLimits: {} },
-        { id: 'cat-tech', name: 'Техника', type: 'expense', limit: 0, subcategories: ['Телефон', 'Ноутбук', 'Аксессуары'], subcategoryLimits: {} }
+        { id: 'cat-food', name: 'Еда', type: 'expense', limit: 20000, subcategories: ['Продукты', 'Доставка', 'Фастфуд', 'Кафе'], subcategoryLimits: {}, color: '#7e22ce' },
+        { id: 'cat-transport', name: 'Транспорт', type: 'expense', limit: 3000, subcategories: ['Такси', 'Общественный транспорт', 'Бензин'], subcategoryLimits: {}, color: '#a855f7' },
+        { id: 'cat-connection', name: 'Связь', type: 'expense', limit: 1000, subcategories: ['Интернет', 'Мобильная связь'], subcategoryLimits: {}, color: '#c084fc' },
+        { id: 'cat-marketplace', name: 'Маркетплейсы', type: 'expense', limit: 5000, subcategories: ['ВБ', 'Озон', 'Яндекс Маркет'], subcategoryLimits: {}, color: '#d8b4fe' },
+        { id: 'cat-sport', name: 'Спорт', type: 'expense', limit: 5000, subcategories: ['Тренер', 'Абонемент', 'Экипировка'], subcategoryLimits: {}, color: '#9333ea' },
+        { id: 'cat-education', name: 'Обучение', type: 'expense', limit: 15000, subcategories: ['Автошкола', 'Курсы', 'Книги'], subcategoryLimits: {}, color: '#6366f1' },
+        { id: 'cat-tech', name: 'Техника', type: 'expense', limit: 0, subcategories: ['Телефон', 'Ноутбук', 'Аксессуары'], subcategoryLimits: {}, color: '#3b82f6' }
     ]
 };
 let financeSelectedMonth = null;

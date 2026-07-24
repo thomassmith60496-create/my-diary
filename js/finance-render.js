@@ -59,12 +59,10 @@ function renderFinanceDashboard() {
             return `<option value="${m}">${label}</option>`;
         }).join('');
     
-    // Set default to current month if no previous selection or if previous selection is invalid
+    // Default to current month (if it has data), otherwise most recent month
     const today = new Date();
     const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
-    if(currentMonthValue && (currentMonthValue === 'all' || allMonthsSet.has(currentMonthValue))) {
-        monthSelect.value = currentMonthValue;
-    } else if(allMonthsSet.has(currentMonth)) {
+    if(allMonthsSet.has(currentMonth)) {
         monthSelect.value = currentMonth;
     } else if(sortedMonths.length > 0) {
         // If current month has no data, select the most recent month
@@ -185,7 +183,7 @@ function renderFinanceDashboard() {
                 .filter(t => t.type === 'expense' && t.category === c.id)
                 .reduce((s, t) => s + Math.abs(t.amount), 0);
             const pct = Math.min(100, (spent / c.limit) * 100);
-            const barColor = pct > 90 ? '#dc2626' : (pct > 70 ? '#d97706' : '#16a34a');
+            const barColor = pct >= 100 ? '#b91c1c' : (pct > 80 ? '#dc2626' : (pct > 50 ? '#d97706' : '#16a34a'));
             
             let subcatsHtml = '';
             if(c.subcategories && c.subcategories.length > 0) {
@@ -199,7 +197,7 @@ function renderFinanceDashboard() {
                 
                 subcatsHtml = subcatsWithSpending.map(sc => {
                     const scPct = sc.limit > 0 ? Math.min(100, (sc.spent / sc.limit) * 100) : 0;
-                    const scBarColor = scPct > 90 ? '#dc2626' : (scPct > 70 ? '#d97706' : '#a855f7');
+                    const scBarColor = scPct >= 100 ? '#b91c1c' : (scPct > 80 ? '#dc2626' : (scPct > 50 ? '#d97706' : '#16a34a'));
                     const limitDisplay = sc.limit > 0 ? `${Math.round(sc.spent).toLocaleString('ru-RU')} / ${sc.limit.toLocaleString('ru-RU')} ₽` : `${Math.round(sc.spent).toLocaleString('ru-RU')} ₽`;
                     const barHtml = sc.limit > 0 ? `<div style="height:6px;background:#f3e8ff;border-radius:3px;overflow:hidden;margin-top:2px;">
                         <div style="height:100%;width:${scPct}%;background:${scBarColor};border-radius:3px;transition:width 0.3s;"></div>

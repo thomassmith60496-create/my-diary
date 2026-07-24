@@ -4,6 +4,11 @@
 
 function migrateCategoryColors() {
     if (!financeData || !financeData.categories) return;
+    // Don't save if Firebase Auth isn't ready yet
+    if (!currentUser || !currentUserId) {
+        console.log('⏳ Category colors migration deferred: auth not ready');
+        return;
+    }
     
     const colors = ['#7e22ce', '#a855f7', '#c084fc', '#d8b4fe', '#9333ea', '#6366f1', '#3b82f6', '#06b6d4', '#14b8a6', '#22c55e'];
     let needsUpdate = false;
@@ -17,7 +22,8 @@ function migrateCategoryColors() {
     
     if (needsUpdate) {
         console.log('✅ Category colors migrated');
-        saveFinance();
+        // Delay save so auth has time to settle
+        setTimeout(() => saveFinance(), 100);
     }
 }
 
@@ -37,6 +43,14 @@ function saveFinance() {
     if (!targetUid) {
         console.error('❌ saveFinance: no targetUid, cannot determine write path');
         showSyncStatus('❌ Ошибка: пользователь не определён', 'error');
+        return;
+    }
+    
+    // UID mismatch check: rules require auth.uid === $uid
+    if (targetUid !== authUid) {
+        console.error('❌ saveFinance: UID MISMATCH — targetUid (' + targetUid + ') !== authUid (' + authUid + '). This will cause PERMISSION_DENIED.');
+        console.error('   Check: viewingUserId=' + viewingUserId + ' currentUserId=' + currentUserId + ' currentUserRole=' + currentUserRole);
+        showSyncStatus('❌ UID mismatch: целевой пользователь не совпадает с текущим', 'error');
         return;
     }
     
