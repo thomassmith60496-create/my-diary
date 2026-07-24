@@ -336,8 +336,9 @@ function renderFinanceTransactions() {
             <span style="font-size:13px;font-weight:700;color:${isExpense ? '#dc2626' : '#16a34a'};min-width:80px;">${isExpense ? '−' : '+'}${Math.abs(t.amount).toLocaleString('ru-RU')} ₽</span>
             <span style="font-size:12px;color:${catColor};font-weight:600;min-width:100px;">${catName}${t.subcategory ? ' › ' + t.subcategory : ''}</span>
             <span style="font-size:11px;color:#94a3b8;flex:1;">${t.comment || ''}</span>
+            ${isReadOnlyActive() ? '' : `
             <button class="action-btn edit" onclick="editFinanceTransaction('${t.id}')" style="padding:3px 8px;font-size:11px;">✏️</button>
-            <button class="action-btn delete" onclick="deleteFinanceItem('transaction','${t.id}')" style="padding:3px 8px;font-size:11px;">🗑</button>
+            <button class="action-btn delete" onclick="deleteFinanceItem('transaction','${t.id}')" style="padding:3px 8px;font-size:11px;">🗑</button>`}
         </div>`;
     }).join('');
     
@@ -376,7 +377,7 @@ function renderFinanceSavings() {
                     <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px dashed #f3e8ff;font-size:13px;">
                         <span style="color:#64748b;">${formatFinanceDate(e.date)}</span>
                         <span style="font-weight:600;color:${e.amount >= 0 ? '#16a34a' : '#dc2626'};">${e.amount >= 0 ? '+' : ''}${e.amount.toLocaleString('ru-RU')} ₽</span>
-                        <button class="action-btn delete" onclick="deleteFinanceItem('savings','${e.id}')" style="padding:2px 6px;font-size:10px;">🗑</button>
+                        ${isReadOnlyActive() ? '' : `<button class="action-btn delete" onclick="deleteFinanceItem('savings','${e.id}')" style="padding:2px 6px;font-size:10px;">🗑</button>`}
                     </div>
                 `).join('')}
             </div>
@@ -411,7 +412,7 @@ function renderFinancePlanned() {
                 <input type="checkbox" ${p.done ? 'checked' : ''} onchange="togglePlannedDone('${p.id}')" style="width:16px;height:16px;cursor:pointer;">
                 Выполнено
             </label>
-            <button class="action-btn delete" onclick="deleteFinanceItem('planned','${p.id}')" style="padding:3px 8px;font-size:11px;">🗑</button>
+            ${isReadOnlyActive() ? '' : `<button class="action-btn delete" onclick="deleteFinanceItem('planned','${p.id}')" style="padding:3px 8px;font-size:11px;">🗑</button>`}
         </div>`;
     }).join('');
 }
@@ -443,8 +444,9 @@ function renderFinanceCategories() {
                 </div>
                 <div style="display:flex;align-items:center;gap:8px;">
                     <span style="font-size:12px;font-weight:600;color:#065f46;">💰 ${limitDisplay}</span>
+                    ${isReadOnlyActive() ? '' : `
                     <button class="action-btn edit" onclick="openCategoryModal('${c.id}')" style="padding:2px 8px;font-size:11px;">✏️</button>
-                    <button class="action-btn delete" onclick="deleteFinanceItem('category','${c.id}')" style="padding:2px 8px;font-size:11px;">🗑</button>
+                    <button class="action-btn delete" onclick="deleteFinanceItem('category','${c.id}')" style="padding:2px 8px;font-size:11px;">🗑</button>`}
                 </div>
             </div>
             <div>${subcatsHtml}</div>

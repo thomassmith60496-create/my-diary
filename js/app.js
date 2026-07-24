@@ -162,6 +162,10 @@ function getProgressData() {
     }
 }
 
+function isReadOnlyActive() {
+    return currentUserRole === 'reader' || isReadOnlyMode;
+}
+
 function getTargetUid() {
     return viewingUserId || currentUserId;
 }

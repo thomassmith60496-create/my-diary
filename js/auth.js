@@ -44,6 +44,10 @@ function renderReadOnlyBanner() {
 
 function applyReadOnlyState() {
     const isReadOnly = currentUserRole === 'reader' || isReadOnlyMode;
+    
+    // Disable ALL inputs/selects/buttons by default in read-only mode
+    // Then selectively RE-ENABLE view controls
+    
     document.querySelectorAll('input:not([type="file"]), textarea, select, button:not(.user-bar-btn):not(.main-tab-btn):not(.sub-tab-btn)').forEach(el => {
         if (isReadOnly) {
             el.classList.add('read-only-input');
@@ -53,6 +57,76 @@ function applyReadOnlyState() {
             el.disabled = false;
         }
     });
+    
+    // === RE-ENABLE view controls for readers ===
+    if (isReadOnly) {
+        // 1. Питание - Недели: week-select (селектор текущей недели)
+        document.querySelectorAll('#week-select, .week-select').forEach(el => {
+            el.classList.remove('read-only-input');
+            el.disabled = false;
+        });
+        
+        // 2. Питание - Недели: "Скачать шаблон меню" и "Экспорт всего"
+        document.querySelectorAll('button[onclick*="downloadMenuTemplate"], button[onclick*="exportAllData"]').forEach(el => {
+            el.classList.remove('read-only-input');
+            el.disabled = false;
+        });
+        
+        // 3. Питание - Дашборд: селекторы периодов для веса и КБЖУ
+        document.querySelectorAll('#weight-period, #kbju-period, .dashboard-select').forEach(el => {
+            el.classList.remove('read-only-input');
+            el.disabled = false;
+        });
+        
+        // 4. Питание - Дашборд: кнопки метрик (Калории/Белки/Жиры/Углеводы)
+        document.querySelectorAll('#sub-tab-dashboard .metric-btn').forEach(el => {
+            el.classList.remove('read-only-input');
+            el.disabled = false;
+        });
+        
+        // 5. Питание - Дашборд: кнопка "Обновить"
+        document.querySelectorAll('button[onclick*="renderDashboard"]').forEach(el => {
+            el.classList.remove('read-only-input');
+            el.disabled = false;
+        });
+        
+        // 6. Тренировки - Прогресс по упражнениям: селектор упражнения
+        document.querySelectorAll('#progress-exercise-select, .progress-select').forEach(el => {
+            el.classList.remove('read-only-input');
+            el.disabled = false;
+        });
+        
+        // 7. Тренировки - Прогресс по упражнениям: кнопки "Макс. вес" и "Объём"
+        document.querySelectorAll('#main-tab-train .metric-btn').forEach(el => {
+            el.classList.remove('read-only-input');
+            el.disabled = false;
+        });
+        
+        // 8. Финансы - Дашборд: селектор месяца
+        document.querySelectorAll('#fin-month-select, .fin-month-selector select').forEach(el => {
+            el.classList.remove('read-only-input');
+            el.disabled = false;
+        });
+        
+        // 9. Финансы - все подвкладки: селекторы фильтров периода/типа
+        document.querySelectorAll('#fin-filter-period, #fin-filter-type, .fin-filter-select').forEach(el => {
+            el.classList.remove('read-only-input');
+            el.disabled = false;
+        });
+        
+        // 10. Финансы - кнопка "Обновить" на дашборде
+        document.querySelectorAll('#fin-sub-dashboard button[onclick*="renderFinanceDashboard"]').forEach(el => {
+            el.classList.remove('read-only-input');
+            el.disabled = false;
+        });
+        
+        // 11. Экспорт/импорт - кнопки экспорта в любой вкладке
+        document.querySelectorAll('button[onclick*="exportAllData"], button[onclick*="exportMenuAsText"], button[onclick*="printMenu"]').forEach(el => {
+            el.classList.remove('read-only-input');
+            el.disabled = false;
+        });
+    }
+    
     document.querySelectorAll('.admin-only').forEach(el => {
         el.style.display = isReadOnly ? 'none' : '';
     });

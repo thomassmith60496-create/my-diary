@@ -156,10 +156,11 @@ function renderWorkouts() {
                     ${w.log ? `<div class="section-title">📋 Лог тренировки</div><div class="log-box">${escapeHtml(w.log)}</div>` : ''}
                     ${parsedHtml}
                     ${w.note ? `<div class="section-title">💬 Заметки</div><div class="note-box">${escapeHtml(w.note)}</div>` : ''}
+                    ${isReadOnlyActive() ? '' : `
                     <div class="workout-actions">
                         <button class="action-btn edit" onclick="event.stopPropagation();openTrainModal('${w.id}')">✏️ Редактировать</button>
                         <button class="action-btn delete" onclick="event.stopPropagation();deleteWorkout('${w.id}')">🗑 Удалить</button>
-                    </div>
+                    </div>`}
                 </div>
             </div>`;
     }).join('');

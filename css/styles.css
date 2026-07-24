@@ -605,7 +605,7 @@ header h1 { margin: 0 0 8px 0; font-size: 30px; letter-spacing: 0.5px; }
    padding: 10px 16px; margin-bottom: 16px; font-size: 13px; font-weight: 600;
    color: #92400e; text-align: center;
 }
-.read-only-input { pointer-events: none; opacity: 0.6; }
+.read-only-input { pointer-events: none; opacity: 0.5; cursor: not-allowed; user-select: none; }
 
 /* ===== HOME PAGE STYLES ===== */
 .home-header {
