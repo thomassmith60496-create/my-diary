@@ -450,6 +450,36 @@ header h1 { margin: 0 0 8px 0; font-size: 30px; letter-spacing: 0.5px; }
 .hidden { display: none; }
 .auth-form-content { display: none; }
 .auth-form-content.active { display: block; }
+
+/* Scroll to Top Button */
+.btn-scroll-top {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #7e22ce 0%, #a855f7 100%);
+    color: white;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(126, 34, 206, 0.4);
+    z-index: 999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+}
+
+.btn-scroll-top:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(126, 34, 206, 0.5);
+}
+
+.btn-scroll-top:active {
+    transform: translateY(-1px);
+}
 /* ===== Finance Dashboard Styles ===== */
 #main-tab-finance .sub-tab-content { padding-top: 14px; }
 .fin-month-selector {

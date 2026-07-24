@@ -109,7 +109,6 @@
                 <button class="btn" onclick="exportAllData()">💾 Экспорт всего</button>
                 <button class="btn" onclick="document.getElementById('import-all-file').click()">📂 Импорт всего</button>
                 <button class="btn danger" onclick="resetAllData()">🗑 Очистить всё</button>
-                <button class="btn" onclick="scrollToTop()" title="Наверх">⬆️</button>
                 <input type="file" id="import-all-file" accept=".json" style="display:none;" onchange="importAllData(this)">
             </div>
             <div class="rule-box">
@@ -603,6 +602,9 @@
 </div>
 
 <div id="print-area" style="display:none;"></div>
+
+<!-- Fixed Scroll to Top Button -->
+<button class="btn-scroll-top" onclick="scrollToTop()" title="Наверх">⬆️</button>
 
 <!-- JavaScript -->
 <script src="js/firebase-config.js"></script>

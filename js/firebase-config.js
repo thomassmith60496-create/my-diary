@@ -40,7 +40,7 @@ let financeData = {
         { id: 'cat-tech', name: 'Техника', type: 'expense', limit: 0, subcategories: ['Телефон', 'Ноутбук', 'Аксессуары'], subcategoryLimits: {} }
     ]
 };
-let financeSelectedMonth = 'all';
+let financeSelectedMonth = null;
 
 const mealIcons = {
     breakfast:"З", lunch:"О", dinner:"У", snack:"П", snack1:"П1", snack2:"П2",

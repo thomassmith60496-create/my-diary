@@ -2,6 +2,25 @@
 // 💰 FINANCE SAVE FUNCTIONS
 // ============================================
 
+function migrateCategoryColors() {
+    if (!financeData || !financeData.categories) return;
+    
+    const colors = ['#7e22ce', '#a855f7', '#c084fc', '#d8b4fe', '#9333ea', '#6366f1', '#3b82f6', '#06b6d4', '#14b8a6', '#22c55e'];
+    let needsUpdate = false;
+    
+    financeData.categories.forEach((cat, index) => {
+        if (!cat.color) {
+            cat.color = colors[index % colors.length];
+            needsUpdate = true;
+        }
+    });
+    
+    if (needsUpdate) {
+        console.log('✅ Category colors migrated');
+        saveFinance();
+    }
+}
+
 function saveFinance() {
     const targetUid = getTargetUid();
     const data = {

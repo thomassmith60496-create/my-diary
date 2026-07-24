@@ -314,6 +314,11 @@ function saveTrainings() {
         migrateNutritionDates();
     }
     
+    // Migrate category colors
+    if (typeof migrateCategoryColors === 'function') {
+        migrateCategoryColors();
+    }
+    
     // Render with initial data (auth state will reload if needed)
     renderHomePage();
     if (!currentUser) {
