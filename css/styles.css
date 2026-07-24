@@ -21,6 +21,11 @@ body {
     background: linear-gradient(135deg, #9a3412 0%, #ea580c 100%);
     color: white; box-shadow: 0 -4px 15px rgba(234, 88, 12, 0.2);
 }
+.main-tab-btn.home { background: #0f172a; color: rgba(255,255,255,0.6); }
+.main-tab-btn.home.active {
+    background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+    color: white; box-shadow: 0 -4px 15px rgba(30, 58, 138, 0.2);
+}
 .main-tab-btn.finance { background: #581c87; color: rgba(255,255,255,0.6); }
 .main-tab-btn.finance.active {
     background: linear-gradient(135deg, #7e22ce 0%, #a855f7 100%);
@@ -571,4 +576,185 @@ header h1 { margin: 0 0 8px 0; font-size: 30px; letter-spacing: 0.5px; }
    color: #92400e; text-align: center;
 }
 .read-only-input { pointer-events: none; opacity: 0.6; }
+
+/* ===== HOME PAGE STYLES ===== */
+.home-header {
+    background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+    color: white; padding: 35px 30px; border-radius: 0 0 20px 20px;
+    margin-bottom: 25px; box-shadow: 0 10px 30px rgba(30, 58, 138, 0.25);
+    text-align: center;
+}
+.home-header h1 { margin: 0 0 8px 0; font-size: 30px; letter-spacing: 0.5px; }
+.home-header .subtitle { opacity: 0.9; font-size: 15px; }
+
+.quick-actions {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px; margin-bottom: 25px;
+}
+.quick-action-btn {
+    display: flex; align-items: center; gap: 12px; padding: 16px 20px;
+    border: none; border-radius: 12px; cursor: pointer; font-family: inherit;
+    font-size: 14px; font-weight: 600; transition: all 0.2s; color: white;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.quick-action-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.15); }
+.quick-action-icon { font-size: 24px; }
+.quick-action-text { flex: 1; text-align: left; }
+.quick-action-btn.nutrition { background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); }
+.quick-action-btn.workout { background: linear-gradient(135deg, #9a3412 0%, #ea580c 100%); }
+.quick-action-btn.expense { background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%); }
+.quick-action-btn.income { background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%); }
+
+.home-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 20px; margin-bottom: 20px;
+}
+
+.home-card {
+    background: white; border-radius: 18px; overflow: hidden;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.08); border: 1px solid #e0e7ff;
+}
+.home-card-header {
+    padding: 18px 22px; display: flex; justify-content: space-between;
+    align-items: center; border-bottom: 1px solid #f1f5f9;
+}
+.home-card-title { margin: 0; font-size: 20px; font-weight: 700; }
+.home-card-badge {
+    padding: 6px 14px; border-radius: 20px; font-size: 12px;
+    font-weight: 600; background: #f1f5f9; color: #64748b;
+}
+.home-card-body { padding: 20px 22px; }
+
+.nutrition-card .home-card-header { background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); }
+.nutrition-card .home-card-title { color: #1e3a8a; }
+.nutrition-card .home-card-badge { background: #dbeafe; color: #1e40af; }
+
+.workout-card .home-card-header { background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%); }
+.workout-card .home-card-title { color: #9a3412; }
+.workout-card .home-card-badge { background: #fed7aa; color: #9a3412; }
+
+.finance-card .home-card-header { background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%); }
+.finance-card .home-card-title { color: #7e22ce; }
+.finance-card .home-card-badge { background: #e9d5ff; color: #7e22ce; }
+
+.activity-card .home-card-header { background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); }
+.activity-card .home-card-title { color: #065f46; }
+.activity-card .home-card-badge { background: #a7f3d0; color: #065f46; }
+
+.nutrition-stats { }
+.nutrition-main { margin-bottom: 18px; }
+.nutrition-calories { display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px; }
+.nutrition-value { font-size: 36px; font-weight: 800; color: #dc2626; }
+.nutrition-label { font-size: 14px; color: #64748b; font-weight: 600; }
+.nutrition-progress-bar {
+    height: 12px; background: #fee2e2; border-radius: 6px;
+    overflow: hidden; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+}
+.nutrition-progress-fill {
+    height: 100%; background: linear-gradient(90deg, #dc2626 0%, #ef4444 100%);
+    border-radius: 6px; transition: width 0.5s ease;
+}
+
+.nutrition-macros { display: flex; flex-direction: column; gap: 12px; }
+.macro-item { }
+.macro-info { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.macro-value { font-size: 16px; font-weight: 700; color: #1e293b; }
+.macro-label { font-size: 12px; color: #64748b; font-weight: 600; }
+.macro-progress { height: 8px; background: #f1f5f9; border-radius: 4px; overflow: hidden; }
+.macro-progress-fill { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
+.macro-progress-fill.prot { background: linear-gradient(90deg, #2563eb 0%, #3b82f6 100%); }
+.macro-progress-fill.fat { background: linear-gradient(90deg, #d97706 0%, #f59e0b 100%); }
+.macro-progress-fill.carb { background: linear-gradient(90deg, #16a34a 0%, #22c55e 100%); }
+
+.nutrition-meals { margin-top: 14px; padding-top: 14px; border-top: 1px dashed #e0e7ff; }
+.meals-count { font-size: 13px; color: #64748b; font-weight: 600; }
+
+.workout-info { margin-bottom: 14px; }
+.workout-type-badge {
+    display: inline-block; padding: 8px 16px; border-radius: 20px;
+    background: linear-gradient(135deg, #9a3412 0%, #ea580c 100%);
+    color: white; font-size: 14px; font-weight: 600; margin-bottom: 10px;
+}
+.workout-details { display: flex; flex-direction: column; gap: 6px; }
+.workout-detail { font-size: 13px; color: #64748b; font-weight: 600; }
+
+.last-workout {
+    margin-top: 12px; padding-top: 12px; border-top: 1px dashed #fed7aa;
+    display: flex; justify-content: space-between; align-items: center;
+}
+.last-workout-label { font-size: 12px; color: #9a3412; font-weight: 600; }
+.last-workout-date { font-size: 13px; color: #7c2d12; font-weight: 700; }
+
+.week-stats { margin-top: 10px; }
+.week-stat { font-size: 12px; color: #9a3412; font-weight: 600; }
+
+.finance-today { margin-bottom: 16px; }
+.finance-row {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;
+}
+.finance-item {
+    padding: 14px 16px; border-radius: 12px; border: 1px solid;
+}
+.finance-item.expense { background: #fef2f2; border-color: #fecaca; }
+.finance-item.income { background: #f0fdf4; border-color: #bbf7d0; }
+.finance-label { display: block; font-size: 11px; font-weight: 700; color: #64748b; margin-bottom: 4px; text-transform: uppercase; }
+.finance-value { display: block; font-size: 18px; font-weight: 800; }
+.finance-item.expense .finance-value { color: #dc2626; }
+.finance-item.income .finance-value { color: #16a34a; }
+
+.finance-balance {
+    padding: 12px 16px; background: #f8fafc; border-radius: 10px;
+    border: 1px solid #e2e8f0; display: flex; justify-content: space-between;
+    align-items: center;
+}
+.balance-label { font-size: 13px; color: #64748b; font-weight: 600; }
+.balance-value { font-size: 16px; font-weight: 800; }
+.balance-value.positive { color: #16a34a; }
+.balance-value.negative { color: #dc2626; }
+
+.finance-month { margin-top: 16px; padding-top: 16px; border-top: 1px dashed #e9d5ff; }
+.month-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 0; flex-wrap: wrap; gap: 6px;
+}
+.month-label { font-size: 13px; color: #7e22ce; font-weight: 600; }
+.month-value { font-size: 15px; font-weight: 700; color: #7e22ce; }
+.month-date { font-size: 12px; color: #a855f7; font-weight: 600; }
+
+.savings-progress { margin-top: 14px; padding-top: 14px; border-top: 1px dashed #e9d5ff; }
+.savings-label { font-size: 13px; color: #7e22ce; font-weight: 600; margin-bottom: 8px; }
+.savings-bar {
+    height: 10px; background: #f3e8ff; border-radius: 5px;
+    overflow: hidden; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+}
+.savings-bar-fill {
+    height: 100%; background: linear-gradient(90deg, #7e22ce 0%, #a855f7 100%);
+    border-radius: 5px; transition: width 0.5s ease;
+}
+
+.activity-list { display: flex; flex-direction: column; gap: 12px; }
+.activity-item {
+    display: flex; gap: 14px; padding: 14px 16px;
+    background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0;
+    transition: all 0.2s;
+}
+.activity-item:hover { background: #f1f5f9; border-color: #cbd5e1; }
+.activity-icon { font-size: 28px; flex-shrink: 0; }
+.activity-content { flex: 1; }
+.activity-title { font-size: 13px; font-weight: 700; color: #065f46; margin-bottom: 4px; }
+.activity-details { font-size: 12px; color: #64748b; margin-bottom: 4px; }
+.activity-meta { font-size: 13px; color: #064e3b; font-weight: 700; }
+
+.empty-state-mini {
+    text-align: center; padding: 30px 20px; background: #f8fafc;
+    border-radius: 12px; border: 2px dashed #e2e8f0;
+}
+.empty-state-mini-icon { font-size: 48px; margin-bottom: 10px; }
+.empty-state-mini-text { font-size: 14px; color: #64748b; font-weight: 600; }
+
+@media (max-width: 768px) {
+    .home-grid { grid-template-columns: 1fr; }
+    .quick-actions { grid-template-columns: 1fr; }
+    .finance-row { grid-template-columns: 1fr; }
+}
 

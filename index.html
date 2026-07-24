@@ -64,12 +64,17 @@
     <div id="read-only-banner-container"></div>
     <div id="sync-status" class="sync-status"></div>
     <div class="main-tabs">
-        <button class="main-tab-btn food active" onclick="switchMainTab('food')">📘 Питание</button>
+        <button class="main-tab-btn home active" onclick="switchMainTab('home')">🏠 Главная</button>
+        <button class="main-tab-btn food" onclick="switchMainTab('food')">📘 Питание</button>
         <button class="main-tab-btn train" onclick="switchMainTab('train')">🏋️ Тренировки</button>
         <button class="main-tab-btn finance" onclick="switchMainTab('finance')">💰 Финансы</button>
     </div>
 
-    <div class="main-tab-content active" id="main-tab-food">
+    <div class="main-tab-content active" id="main-tab-home">
+        <div id="home-content"></div>
+    </div>
+
+    <div class="main-tab-content" id="main-tab-food">
         <div class="sub-tabs">
             <button class="sub-tab-btn active" onclick="switchSubTab('weeks', event)">📅 Недели</button>
             <button class="sub-tab-btn" onclick="switchSubTab('dashboard', event)">📊 Дашборд</button>

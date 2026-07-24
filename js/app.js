@@ -9,6 +9,7 @@ function switchMainTab(tab) {
     document.querySelectorAll('.main-tab-content').forEach(c => c.classList.remove('active'));
     document.querySelector(`.main-tab-btn.${tab}`).classList.add('active');
     document.getElementById(`main-tab-${tab}`).classList.add('active');
+    if(tab === 'home') renderHomePage();
     if(tab === 'train') renderTrainAll();
     if(tab === 'finance') renderFinanceDashboard();
 }

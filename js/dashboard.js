@@ -1,96 +1,517 @@
 // ============================================
-// ДАШБОРД ПИТАНИЯ
+// 🏠 ГЛАВНАЯ СТРАНИЦА - ДАШБОРД
 // ============================================
 
-function renderDashboard() { 
-    renderWeightChart(); 
-    renderKbjuChart(); 
-    renderWeeklyAvg(); 
+// === ГЛАВНАЯ СТРАНИЦА ===
+
+function renderHomePage() {
+    const container = document.getElementById('home-content');
+    if(!container) return;
+    
+    const today = new Date();
+    const dateStr = today.toISOString().slice(0, 10);
+    const dayNames = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
+    const dayName = dayNames[today.getDay()];
+    const months = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+    const formattedDate = `${today.getDate()} ${months[today.getMonth()]} ${today.getFullYear()}`;
+    
+    const userName = currentUser ? currentUser.email.split('@')[0] : 'Пользователь';
+    const greeting = getGreeting(today.getHours());
+    
+    // Получаем данные
+    const todayNutrition = getTodayNutrition(dateStr);
+    const todayWorkout = getTodayWorkout(dateStr);
+    const todayFinance = getTodayFinance(dateStr);
+    const recentActivity = getRecentActivity();
+    
+    let html = '';
+    
+    // Приветствие
+    html += `
+        <header class="home-header">
+            <h1>${greeting}, ${userName}! 👋</h1>
+            <div class="subtitle">${formattedDate} • ${dayName}</div>
+        </header>
+    `;
+    
+    // Быстрые действия
+    html += renderQuickActions();
+    
+    // Карточки в две колонки
+    html += `<div class="home-grid">`;
+    
+    // Карточка питания
+    html += renderNutritionCard(todayNutrition, dateStr);
+    
+    // Карточка тренировок
+    html += renderWorkoutCard(todayWorkout, dateStr);
+    
+    html += `</div>`;
+    
+    // Карточка финансов (на всю ширину)
+    html += renderFinanceCard(todayFinance, dateStr);
+    
+    // Последняя активность
+    html += renderRecentActivity(recentActivity);
+    
+    container.innerHTML = html;
 }
 
-function setKbjuMetric(metric) {
-    currentKbjuMetric = metric;
-    document.querySelectorAll('#sub-tab-dashboard .metric-btn').forEach(b => { b.classList.toggle('active', b.dataset.metric === metric); });
-    renderKbjuChart();
+function getGreeting(hour) {
+    if(hour >= 5 && hour < 12) return 'Доброе утро';
+    if(hour >= 12 && hour < 17) return 'Добрый день';
+    if(hour >= 17 && hour < 22) return 'Добрый вечер';
+    return 'Доброй ночи';
 }
 
-function renderWeightChart() {
-    const period = document.getElementById('weight-period').value;
-    const data = collectWeightData(period);
-    document.getElementById('weight-chart-container').innerHTML = data.length === 0 ? '<div class="chart-empty">Нет данных о весе</div>' : renderSVGLineChart(data, 'weight', 'кг', '#10b981', 'grad-weight', { textColor: '#065f46', titleColor: '#064e3b', gridColor: '#a7f3d0' });
-    document.getElementById('weight-stats-container').innerHTML = data.length === 0 ? '' : renderStatsBlock(data, 'weight', 'кг');
+// === БЫСТРЫЕ ДЕЙСТВИЯ ===
+
+function renderQuickActions() {
+    return `
+        <div class="quick-actions">
+            <button class="quick-action-btn nutrition" onclick="openNutritionModal()">
+                <span class="quick-action-icon">📥</span>
+                <span class="quick-action-text">Добавить приём пищи</span>
+            </button>
+            <button class="quick-action-btn workout" onclick="openTrainModal()">
+                <span class="quick-action-icon">🏋️</span>
+                <span class="quick-action-text">Добавить тренировку</span>
+            </button>
+            <button class="quick-action-btn expense" onclick="openFinanceModalWithType('expense')">
+                <span class="quick-action-icon">📉</span>
+                <span class="quick-action-text">Добавить расход</span>
+            </button>
+            <button class="quick-action-btn income" onclick="openFinanceModalWithType('income')">
+                <span class="quick-action-icon">📈</span>
+                <span class="quick-action-text">Добавить доход</span>
+            </button>
+        </div>
+    `;
 }
 
-function renderKbjuChart() {
-    const period = document.getElementById('kbju-period').value;
-    const data = collectKbjuData(period, currentKbjuMetric);
-    const units = { cal: 'ккал', prot: 'г', fat: 'г', carb: 'г' };
-    document.getElementById('kbju-chart-container').innerHTML = data.length === 0 ? '<div class="chart-empty">Нет данных КБЖУ</div>' : renderSVGLineChart(data, currentKbjuMetric, units[currentKbjuMetric], '#10b981', 'grad-kbju', { textColor: '#065f46', titleColor: '#064e3b', gridColor: '#a7f3d0' });
-    document.getElementById('kbju-stats-container').innerHTML = data.length === 0 ? '' : renderStatsBlock(data, currentKbjuMetric, units[currentKbjuMetric]);
+function openFinanceModalWithType(type) {
+    openFinanceModal();
+    setTimeout(() => {
+        const typeSelect = document.getElementById('f-fin-type');
+        if(typeSelect) typeSelect.value = type;
+        updateFinanceCategoryOptions();
+    }, 100);
 }
 
-function collectWeightData(period) {
-    const weeks = getFilteredWeeks(period);
-    const data = [];
-    weeks.forEach(week => {
-        if(!week.data) week.data = {};
-        const startDate = new Date(week.startDate);
-        week.menu.forEach((day, di) => {
-            const weight = week.data[`weight-${di}`];
-            if(weight) {
-                const date = new Date(startDate);
-                date.setDate(startDate.getDate() + di);
-                data.push({ date: date.toISOString().slice(0,10), weight: parseFloat(weight) });
-            }
-        });
-    });
-    return data.sort((a, b) => a.date.localeCompare(b.date));
+// === КАРТОЧКА ПИТАНИЯ ===
+
+function renderNutritionCard(todayData, dateStr) {
+    const hasData = todayData.mealsCount > 0;
+    const calProgress = Math.min(100, (todayData.calories / 1300) * 100);
+    const protProgress = Math.min(100, (todayData.protein / 110) * 100);
+    
+    return `
+        <div class="home-card nutrition-card">
+            <div class="home-card-header">
+                <h2 class="home-card-title">📘 Сегодня</h2>
+                <div class="home-card-badge">Питание</div>
+            </div>
+            <div class="home-card-body">
+                ${hasData ? `
+                    <div class="nutrition-stats">
+                        <div class="nutrition-main">
+                            <div class="nutrition-calories">
+                                <span class="nutrition-value">${todayData.calories}</span>
+                                <span class="nutrition-label">/ 1300 ккал</span>
+                            </div>
+                            <div class="nutrition-progress-bar">
+                                <div class="nutrition-progress-fill" style="width: ${calProgress}%"></div>
+                            </div>
+                        </div>
+                        <div class="nutrition-macros">
+                            <div class="macro-item">
+                                <div class="macro-info">
+                                    <span class="macro-value">${todayData.protein}г</span>
+                                    <span class="macro-label">Белки</span>
+                                </div>
+                                <div class="macro-progress">
+                                    <div class="macro-progress-fill prot" style="width: ${protProgress}%"></div>
+                                </div>
+                            </div>
+                            <div class="macro-item">
+                                <div class="macro-info">
+                                    <span class="macro-value">${todayData.fat}г</span>
+                                    <span class="macro-label">Жиры</span>
+                                </div>
+                                <div class="macro-progress">
+                                    <div class="macro-progress-fill fat" style="width: ${Math.min(100, (todayData.fat / 55) * 100)}%"></div>
+                                </div>
+                            </div>
+                            <div class="macro-item">
+                                <div class="macro-info">
+                                    <span class="macro-value">${todayData.carbs}г</span>
+                                    <span class="macro-label">Углеводы</span>
+                                </div>
+                                <div class="macro-progress">
+                                    <div class="macro-progress-fill carb" style="width: ${Math.min(100, (todayData.carbs / 100) * 100)}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="nutrition-meals">
+                            <span class="meals-count">🍽️ ${todayData.mealsCount} приём${getPlural(todayData.mealsCount, ['ов', '', 'а'])} пищи</span>
+                        </div>
+                    </div>
+                ` : `
+                    <div class="empty-state-mini">
+                        <div class="empty-state-mini-icon">📘</div>
+                        <div class="empty-state-mini-text">Сегодня ещё нет приёмов пищи</div>
+                    </div>
+                `}
+            </div>
+        </div>
+    `;
 }
 
-function collectKbjuData(period, metric) {
-    const weeks = getFilteredWeeks(period);
-    const data = [];
-    weeks.forEach(week => {
-        if(!week.data) week.data = {};
-        const startDate = new Date(week.startDate);
-        week.menu.forEach((day, di) => {
-            let total = 0;
-            day.meals.forEach((meal, mi) => { total += parseFloat(week.data[`m-${di}-${mi}-${metric}`]) || 0; });
-            if(total > 0) {
-                const date = new Date(startDate);
-                date.setDate(startDate.getDate() + di);
-                data.push({ date: date.toISOString().slice(0,10), [metric]: total });
-            }
-        });
-    });
-    return data.sort((a, b) => a.date.localeCompare(b.date));
-}
-
-function getFilteredWeeks(period) {
-    const sorted = [...nutritionData.weeks].sort((a, b) => a.startDate.localeCompare(b.startDate));
-    if(period === 'all') return sorted;
-    return sorted.slice(-parseInt(period));
-}
-
-function renderWeeklyAvg() {
-    const container = document.getElementById('weekly-avg-container');
-    if(nutritionData.weeks.length === 0) { container.innerHTML = '<div class="chart-empty">Нет данных</div>'; return; }
-    const weeklyData = nutritionData.weeks.map(week => {
-        if(!week.data) week.data = {};
-        let cal = 0, prot = 0, fat = 0, carb = 0, days = 0;
-        week.menu.forEach((day, di) => {
-            let dayCal = 0;
-            day.meals.forEach((meal, mi) => {
-                dayCal += parseFloat(week.data[`m-${di}-${mi}-cal`]) || 0;
-                prot += parseFloat(week.data[`m-${di}-${mi}-prot`]) || 0;
-                fat += parseFloat(week.data[`m-${di}-${mi}-fat`]) || 0;
-                carb += parseFloat(week.data[`m-${di}-${mi}-carb`]) || 0;
+function getTodayNutrition(dateStr) {
+    let mealsCount = 0;
+    let calories = 0;
+    let protein = 0;
+    let fat = 0;
+    let carbs = 0;
+    
+    if(nutritionData.weeks && nutritionData.weeks.length > 0 && nutritionData.currentWeekId) {
+        const week = nutritionData.weeks.find(w => w.id === nutritionData.currentWeekId);
+        if(week && week.menu) {
+            week.menu.forEach((day, dayIndex) => {
+                if(day.date === dateStr && day.meals) {
+                    day.meals.forEach((meal, mealIndex) => {
+                        mealsCount++;
+                        const calKey = `m-${dayIndex}-${mealIndex}-cal`;
+                        const protKey = `m-${dayIndex}-${mealIndex}-prot`;
+                        const fatKey = `m-${dayIndex}-${mealIndex}-fat`;
+                        const carbKey = `m-${dayIndex}-${mealIndex}-carb`;
+                        
+                        if(week.data) {
+                            calories += parseFloat(week.data[calKey]) || 0;
+                            protein += parseFloat(week.data[protKey]) || 0;
+                            fat += parseFloat(week.data[fatKey]) || 0;
+                            carbs += parseFloat(week.data[carbKey]) || 0;
+                        }
+                    });
+                }
             });
-            if(dayCal > 0) { cal += dayCal; days++; }
+        }
+    }
+    
+    return { mealsCount, calories: Math.round(calories), protein: Math.round(protein), fat: Math.round(fat), carbs: Math.round(carbs) };
+}
+
+// === КАРТОЧКА ТРЕНИРОВОК ===
+
+function renderWorkoutCard(todayData, dateStr) {
+    const hasWorkout = todayData.hasWorkout;
+    
+    return `
+        <div class="home-card workout-card">
+            <div class="home-card-header">
+                <h2 class="home-card-title">🏋️ Тренировки</h2>
+                <div class="home-card-badge">${hasWorkout ? 'Сегодня' : 'Отдых'}</div>
+            </div>
+            <div class="home-card-body">
+                ${hasWorkout ? `
+                    <div class="workout-info">
+                        <div class="workout-type-badge">${todayData.typeLabel || 'Тренировка'}</div>
+                        <div class="workout-details">
+                            ${todayData.duration ? `<div class="workout-detail">⏱ ${todayData.duration} мин</div>` : ''}
+                            ${todayData.exercisesCount > 0 ? `<div class="workout-detail">🎯 ${todayData.exercisesCount} упражнений</div>` : ''}
+                        </div>
+                    </div>
+                ` : `
+                    <div class="empty-state-mini">
+                        <div class="empty-state-mini-icon">🏋️</div>
+                        <div class="empty-state-mini-text">Сегодня нет тренировок</div>
+                    </div>
+                `}
+                ${todayData.lastWorkout ? `
+                    <div class="last-workout">
+                        <div class="last-workout-label">Последняя тренировка:</div>
+                        <div class="last-workout-date">${formatDateShort(todayData.lastWorkout.date)}</div>
+                    </div>
+                ` : ''}
+                <div class="week-stats">
+                    <span class="week-stat">📊 ${todayData.weekCount} тренировок на неделе</span>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function getTodayWorkout(dateStr) {
+    const todayWorkouts = workouts.filter(w => w.date === dateStr);
+    const hasWorkout = todayWorkouts.length > 0;
+    const workout = hasWorkout ? todayWorkouts[0] : null;
+    
+    const weekStart = new Date(dateStr);
+    weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    const weekStartStr = weekStart.toISOString().slice(0, 10);
+    const weekEndStr = weekEnd.toISOString().slice(0, 10);
+    
+    const weekWorkouts = workouts.filter(w => w.date >= weekStartStr && w.date <= weekEndStr);
+    
+    const lastWorkout = workouts.length > 0 ? [...workouts].sort((a, b) => b.date.localeCompare(a.date))[0] : null;
+    
+    return {
+        hasWorkout,
+        typeLabel: workout ? (typeLabels[workout.type] || 'Тренировка') : null,
+        duration: workout ? workout.duration : 0,
+        exercisesCount: workout && workout.parsedExercises ? workout.parsedExercises.length : 0,
+        lastWorkout,
+        weekCount: weekWorkouts.length
+    };
+}
+
+// === КАРТОЧКА ФИНАНСОВ ===
+
+function renderFinanceCard(todayData, dateStr) {
+    const hasTransactions = todayData.hasTransactions;
+    
+    return `
+        <div class="home-card finance-card">
+            <div class="home-card-header">
+                <h2 class="home-card-title">💰 Финансы</h2>
+                <div class="home-card-badge">Сегодня</div>
+            </div>
+            <div class="home-card-body">
+                ${hasTransactions ? `
+                    <div class="finance-today">
+                        <div class="finance-row">
+                            <div class="finance-item expense">
+                                <span class="finance-label">📉 Расходы</span>
+                                <span class="finance-value">${todayData.todayExpense.toLocaleString('ru-RU')} ₽</span>
+                            </div>
+                            <div class="finance-item income">
+                                <span class="finance-label">📈 Доходы</span>
+                                <span class="finance-value">${todayData.todayIncome.toLocaleString('ru-RU')} ₽</span>
+                            </div>
+                        </div>
+                        <div class="finance-balance">
+                            <span class="balance-label">Баланс за день:</span>
+                            <span class="balance-value ${todayData.dayBalance >= 0 ? 'positive' : 'negative'}">
+                                ${todayData.dayBalance >= 0 ? '+' : ''}${todayData.dayBalance.toLocaleString('ru-RU')} ₽
+                            </span>
+                        </div>
+                    </div>
+                ` : `
+                    <div class="empty-state-mini">
+                        <div class="empty-state-mini-icon">💰</div>
+                        <div class="empty-state-mini-text">Сегодня нет операций</div>
+                    </div>
+                `}
+                <div class="finance-month">
+                    <div class="month-item">
+                        <span class="month-label">💵 Остаток бюджета:</span>
+                        <span class="month-value">${todayData.monthBalance.toLocaleString('ru-RU')} ₽</span>
+                    </div>
+                    ${todayData.nextPlanned ? `
+                        <div class="month-item">
+                            <span class="month-label">📅 Ближайший платёж:</span>
+                            <span class="month-value">${todayData.nextPlanned.amount.toLocaleString('ru-RU')} ₽</span>
+                            <span class="month-date">${formatDateShort(todayData.nextPlanned.date)}</span>
+                        </div>
+                    ` : ''}
+                </div>
+                ${todayData.savingsProgress > 0 ? `
+                    <div class="savings-progress">
+                        <div class="savings-label">🏦 Накопления: ${todayData.savingsProgress.toLocaleString('ru-RU')} ₽</div>
+                        <div class="savings-bar">
+                            <div class="savings-bar-fill" style="width: ${Math.min(100, todayData.savingsProgress / 100)}%"></div>
+                        </div>
+                    </div>
+                ` : ''}
+            </div>
+        </div>
+    `;
+}
+
+function getTodayFinance(dateStr) {
+    const todayTransactions = financeData.transactions.filter(t => t.date === dateStr);
+    const hasTransactions = todayTransactions.length > 0;
+    
+    const todayExpense = todayTransactions
+        .filter(t => t.type === 'expense')
+        .reduce((s, t) => s + Math.abs(t.amount), 0);
+    
+    const todayIncome = todayTransactions
+        .filter(t => t.type === 'income')
+        .reduce((s, t) => s + Math.abs(t.amount), 0);
+    
+    const totalIncome = financeData.transactions
+        .filter(t => t.type === 'income')
+        .reduce((s, t) => s + Math.abs(t.amount), 0);
+    
+    const totalExpense = financeData.transactions
+        .filter(t => t.type === 'expense')
+        .reduce((s, t) => s + Math.abs(t.amount), 0);
+    
+    const now = new Date();
+    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const monthExpense = financeData.transactions
+        .filter(t => t.type === 'expense' && t.date.startsWith(currentMonth))
+        .reduce((s, t) => s + Math.abs(t.amount), 0);
+    
+    const monthBalance = totalIncome - totalExpense;
+    
+    const nextPlanned = financeData.planned
+        .filter(p => !p.done && p.date >= dateStr)
+        .sort((a, b) => a.date.localeCompare(b.date))[0];
+    
+    const totalSavings = financeData.savings.reduce((s, item) => s + item.amount, 0);
+    
+    return {
+        hasTransactions,
+        todayExpense: Math.round(todayExpense),
+        todayIncome: Math.round(todayIncome),
+        dayBalance: Math.round(todayIncome - todayExpense),
+        monthBalance: Math.round(monthBalance),
+        nextPlanned,
+        savingsProgress: Math.round(totalSavings)
+    };
+}
+
+// === ПОСЛЕДНЯЯ АКТИВНОСТЬ ===
+
+function renderRecentActivity(activity) {
+    let html = `
+        <div class="home-card activity-card">
+            <div class="home-card-header">
+                <h2 class="home-card-title">📋 Последняя активность</h2>
+            </div>
+            <div class="home-card-body">
+    `;
+    
+    const hasAnyActivity = activity.lastMeal || activity.lastWorkout || activity.lastFinance;
+    
+    if(!hasAnyActivity) {
+        html += `
+            <div class="empty-state-mini">
+                <div class="empty-state-mini-icon">📋</div>
+                <div class="empty-state-mini-text">Пока нет активности</div>
+            </div>
+        `;
+    } else {
+        html += `<div class="activity-list">`;
+        
+        if(activity.lastMeal) {
+            html += `
+                <div class="activity-item">
+                    <div class="activity-icon">📘</div>
+                    <div class="activity-content">
+                        <div class="activity-title">Последний приём пищи</div>
+                        <div class="activity-details">${activity.lastMeal.name} • ${formatDateShort(activity.lastMeal.date)}</div>
+                        ${activity.lastMeal.calories > 0 ? `<div class="activity-meta">🔥 ${activity.lastMeal.calories} ккал</div>` : ''}
+                    </div>
+                </div>
+            `;
+        }
+        
+        if(activity.lastWorkout) {
+            html += `
+                <div class="activity-item">
+                    <div class="activity-icon">🏋️</div>
+                    <div class="activity-content">
+                        <div class="activity-title">Последняя тренировка</div>
+                        <div class="activity-details">${typeLabels[activity.lastWorkout.type] || 'Тренировка'} • ${formatDateShort(activity.lastWorkout.date)}</div>
+                        ${activity.lastWorkout.duration > 0 ? `<div class="activity-meta">⏱ ${activity.lastWorkout.duration} мин</div>` : ''}
+                    </div>
+                </div>
+            `;
+        }
+        
+        if(activity.lastFinance) {
+            const isExpense = activity.lastFinance.type === 'expense';
+            html += `
+                <div class="activity-item">
+                    <div class="activity-icon">${isExpense ? '📉' : '📈'}</div>
+                    <div class="activity-content">
+                        <div class="activity-title">Последняя операция</div>
+                        <div class="activity-details">${isExpense ? 'Расход' : 'Доход'} • ${formatDateShort(activity.lastFinance.date)}</div>
+                        <div class="activity-meta">${isExpense ? '−' : '+'}${Math.abs(activity.lastFinance.amount).toLocaleString('ru-RU')} ₽</div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        html += `</div>`;
+    }
+    
+    html += `</div></div>`;
+    return html;
+}
+
+function getRecentActivity() {
+    let lastMeal = null;
+    let lastWorkout = null;
+    let lastFinance = null;
+    
+    // Последний приём пищи
+    if(nutritionData.weeks && nutritionData.weeks.length > 0) {
+        const allMeals = [];
+        nutritionData.weeks.forEach(week => {
+            if(week.menu) {
+                week.menu.forEach((day, dayIndex) => {
+                    if(day.meals) {
+                        day.meals.forEach((meal, mealIndex) => {
+                            allMeals.push({
+                                name: meal.name,
+                                date: day.date,
+                                calories: week.data ? parseFloat(week.data[`m-${dayIndex}-${mealIndex}-cal`]) || 0 : 0
+                            });
+                        });
+                    }
+                });
+            }
         });
-        return { title: week.title, avgCal: days > 0 ? Math.round(cal / days) : 0, avgProt: days > 0 ? Math.round(prot / days) : 0, avgFat: days > 0 ? Math.round(fat / days) : 0, avgCarb: days > 0 ? Math.round(carb / days) : 0, days };
-    });
-    container.innerHTML = `<div style="overflow-x:auto;"><table class="weekly-table"><thead><tr><th>Неделя</th><th style="text-align:center;">Дней</th><th style="text-align:center;">Ккал</th><th style="text-align:center;">Б</th><th style="text-align:center;">Ж</th><th style="text-align:center;">У</th></tr></thead><tbody>
-        ${weeklyData.map(w => `<tr><td>${w.title}</td><td style="text-align:center;">${w.days}</td><td style="text-align:center;" class="cal">${w.avgCal || '—'}</td><td style="text-align:center;" class="prot">${w.avgProt || '—'}</td><td style="text-align:center;" class="fat">${w.avgFat || '—'}</td><td style="text-align:center;" class="carb">${w.avgCarb || '—'}</td></tr>`).join('')}
-    </tbody></table></div>`;
+        if(allMeals.length > 0) {
+            allMeals.sort((a, b) => b.date.localeCompare(a.date));
+            lastMeal = allMeals[0];
+        }
+    }
+    
+    // Последняя тренировка
+    if(workouts.length > 0) {
+        const sorted = [...workouts].sort((a, b) => b.date.localeCompare(a.date));
+        lastWorkout = sorted[0];
+    }
+    
+    // Последняя финансовая операция
+    if(financeData.transactions.length > 0) {
+        const sorted = [...financeData.transactions].sort((a, b) => {
+            if(a.date !== b.date) return b.date.localeCompare(a.date);
+            return (b.createdAt || 0) - (a.createdAt || 0);
+        });
+        lastFinance = sorted[0];
+    }
+    
+    return { lastMeal, lastWorkout, lastFinance };
+}
+
+// === ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ===
+
+function formatDateShort(dateStr) {
+    if(!dateStr) return '';
+    const d = new Date(dateStr);
+    const days = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
+    const months = ['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
+    return `${d.getDate()} ${months[d.getMonth()]}`;
+}
+
+function getPlural(n, forms) {
+    const mod10 = n % 10;
+    const mod100 = n % 100;
+    if(mod100 >= 11 && mod100 <= 19) return forms[0];
+    if(mod10 === 1) return forms[1];
+    if(mod10 >= 2 && mod10 <= 4) return forms[2];
+    return forms[0];
+}
+
+// Инициализация при загрузке
+if(typeof renderHomePage !== 'undefined') {
+    // Функция будет вызвана при переключении на вкладку
 }
