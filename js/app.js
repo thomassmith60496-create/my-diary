@@ -125,6 +125,18 @@ function showSyncStatus(message, type = 'success') {
     setTimeout(() => { statusEl.classList.remove('visible'); }, 3000);
 }
 
+function getProgressData() {
+    try {
+        return JSON.parse(localStorage.getItem('exercise-progress') || '{}');
+    } catch(e) {
+        return {};
+    }
+}
+
+function getTargetUid() {
+    return viewingUserId || currentUserId;
+}
+
 function syncToCloud() {
     if(syncTimeout) clearTimeout(syncTimeout);
     const statusEl = document.getElementById('sync-status');
@@ -132,67 +144,33 @@ function syncToCloud() {
         showSyncStatus('💾 Сохранение...', 'syncing');
     }
     syncTimeout = setTimeout(() => {
-        const targetUid = viewingUserId || currentUserId;
-        if (!targetUid) {
-            // Fallback to old root path if no user
-            const data = {
-                nutrition: nutritionData,
-                workouts: workouts,
-                progress: JSON.parse(localStorage.getItem('exercise-progress') || '{}'),
-                lastUpdated: Date.now()
-            };
-            
-            diaryRef.set(data);
-            
-            financeRef.set({
-                transactions: financeData.transactions,
-                savings: financeData.savings,
-                planned: financeData.planned,
-                categories: financeData.categories,
-                lastUpdated: Date.now()
-            })
-            .then(() => {
-                console.log('✅ Data saved to Firebase');
-                showSyncStatus('✅ Сохранено!', 'success');
-            })
-            .catch((error) => {
-                console.error('❌ Firebase error:', error);
-                showSyncStatus('❌ Ошибка сохранения', 'error');
-            });
-            return;
-        }
-        
+        const targetUid = getTargetUid();
+        const progress = getProgressData();
         const data = {
             nutrition: nutritionData,
             workouts: workouts,
-            progress: JSON.parse(localStorage.getItem('exercise-progress') || '{}'),
+            progress: progress,
             lastUpdated: Date.now()
         };
         
-        db.ref(`lera_diary_v1/${targetUid}`).set(data);
+        const savePromise = targetUid
+            ? db.ref(`lera_diary_v1/${targetUid}`).set(data)
+            : diaryRef.set(data);
         
-        db.ref(`lera_finance_v1/${targetUid}`).set({
-            transactions: financeData.transactions,
-            savings: financeData.savings,
-            planned: financeData.planned,
-            categories: financeData.categories,
-            lastUpdated: Date.now()
-        })
-            .then(() => {
-                console.log(`✅ Data saved to Firebase for user ${targetUid}`);
-                showSyncStatus('✅ Сохранено!', 'success');
-            })
-            .catch((error) => {
-                console.error('❌ Firebase error:', error);
-                showSyncStatus('❌ Ошибка сохранения', 'error');
-            });
+        savePromise.then(() => {
+            console.log('✅ Diary data saved' + (targetUid ? ` for user ${targetUid}` : ' (root)'));
+            showSyncStatus('✅ Сохранено!', 'success');
+        }).catch((error) => {
+            console.error('❌ Firebase diary save error:', error);
+            showSyncStatus('❌ Ошибка сохранения', 'error');
+        });
     }, 5000);
 }
 
 // === ЭКСПОРТ/ИМПОРТ ===
 
 function exportAllData() {
-    const data = { nutrition: nutritionData, workouts, progress: JSON.parse(localStorage.getItem('exercise-progress') || '{}'), exportedAt: new Date().toISOString() };
+    const data = { nutrition: nutritionData, workouts, progress: getProgressData(), exportedAt: new Date().toISOString() };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -209,22 +187,32 @@ function importAllData(input) {
     reader.onload = function(e) {
         try {
             const parsed = JSON.parse(e.target.result);
-            if(parsed.nutrition && parsed.nutrition.weeks) {
+            if(!parsed || typeof parsed !== 'object') {
+                alert('❌ Неверный формат файла');
+                return;
+            }
+            if(parsed.nutrition && parsed.nutrition.weeks && Array.isArray(parsed.nutrition.weeks)) {
                 const existingIds = new Set(nutritionData.weeks.map(w => w.id));
-                parsed.nutrition.weeks.forEach(w => { if(!existingIds.has(w.id)) nutritionData.weeks.push(w); });
+                parsed.nutrition.weeks.forEach(w => { 
+                    if(w && w.id && !existingIds.has(w.id)) nutritionData.weeks.push(w); 
+                });
                 if(parsed.nutrition.currentWeekId && !nutritionData.currentWeekId) nutritionData.currentWeekId = parsed.nutrition.currentWeekId;
             }
-            if(parsed.workouts) {
+            if(parsed.workouts && Array.isArray(parsed.workouts)) {
                 const existingIds = new Set(workouts.map(w => w.id));
-                parsed.workouts.forEach(w => { if(!existingIds.has(w.id)) workouts.push(w); });
+                parsed.workouts.forEach(w => { 
+                    if(w && w.id && !existingIds.has(w.id)) workouts.push(w); 
+                });
             }
             if(parsed.progress) localStorage.setItem('exercise-progress', JSON.stringify(parsed.progress));
-            saveNutrition();
-            saveTrainings();
+            syncToCloud();
             renderNutritionAll();
             renderTrainAll();
             alert('✅ Данные импортированы!');
-        } catch(err) { alert('❌ Ошибка чтения'); }
+        } catch(err) { 
+            alert('❌ Ошибка чтения файла'); 
+            console.error('Import error:', err);
+        }
     };
     reader.readAsText(file);
     input.value = '';
@@ -237,15 +225,20 @@ function importTrainData(input) {
     reader.onload = function(e) {
         try {
             const parsed = JSON.parse(e.target.result);
-            if(parsed.workouts) {
+            if(parsed.workouts && Array.isArray(parsed.workouts)) {
                 const existingIds = new Set(workouts.map(w => w.id));
-                parsed.workouts.forEach(w => { if(!existingIds.has(w.id)) workouts.push(w); });
+                parsed.workouts.forEach(w => { 
+                    if(w && w.id && !existingIds.has(w.id)) workouts.push(w); 
+                });
                 if(parsed.progress) localStorage.setItem('exercise-progress', JSON.stringify(parsed.progress));
-                saveTrainings();
+                syncToCloud();
                 renderTrainAll();
                 alert(`✅ Импортировано тренировок: ${parsed.workouts.length}`);
             } else { alert('❌ Неверный формат'); }
-        } catch(err) { alert('❌ Ошибка чтения'); }
+        } catch(err) { 
+            alert('❌ Ошибка чтения файла');
+            console.error('Import train error:', err);
+        }
     };
     reader.readAsText(file);
     input.value = '';
@@ -253,16 +246,22 @@ function importTrainData(input) {
 
 function resetAllData() {
     if(confirm('Удалить ВСЕ данные (питание + тренировки + финансы)? Это нельзя отменить.')) {
-        const targetUid = viewingUserId || currentUserId;
+        const targetUid = getTargetUid();
         if (targetUid) {
-            db.ref(`lera_diary_v1/${targetUid}`).remove().catch(console.error);
-            db.ref(`lera_finance_v1/${targetUid}`).remove().catch(console.error);
+            db.ref(`lera_diary_v1/${targetUid}`).remove().catch(function(err) { 
+                console.error('❌ Firebase diary remove error:', err); 
+            });
+            db.ref(`lera_finance_v1/${targetUid}`).remove().catch(function(err) { 
+                console.error('❌ Firebase finance remove error:', err); 
+            });
         } else {
-            diaryRef.remove().catch(console.error);
-            financeRef.remove().catch(console.error);
+            diaryRef.remove().catch(function(err) { 
+                console.error('❌ Firebase diary remove error:', err); 
+            });
+            financeRef.remove().catch(function(err) { 
+                console.error('❌ Firebase finance remove error:', err); 
+            });
         }
-        localStorage.removeItem('nutrition-data');
-        localStorage.removeItem('workouts-data');
         localStorage.removeItem('exercise-progress');
         nutritionData = { weeks: [], currentWeekId: null };
         workouts = [];
@@ -280,27 +279,7 @@ function saveTrainings() {
 
 // === ИНИЦИАЛИЗАЦИЯ ===
 
-// Load fallback from localStorage on page load
 (function init() {
-    const rawNutrition = localStorage.getItem('nutrition-data');
-    if(rawNutrition) { 
-        try { 
-            const parsed = JSON.parse(rawNutrition);
-            if(parsed && parsed.weeks && parsed.weeks.length > 0) {
-                nutritionData = parsed;
-            }
-        } catch(e) { console.error('Error parsing localStorage nutrition:', e); } 
-    }
-    const rawTrain = localStorage.getItem('workouts-data');
-    if(rawTrain) { 
-        try { 
-            const parsed = JSON.parse(rawTrain);
-            if(parsed && parsed.workouts) {
-                workouts = parsed.workouts;
-            }
-        } catch(e) { console.error('Error parsing localStorage workouts:', e); } 
-    }
-    
     // Render with initial data (auth state will reload if needed)
     if (!currentUser) {
         renderNutritionAll();
@@ -310,4 +289,3 @@ function saveTrainings() {
         isInitialLoad = false;
     }
 })();
-

@@ -200,71 +200,51 @@ function renderTrainChart() {
     const values = sorted.map(e => currentTrainMetric === 'weight' ? e.maxWeight : e.volume);
     const unit = currentTrainMetric === 'weight' ? 'кг' : 'кг·повт';
     const metricLabel = currentTrainMetric === 'weight' ? 'Макс. вес' : 'Объём';
+    
+    // Use shared chart with train-specific styling
     chartC.innerHTML = renderTrainSVGChart(sorted, values, unit, metricLabel);
     statsC.innerHTML = renderTrainStatsBlock(sorted, values, unit);
     histC.innerHTML = renderTrainHistoryBlock(sorted, values, unit);
 }
 
 function renderTrainSVGChart(entries, values, unit, metricLabel) {
-    const width = 800, height = 280;
-    const padding = { top: 30, right: 30, bottom: 60, left: 60 };
-    const chartW = width - padding.left - padding.right;
-    const chartH = height - padding.top - padding.bottom;
-    const minVal = Math.min(...values), maxVal = Math.max(...values);
-    const valRange = maxVal - minVal || 1;
-    const yMin = Math.max(0, minVal - valRange * 0.1), yMax = maxVal + valRange * 0.15;
-    const xOffset = 15;
-    const xStep = entries.length > 1 ? (chartW - xOffset * 2) / (entries.length - 1) : chartW / 2;
-    const points = entries.map((e, i) => {
-        const x = padding.left + xOffset + (entries.length > 1 ? i * xStep : chartW / 2);
-        const y = padding.top + chartH - ((values[i] - yMin) / (yMax - yMin)) * chartH;
-        return { x, y, value: values[i], date: e.date };
+    // Build data in the format expected by shared renderSVGLineChart
+    var data = entries.map(function(e, i) {
+        var obj = { date: e.date };
+        obj.value = values[i];
+        return obj;
     });
-    const linePath = points.map((p, i) => `${i===0?'M':'L'} ${p.x} ${p.y}`).join(' ');
-    const areaPath = linePath + ` L ${points[points.length-1].x} ${padding.top + chartH} L ${points[0].x} ${padding.top + chartH} Z`;
-    const gridLines = [];
-    for(let i = 0; i <= 5; i++) {
-        const val = yMin + (yMax - yMin) * (i / 5);
-        const y = padding.top + chartH - (i / 5) * chartH;
-        gridLines.push(`<line x1="${padding.left}" y1="${y}" x2="${padding.left + chartW}" y2="${y}" stroke="#fdba74" stroke-width="1" stroke-dasharray="2,4"/>`);
-        gridLines.push(`<text x="${padding.left - 8}" y="${y + 4}" text-anchor="end" font-size="11" fill="#9a3412" font-weight="600">${Math.round(val)}</text>`);
-    }
-    const pointsHtml = points.map((p, i) => {
-        const isFirst = i === 0, isLast = i === entries.length - 1;
-        const color = isLast ? '#ea580c' : (isFirst ? '#2563eb' : '#f97316');
-        const shortDate = p.date.slice(5).split('-').reverse().join('.');
-        return `<circle cx="${p.x}" cy="${p.y}" r="${isFirst||isLast?6:4}" fill="${color}" stroke="white" stroke-width="2"/>
-                <text x="${p.x}" y="${p.y - 10}" text-anchor="middle" font-size="11" font-weight="700" fill="#7c2d12">${p.value}</text>
-                <text x="${p.x}" y="${padding.top + chartH + 18}" text-anchor="middle" font-size="10" fill="#9a3412" font-weight="600">${shortDate}</text>`;
-    }).join('');
-    return `<div class="progress-chart"><svg class="chart-svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet">
-        <defs><linearGradient id="areaGrad-train" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ea580c" stop-opacity="0.3"/><stop offset="100%" stop-color="#ea580c" stop-opacity="0"/></linearGradient></defs>
-        ${gridLines.join('')}
-        <line x1="${padding.left}" y1="${padding.top}" x2="${padding.left}" y2="${padding.top + chartH}" stroke="#9a3412" stroke-width="1.5"/>
-        <line x1="${padding.left}" y1="${padding.top + chartH}" x2="${padding.left + chartW}" y2="${padding.top + chartH}" stroke="#9a3412" stroke-width="1.5"/>
-        <path d="${areaPath}" fill="url(#areaGrad-train)"/>
-        <path d="${linePath}" fill="none" stroke="#ea580c" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
-        ${pointsHtml}
-        <text x="${width/2}" y="18" text-anchor="middle" font-size="13" font-weight="700" fill="#7c2d12">${metricLabel} (${unit})</text>
-    </svg></div>`;
+    
+    // Use shared chart with train-specific orange theme
+    var chartHtml = renderSVGLineChart(data, 'value', unit, '#ea580c', 'areaGrad-train', {
+        title: metricLabel + ' (' + unit + ')',
+        textColor: '#9a3412',
+        titleColor: '#7c2d12',
+        gridColor: '#fdba74'
+    });
+    
+    // Replace dashboard-chart class with progress-chart class for train-specific styling
+    return chartHtml.replace('dashboard-chart', 'progress-chart');
 }
 
 function renderTrainStatsBlock(entries, values, unit) {
-    const first = values[0], last = values[values.length - 1];
-    const diff = last - first;
-    const percent = first > 0 ? (diff / first) * 100 : 0;
-    const max = Math.max(...values), min = Math.min(...values);
-    const avg = values.reduce((s, v) => s + v, 0) / values.length;
-    const daysDiff = Math.round((new Date(entries[entries.length - 1].date) - new Date(entries[0].date)) / (1000 * 60 * 60 * 24));
-    let periodText = daysDiff === 0 ? 'в один день' : (daysDiff === 1 ? 'за 1 день' : (daysDiff < 30 ? `за ${daysDiff} дней` : `за ${Math.round(daysDiff / 30)} месяцев`));
-    const trendIcon = diff > 0 ? '📈' : (diff < 0 ? '📉' : '➡️');
-    const trendColor = diff > 0 ? '#166534' : (diff < 0 ? '#991b1b' : '#6b7280');
-    return `<div class="progress-stats">
-        <div class="stat-card"><div class="stat-label">Старт</div><div class="stat-value">${first} ${unit}</div><div class="stat-sub">${entries[0].date}</div></div>
-        <div class="stat-card"><div class="stat-label">Сейчас</div><div class="stat-value">${last} ${unit}</div><div class="stat-sub">${entries[entries.length-1].date}</div></div>
-        <div class="stat-card" style="border-left-color:${trendColor};"><div class="stat-label">Прогресс ${trendIcon}</div><div class="stat-value" style="color:${trendColor};">${diff > 0 ? '+' : ''}${Math.round(diff)} ${unit}</div><div class="stat-sub">${percent > 0 ? '+' : ''}${percent.toFixed(1)}% ${periodText}</div></div>
-        <div class="stat-card"><div class="stat-label">Рекорд</div><div class="stat-value">${max} ${unit}</div><div class="stat-sub">мин: ${min} • сред: ${Math.round(avg)}</div></div>
-    </div>`;
+    var first = values[0], last = values[values.length - 1];
+    var diff = last - first;
+    var percent = first > 0 ? (diff / first) * 100 : 0;
+    var max = Math.max.apply(null, values);
+    var min = Math.min.apply(null, values);
+    var avg = values.reduce(function(s, v) { return s + v; }, 0) / values.length;
+    var daysDiff = Math.round((new Date(entries[entries.length - 1].date) - new Date(entries[0].date)) / (1000 * 60 * 60 * 24));
+    var periodText = daysDiff === 0 ? 'в один день' : (daysDiff === 1 ? 'за 1 день' : (daysDiff < 30 ? 'за ' + daysDiff + ' дней' : 'за ' + Math.round(daysDiff / 30) + ' месяцев'));
+    var trendIcon = diff > 0 ? '📈' : (diff < 0 ? '📉' : '➡️');
+    var trendColor = diff > 0 ? '#166534' : (diff < 0 ? '#991b1b' : '#6b7280');
+    
+    return '<div class="progress-stats">' +
+        '<div class="stat-card"><div class="stat-label">Старт</div><div class="stat-value">' + first + ' ' + unit + '</div><div class="stat-sub">' + entries[0].date + '</div></div>' +
+        '<div class="stat-card"><div class="stat-label">Сейчас</div><div class="stat-value">' + last + ' ' + unit + '</div><div class="stat-sub">' + entries[entries.length - 1].date + '</div></div>' +
+        '<div class="stat-card" style="border-left-color:' + trendColor + ';"><div class="stat-label">Прогресс ' + trendIcon + '</div><div class="stat-value" style="color:' + trendColor + ';">' + (diff > 0 ? '+' : '') + Math.round(diff) + ' ' + unit + '</div><div class="stat-sub">' + (percent > 0 ? '+' : '') + percent.toFixed(1) + '% ' + periodText + '</div></div>' +
+        '<div class="stat-card"><div class="stat-label">Рекорд</div><div class="stat-value">' + max + ' ' + unit + '</div><div class="stat-sub">мин: ' + min + ' • сред: ' + Math.round(avg) + '</div></div>' +
+    '</div>';
 }
 
 function renderTrainHistoryBlock(entries, values, unit) {
