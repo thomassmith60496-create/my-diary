@@ -13,7 +13,7 @@ function downloadMenuTemplate() {
         "menu": [
             {
                 "day": "Понедельник",
-                "date": formatDateShort(monday.toISOString().slice(0,10)),
+                "date": formatDateWithYear(monday.toISOString().slice(0,10)),
                 "training": false,
                 "meals": [
                     {
@@ -63,7 +63,7 @@ function downloadMenuTemplate() {
             },
             {
                 "day": "Вторник",
-                "date": formatDateShort(tuesday.toISOString().slice(0,10)),
+                "date": formatDateWithYear(tuesday.toISOString().slice(0,10)),
                 "training": true,
                 "meals": [
                     {
