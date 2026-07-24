@@ -30,6 +30,16 @@ function saveFinance() {
     }
     
     const targetUid = getTargetUid();
+    const authUid = currentUser ? (currentUser.uid || currentUser.user_id) : null;
+    console.log('📝 saveFinance debug:', { targetUid, authUid, currentUserRole, isReadOnly, path: targetUid ? `lera_finance_v1/${targetUid}` : 'lera_finance_v1' });
+    
+    // If no targetUid, we can't write to a user-specific path - rules require $uid
+    if (!targetUid) {
+        console.error('❌ saveFinance: no targetUid, cannot determine write path');
+        showSyncStatus('❌ Ошибка: пользователь не определён', 'error');
+        return;
+    }
+    
     const data = {
         transactions: financeData.transactions,
         savings: financeData.savings,
@@ -38,17 +48,15 @@ function saveFinance() {
         lastUpdated: Date.now()
     };
     
-    const savePromise = targetUid
-        ? db.ref(`lera_finance_v1/${targetUid}`).set(data)
-        : financeRef.set(data);
-    
-    savePromise.then(() => {
-        console.log('✅ Finance data saved' + (targetUid ? ` for user ${targetUid}` : ' (root)'));
+    db.ref(`lera_finance_v1/${targetUid}`).set(data)
+    .then(() => {
+        console.log('✅ Finance data saved for user', targetUid);
         showSyncStatus('✅ Финансы сохранены!', 'success');
     }).catch((error) => {
         console.error('❌ Firebase finance save error:', error);
+        console.error('   targetUid:', targetUid, 'authUid:', authUid, 'match:', targetUid === authUid);
         if (error.code === 'PERMISSION_DENIED') {
-            showSyncStatus('❌ Нет прав на запись. Проверьте правила БД Firebase.', 'error');
+            showSyncStatus('❌ Нет прав на запись. Опубликуйте правила БД в Firebase Console → Realtime Database → Rules → Publish', 'error');
         } else {
             showSyncStatus('❌ Ошибка сохранения финансов', 'error');
         }
