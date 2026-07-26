@@ -539,8 +539,8 @@ function renderWeightChart() {
                 week.menu.forEach((day, dayIndex) => {
                     if(day.date && week.data) {
                         const weight = parseFloat(week.data[`weight-${dayIndex}`]);
-                        if(weight && weight > 0) {
-                            weightData.push({ date: day.date, weight });
+                        if(!isNaN(weight) && weight > 0) {
+                            weightData.push({ date: normalizeDate(day.date), weight: weight });
                         }
                     }
                 });
@@ -548,7 +548,7 @@ function renderWeightChart() {
         });
     }
     
-    // Filter by period
+    // Filter by period (dates are already normalized to YYYY-MM-DD)
     let filteredData = weightData;
     if(period !== 'all') {
         const weeks = parseInt(period);
@@ -567,8 +567,11 @@ function renderWeightChart() {
         return;
     }
     
+    // Normalize dates for display
+    filteredData = filteredData.map(d => ({ ...d, date: normalizeDate(d.date) }));
+    
     // Render chart
-    const data = filteredData.map(d => ({ date: d.date, value: d.weight }));
+    const data = filteredData.map(d => ({ date: normalizeDate(d.date), value: d.weight }));
     container.innerHTML = renderSVGLineChart(data, 'value', 'кг', '#2563eb', 'weightGrad', {
         title: 'Динамика веса',
         textColor: '#065f46',
@@ -578,15 +581,16 @@ function renderWeightChart() {
     
     // Render stats
     const values = filteredData.map(d => d.weight);
-    const first = values[0], last = values[values.length - 1];
+    const first = values[0] || 0;
+    const last = values[values.length - 1] || 0;
     const diff = last - first;
     const trendIcon = diff > 0 ? '📈' : (diff < 0 ? '📉' : '➡️');
     const trendColor = diff > 0 ? '#166534' : (diff < 0 ? '#991b1b' : '#6b7280');
     
     statsContainer.innerHTML = `
         <div class="dashboard-stats">
-            <div class="stat-card"><div class="stat-label">Старт</div><div class="stat-value">${first} кг</div><div class="stat-sub">${formatDateShortRussian(filteredData[0].date)}</div></div>
-            <div class="stat-card"><div class="stat-label">Сейчас</div><div class="stat-value">${last} кг</div><div class="stat-sub">${formatDateShortRussian(filteredData[filteredData.length - 1].date)}</div></div>
+            <div class="stat-card"><div class="stat-label">Старт</div><div class="stat-value">${first.toFixed(1)} кг</div><div class="stat-sub">${formatDateShortRussian(filteredData[0].date)}</div></div>
+            <div class="stat-card"><div class="stat-label">Сейчас</div><div class="stat-value">${last.toFixed(1)} кг</div><div class="stat-sub">${formatDateShortRussian(filteredData[filteredData.length - 1].date)}</div></div>
             <div class="stat-card" style="border-left-color:${trendColor};"><div class="stat-label">Изменение ${trendIcon}</div><div class="stat-value" style="color:${trendColor};">${diff > 0 ? '+' : ''}${diff.toFixed(1)} кг</div><div class="stat-sub">${filteredData.length} измерений</div></div>
         </div>
     `;
@@ -614,7 +618,7 @@ function renderKbjuChart() {
                         
                         if(dayCal > 0) {
                             dailyData.push({
-                                date: day.date,
+                                date: normalizeDate(day.date),
                                 cal: Math.round(dayCal),
                                 prot: Math.round(dayProt),
                                 fat: Math.round(dayFat),
@@ -627,7 +631,7 @@ function renderKbjuChart() {
         });
     }
     
-    // Filter by period
+    // Filter by period (dates are already normalized to YYYY-MM-DD)
     let filteredData = dailyData;
     if(period !== 'all') {
         const weeks = parseInt(period);
@@ -646,6 +650,9 @@ function renderKbjuChart() {
         return;
     }
     
+    // Normalize dates for display
+    filteredData = filteredData.map(d => ({ ...d, date: normalizeDate(d.date) }));
+    
     // Get metric to display
     const metric = currentKbjuMetric;
     const metricConfig = {
@@ -657,7 +664,7 @@ function renderKbjuChart() {
     const config = metricConfig[metric];
     
     // Render chart
-    const data = filteredData.map(d => ({ date: d.date, value: d[config.field] }));
+    const data = filteredData.map(d => ({ date: normalizeDate(d.date), value: d[config.field] }));
     container.innerHTML = renderSVGLineChart(data, 'value', config.unit, config.color, 'kbjuGrad', {
         title: config.label + ' по дням',
         textColor: '#065f46',

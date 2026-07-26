@@ -23,8 +23,15 @@ function renderSVGLineChart(data, field, unit, color, gradientId, options) {
     var chartW = width - padding.left - padding.right;
     var chartH = height - padding.top - padding.bottom;
     var values = data.map(function(d) { return d[field]; });
-    var minVal = Math.min.apply(null, values);
-    var maxVal = Math.max.apply(null, values);
+    
+    // Filter out non-numeric values
+    var numericValues = values.filter(function(v) { return !isNaN(v) && v !== null && v !== undefined; });
+    if(numericValues.length === 0) {
+        return '<div class="chart-empty">Нет данных для отображения</div>';
+    }
+    
+    var minVal = Math.min.apply(null, numericValues);
+    var maxVal = Math.max.apply(null, numericValues);
     var valRange = Math.max(maxVal - minVal, 0.01);
     var yMin = Math.max(0, minVal - Math.max(valRange * 0.1, 0.5));
     var yMax = maxVal + Math.max(valRange * 0.15, 0.5);
@@ -56,7 +63,9 @@ function renderSVGLineChart(data, field, unit, color, gradientId, options) {
     var pointsHtml = points.map(function(p, i) {
         var isFirst = i === 0, isLast = i === data.length - 1;
         var pointColor = isLast ? color : (isFirst ? '#2563eb' : color);
-        var shortDate = p.date.slice(5).split('-').reverse().join('.');
+        // Format date as DD.MM.YYYY
+        var dateParts = p.date.split('-');
+        var shortDate = dateParts.length === 3 ? dateParts[2] + '.' + dateParts[1] + '.' + dateParts[0] : p.date;
         return '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + (isFirst || isLast ? 6 : 4) + '" fill="' + pointColor + '" stroke="white" stroke-width="2"/>' +
                '<text x="' + p.x + '" y="' + (p.y - 10) + '" text-anchor="middle" font-size="11" font-weight="700" fill="' + titleColor + '">' + p.value + '</text>' +
                '<text x="' + p.x + '" y="' + (padding.top + chartH + 18) + '" text-anchor="middle" font-size="10" fill="' + textColor + '" font-weight="600">' + shortDate + '</text>';
