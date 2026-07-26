@@ -3,7 +3,7 @@
 // ============================================
 "use strict";
 
-function openFinanceModal() {
+window.openFinanceModal = function() {
     document.getElementById('f-fin-date').value = new Date().toISOString().slice(0,10);
     document.getElementById('f-fin-amount').value = '';
     document.getElementById('f-fin-comment').value = '';
@@ -13,7 +13,7 @@ function openFinanceModal() {
     document.getElementById('finance-modal').classList.add('visible');
 }
 
-function openSavingsModal() {
+window.openSavingsModal = function() {
     document.getElementById('f-sav-date').value = new Date().toISOString().slice(0,10);
     document.getElementById('f-sav-amount').value = '';
     document.getElementById('f-sav-goal').value = 'Отпуск';
@@ -22,7 +22,7 @@ function openSavingsModal() {
     document.getElementById('savings-modal').classList.add('visible');
 }
 
-function openPlannedModal() {
+window.openPlannedModal = function() {
     document.getElementById('f-plan-date').value = new Date().toISOString().slice(0,10);
     document.getElementById('f-plan-amount').value = '';
     document.getElementById('f-plan-done').value = 'false';
@@ -30,7 +30,7 @@ function openPlannedModal() {
     document.getElementById('planned-modal').classList.add('visible');
 }
 
-function openCategoryModal(catId) {
+window.openCategoryModal = function(catId) {
     if(catId) {
         const cat = financeData.categories.find(c => c.id === catId);
         if(!cat) return;

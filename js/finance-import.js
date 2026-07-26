@@ -3,7 +3,7 @@
 // ============================================
 "use strict";
 
-function importFinanceExcel(input) {
+window.importFinanceExcel = function(input) {
     const file = input.files[0];
     if(!file) { alert('Файл не выбран'); return; }
     

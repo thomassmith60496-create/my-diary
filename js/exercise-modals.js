@@ -13,7 +13,7 @@ let window._editingExerciseSubcategoryLimits = {};
 
 // === КАТЕГОРИИ УПРАЖНЕНИЙ ===
 
-function openExerciseCategoryModal(id = null) {
+window.openExerciseCategoryModal = function(id = null) {
     editingExerciseId = id;
     const modal = document.getElementById('exercise-category-modal');
     const title = document.getElementById('exercise-category-modal-title');
@@ -87,7 +87,7 @@ function deleteExerciseCategory(id) {
 
 // === БАЗОВЫЕ УПРАЖНЕНИЯ ===
 
-function openBaseExerciseModal(id = null) {
+window.openBaseExerciseModal = function(id = null) {
     editingBaseExerciseId = id;
     const modal = document.getElementById('base-exercise-modal');
     const title = document.getElementById('base-exercise-modal-title');
@@ -163,7 +163,7 @@ function deleteBaseExercise(id) {
 
 // === ВАРИАНТЫ УПРАЖНЕНИЙ ===
 
-function openVariantModal(id = null) {
+window.openVariantModal = function(id = null) {
     editingVariantId = id;
     const modal = document.getElementById('exercise-variant-modal');
     const title = document.getElementById('exercise-variant-modal-title');
@@ -332,7 +332,7 @@ function mergeVariants(sourceId, targetId) {
 
 // === РЕНДЕР СПИСКОВ ===
 
-function renderExerciseCategories() {
+window.renderExerciseCategories = function() {
     const container = document.getElementById('exercise-categories-list');
     if (!container) return;
     
@@ -369,7 +369,7 @@ function renderExerciseCategories() {
     }).join('');
 }
 
-function renderBaseExercises() {
+window.renderBaseExercises = function() {
     const container = document.getElementById('base-exercises-list');
     if (!container) return;
     
@@ -421,7 +421,7 @@ function renderBaseExercises() {
     }).join('');
 }
 
-function renderExerciseVariants() {
+window.renderExerciseVariants = function() {
     const container = document.getElementById('exercise-variants-list');
     if (!container) return;
     

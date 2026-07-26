@@ -5,7 +5,7 @@
 
 // === ВКЛАДКИ ===
 
-function switchMainTab(tab) {
+window.switchMainTab = function(tab) {
     document.querySelectorAll('.main-tab-btn').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.main-tab-content').forEach(c => c.classList.remove('active'));
     document.querySelector(`.main-tab-btn.${tab}`).classList.add('active');
@@ -22,7 +22,7 @@ function switchMainTab(tab) {
     setTimeout(() => applyReadOnlyState(), 50);
 }
    
-function switchSubTab(tab, event) {
+window.switchSubTab = function(tab, event) {
     document.querySelectorAll('.sub-tab-btn').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.sub-tab-content').forEach(c => c.classList.remove('active'));
     event.target.classList.add('active');
@@ -32,7 +32,7 @@ function switchSubTab(tab, event) {
     setTimeout(() => applyReadOnlyState(), 50);
 }
 
-function switchFinanceSubTab(tab, event) {
+window.switchFinanceSubTab = function(tab, event) {
     const financeContent = document.getElementById('main-tab-finance');
     financeContent.querySelectorAll('.sub-tab-btn').forEach(b => b.classList.remove('active'));
     financeContent.querySelectorAll('.sub-tab-content').forEach(c => c.classList.remove('active'));
@@ -49,7 +49,7 @@ function switchFinanceSubTab(tab, event) {
     setTimeout(() => applyReadOnlyState(), 50);
 }
 
-function switchTrainSubTab(tab, event) {
+window.switchTrainSubTab = function(tab, event) {
     const trainContent = document.getElementById('main-tab-train');
     trainContent.querySelectorAll('.sub-tab-btn').forEach(b => b.classList.remove('active'));
     trainContent.querySelectorAll('.sub-tab-content').forEach(c => c.classList.remove('active'));
@@ -82,7 +82,7 @@ function switchTrainSubTab(tab, event) {
 
 // === МОДАЛКИ ===
 
-function openNutritionModal() {
+window.openNutritionModal = function() {
     const today = new Date();
     const startOfWeek = new Date(today);
     startOfWeek.setDate(today.getDate() - today.getDay() + 1);
@@ -94,7 +94,7 @@ function openNutritionModal() {
     document.getElementById('nutrition-modal').classList.add('visible');
 }
 
-function openTrainModal(id = null) {
+window.openTrainModal = function(id = null) {
     editingWorkoutId = id;
     document.getElementById('train-modal-title').textContent = id ? '✏️ Редактировать' : '➕ Новая тренировка';
     if(id) {
@@ -123,12 +123,12 @@ function openTrainModal(id = null) {
     document.getElementById('train-modal').classList.add('visible');
 }
 
-function closeAllModals() {
+window.closeAllModals = function() {
     document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('visible'));
     editingWorkoutId = null;
 }
 
-function setFormStars(containerId, rating) {
+window.setFormStars = function(containerId, rating) {
     const current = formStarsData[containerId] || 0;
     const newVal = current === rating ? 0 : rating;
     formStarsData[containerId] = newVal;

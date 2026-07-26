@@ -68,7 +68,7 @@ function saveFinance() {
     });
 }
 
-function saveFinanceTransaction() {
+window.saveFinanceTransaction = function() {
     const date = document.getElementById('f-fin-date').value;
     const amountRaw = document.getElementById('f-fin-amount').value;
     const amount = parseAmountFormula(amountRaw);
@@ -120,7 +120,7 @@ function saveFinanceTransaction() {
     alert('✅ Операция сохранена');
 }
 
-function saveSavingsEntry() {
+window.saveSavingsEntry = function() {
     const date = document.getElementById('f-sav-date').value;
     const amount = parseFloat(document.getElementById('f-sav-amount').value);
     let goal = document.getElementById('f-sav-goal').value;
@@ -148,7 +148,7 @@ function saveSavingsEntry() {
     alert('✅ Накопление сохранено');
 }
 
-function savePlannedEntry() {
+window.savePlannedEntry = function() {
     const date = document.getElementById('f-plan-date').value;
     const amount = parseFloat(document.getElementById('f-plan-amount').value);
     const catId = document.getElementById('f-plan-category').value;
@@ -176,7 +176,7 @@ function savePlannedEntry() {
     alert('✅ Планируемый расход сохранён');
 }
 
-function saveCategory() {
+window.saveCategory = function() {
     const name = document.getElementById('f-cat-name').value.trim();
     const type = document.getElementById('f-cat-type').value;
     const limit = parseFloat(document.getElementById('f-cat-limit').value) || 0;
@@ -236,7 +236,7 @@ function saveCategory() {
     alert('✅ Категория сохранена');
 }
 
-function deleteFinanceItem(type, id) {
+window.deleteFinanceItem = function(type, id) {
     if(!confirm('Удалить эту запись?')) return;
     if(type === 'transaction') {
         financeData.transactions = financeData.transactions.filter(t => t.id !== id);
@@ -254,7 +254,7 @@ function deleteFinanceItem(type, id) {
     updateFinanceStats();
 }
 
-function editFinanceTransaction(id) {
+window.editFinanceTransaction = function(id) {
     const t = financeData.transactions.find(x => x.id === id);
     if(!t) return;
     
@@ -281,7 +281,7 @@ function editFinanceTransaction(id) {
     document.getElementById('finance-modal').classList.add('visible');
 }
 
-function deleteAllFinanceTransactions() {
+window.deleteAllFinanceTransactions = function() {
     if(!confirm('Удалить ВСЕ операции? Это нельзя отменить.')) return;
     if(!confirm('Вы уверены? Будет удалено ' + financeData.transactions.length + ' операций.')) return;
     financeData.transactions = [];
@@ -290,7 +290,7 @@ function deleteAllFinanceTransactions() {
     updateFinanceStats();
 }
 
-function togglePlannedDone(id) {
+window.togglePlannedDone = function(id) {
     const entry = financeData.planned.find(p => p.id === id);
     if(entry) {
         entry.done = !entry.done;

@@ -129,7 +129,7 @@ function parseGymKeeperText(text) {
     return workouts;
 }
 
-function importGymKeeperData(input) {
+window.importGymKeeperData = function(input) {
     const file = input.files[0];
     if(!file) return;
     

@@ -37,7 +37,7 @@ function deleteWorkout(id) {
     renderTrainAll();
 }
 
-function deleteAllWorkouts() {
+window.deleteAllWorkouts = function() {
     if(!confirm('Удалить ВСЕ тренировки? Это нельзя отменить.')) return;
     if(!confirm('Вы уверены? Все данные о прогрессе будут удалены.')) return;
     
@@ -50,7 +50,7 @@ function deleteAllWorkouts() {
     renderTrainAll();
     
     alert('✅ Все тренировки удалены');
-}
+};
 
 function toggleWorkout(id) {
     const card = document.querySelector(`.workout-card[data-id="${id}"]`);

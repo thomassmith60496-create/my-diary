@@ -139,7 +139,7 @@ function applyReadOnlyState() {
     });
 }
 
-function registerUser() {
+window.registerUser = function() {
     const email = document.getElementById('auth-reg-email').value.trim();
     const password = document.getElementById('auth-reg-password').value;
     const errorEl = document.getElementById('auth-reg-error');
@@ -184,7 +184,7 @@ function registerUser() {
         });
 }
 
-function loginUser() {
+window.loginUser = function() {
     const email = document.getElementById('auth-email').value.trim();
     const password = document.getElementById('auth-password').value;
     const errorEl = document.getElementById('auth-error');
@@ -216,7 +216,7 @@ function loginUser() {
         });
 }
 
-function logoutUser() {
+window.logoutUser = function() {
     firebase.auth().signOut().then(() => {
         currentUser = null;
         currentUserRole = 'admin';
@@ -245,7 +245,7 @@ function translateFirebaseError(code) {
     return map[code] || code;
 }
 
-function switchAuthTab(tab) {
+window.switchAuthTab = function(tab) {
     document.querySelectorAll('.auth-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
     document.querySelectorAll('.auth-form-content').forEach(f => f.classList.toggle('active', f.id === 'auth-form-' + tab));
     
@@ -363,7 +363,7 @@ function loadDataForUser(uid) {
 
 // ============ ACCESS MANAGEMENT ============
 
-function openAccessModal() {
+window.openAccessModal = function() {
     var uid = currentUserId;
     if (!uid) return;
     
@@ -415,12 +415,12 @@ function openAccessModal() {
     });
 }
 
-function closeAccessModal() {
+window.closeAccessModal = function() {
     var modal = document.getElementById('access-modal');
     if (modal) modal.remove();
 }
 
-function addReader() {
+window.addReader = function() {
     var email = document.getElementById('add-reader-email').value.trim();
     var errorEl = document.getElementById('add-reader-error');
     errorEl.style.display = 'none';
@@ -471,7 +471,7 @@ function createReaderUser(email) {
     });
 }
 
-function removeReader(readerUid) {
+window.removeReader = function(readerUid) {
     if (!confirm('Удалить читателя?')) return;
     
     usersRef.child(currentUserId).child('readers').child(readerUid).remove().then(function() {
@@ -485,7 +485,7 @@ function removeReader(readerUid) {
     });
 }
 
-function toggleViewMode() {
+window.toggleViewMode = function() {
     if (currentUserRole !== 'admin') return;
     isReadOnlyMode = !isReadOnlyMode;
     renderUserBar();

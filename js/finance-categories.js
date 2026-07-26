@@ -3,7 +3,7 @@
 // ============================================
 "use strict";
 
-function updateFinanceCategoryOptions() {
+window.updateFinanceCategoryOptions = function() {
     const typeSelect = document.getElementById('f-fin-type');
     const catSelect = document.getElementById('f-fin-category');
     const type = typeSelect.value;
@@ -32,7 +32,7 @@ function updateFinanceCategoryOptions() {
     updateFinanceSubcategoryOptions();
 }
 
-function updateFinanceSubcategoryOptions() {
+window.updateFinanceSubcategoryOptions = function() {
     const catId = document.getElementById('f-fin-category').value;
     const subSelect = document.getElementById('f-fin-subcategory');
     const cat = financeData.categories.find(c => c.id === catId);
@@ -44,7 +44,7 @@ function updateFinanceSubcategoryOptions() {
     }
 }
 
-function updatePlanCategoryOptions() {
+window.updatePlanCategoryOptions = function() {
     const catSelect = document.getElementById('f-plan-category');
     const expenseCats = financeData.categories.filter(c => c.type === 'expense');
     catSelect.innerHTML = '<option value="">— выбрать —</option>' +
@@ -52,7 +52,7 @@ function updatePlanCategoryOptions() {
     updatePlanSubcategoryOptions();
 }
 
-function updatePlanSubcategoryOptions() {
+window.updatePlanSubcategoryOptions = function() {
     const catId = document.getElementById('f-plan-category').value;
     const subSelect = document.getElementById('f-plan-subcategory');
     const cat = financeData.categories.find(c => c.id === catId);
@@ -66,7 +66,7 @@ function updatePlanSubcategoryOptions() {
 
 // --- SUBCATEGORY TAG MANAGEMENT ---
 
-function addSubcategoryTag() {
+window.addSubcategoryTag = function() {
     const input = document.getElementById('f-cat-new-subcat');
     const val = input.value.trim();
     if(!val) return;
@@ -77,7 +77,7 @@ function addSubcategoryTag() {
     renderSubcategoryTags();
 }
 
-function removeSubcategoryTag(el, idx) {
+window.removeSubcategoryTag = function(el, idx) {
     if(window._editingSubcategories) {
         window._editingSubcategories.splice(idx, 1);
         renderSubcategoryTags();
@@ -103,7 +103,7 @@ function renderSubcategoryTags() {
     }).join('');
 }
 
-function updateSubcategoryLimit(input, subcatName) {
+window.updateSubcategoryLimit = function(input, subcatName) {
     if(!window._editingSubcategoryLimits) window._editingSubcategoryLimits = {};
     window._editingSubcategoryLimits[subcatName] = input.value;
 }

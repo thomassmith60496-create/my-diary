@@ -2,7 +2,7 @@
 // 💰 FINANCE RENDER FUNCTIONS
 // ============================================
 
-function updateFinanceStats() {
+window.updateFinanceStats = function() {
     const totalIncome = financeData.transactions
         .filter(t => t.type === 'income')
         .reduce((s, t) => s + Math.abs(t.amount), 0);
@@ -19,7 +19,7 @@ function updateFinanceStats() {
         `📉 Расходы: ${totalExpense.toLocaleString('ru-RU')} ₽`;
 }
 
-function renderCurrentFinanceTab() {
+window.renderCurrentFinanceTab = function() {
     const activeTab = document.querySelector('#main-tab-finance .sub-tab-btn.active');
     if(!activeTab) return;
     const tab = activeTab.textContent.trim();
@@ -30,7 +30,7 @@ function renderCurrentFinanceTab() {
     else if(tab.includes('Категории')) renderFinanceCategories();
 }
 
-function renderFinanceDashboard() {
+window.renderFinanceDashboard = function() {
     const container = document.getElementById('finance-dashboard-content');
     updateFinanceStats();
     
@@ -261,7 +261,7 @@ function renderFinanceDashboard() {
     container.innerHTML = html;
 }
 
-function renderFinanceTransactions() {
+window.renderFinanceTransactions = function() {
     const container = document.getElementById('finance-transactions-list');
     updateFinanceStats();
     
@@ -353,7 +353,7 @@ function renderFinanceTransactions() {
     container.innerHTML = html;
 }
 
-function renderFinanceSavings() {
+window.renderFinanceSavings = function() {
     const container = document.getElementById('finance-savings-list');
     updateFinanceStats();
     
@@ -395,7 +395,7 @@ function renderFinanceSavings() {
     container.innerHTML = html;
 }
 
-function renderFinancePlanned() {
+window.renderFinancePlanned = function() {
     const container = document.getElementById('finance-planned-list');
     
     if(financeData.planned.length === 0) {
@@ -425,7 +425,7 @@ function renderFinancePlanned() {
     }).join('');
 }
 
-function renderFinanceCategories() {
+window.renderFinanceCategories = function() {
     const container = document.getElementById('finance-categories-list');
     
     if(financeData.categories.length === 0) {

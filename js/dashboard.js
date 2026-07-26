@@ -5,7 +5,7 @@
 
 // === ГЛАВНАЯ СТРАНИЦА ===
 
-function renderHomePage() {
+window.renderHomePage = function() {
     const container = document.getElementById('home-content');
     if(!container) return;
     
@@ -84,7 +84,7 @@ function getGreeting(hour) {
     return 'Доброй ночи';
 }
 
-function openFinanceModalWithType(type) {
+window.openFinanceModalWithType = function(type) {
     openFinanceModal();
     setTimeout(() => {
         const typeSelect = document.getElementById('f-fin-type');
@@ -512,13 +512,13 @@ function getRecentActivity() {
 
 // === ДАШБОРД ПИТАНИЯ ===
 
-function renderDashboard() {
+window.renderDashboard = function() {
     renderWeightChart();
     renderKbjuChart();
     renderWeeklyAvg();
 }
 
-function setKbjuMetric(metric) {
+window.setKbjuMetric = function(metric) {
     currentKbjuMetric = metric;
     document.querySelectorAll('#sub-tab-dashboard .metric-btn').forEach(b => { 
         b.classList.toggle('active', b.dataset.metric === metric); 
@@ -526,7 +526,7 @@ function setKbjuMetric(metric) {
     renderKbjuChart();
 }
 
-function renderWeightChart() {
+window.renderWeightChart = function() {
     const container = document.getElementById('weight-chart-container');
     const statsContainer = document.getElementById('weight-stats-container');
     const period = document.getElementById('weight-period').value;
@@ -596,7 +596,7 @@ function renderWeightChart() {
     `;
 }
 
-function renderKbjuChart() {
+window.renderKbjuChart = function() {
     const container = document.getElementById('kbju-chart-container');
     const statsContainer = document.getElementById('kbju-stats-container');
     const period = document.getElementById('kbju-period').value;

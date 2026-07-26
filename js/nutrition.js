@@ -3,7 +3,7 @@
 // ============================================
 "use strict";
 
-function downloadMenuTemplate() {
+window.downloadMenuTemplate = function() {
     const today = new Date();
     const monday = new Date(today);
     monday.setDate(today.getDate() - today.getDay() + 1);
@@ -125,7 +125,7 @@ function downloadMenuTemplate() {
     alert('✅ Шаблон меню скачан!');
 }
 
-function importMenu() {
+window.importMenu = function() {
     const startDate = document.getElementById('f-start-date').value;
     const endDate = document.getElementById('f-end-date').value;
     const menuJson = document.getElementById('f-menu-json').value.trim();
@@ -149,7 +149,7 @@ function importMenu() {
     alert('✅ Меню импортировано!');
 }
 
-function createEmptyWeek() {
+window.createEmptyWeek = function() {
     const today = new Date();
     const startOfWeek = new Date(today);
     startOfWeek.setDate(today.getDate() - today.getDay() + 1);
@@ -207,13 +207,13 @@ function migrateNutritionDates() {
     }
 }
 
-function switchWeek() {
+window.switchWeek = function() {
     nutritionData.currentWeekId = document.getElementById('week-select').value;
     saveNutrition();
     renderDays();
 }
 
-function deleteWeek() {
+window.deleteWeek = function() {
     if(!nutritionData.currentWeekId || !confirm('Удалить эту неделю?')) return;
     nutritionData.weeks = nutritionData.weeks.filter(w => w.id !== nutritionData.currentWeekId);
     nutritionData.currentWeekId = nutritionData.weeks.length > 0 ? nutritionData.weeks[0].id : null;
@@ -407,7 +407,7 @@ function getWeekData(weekId, key) {
     return week.data[key] || '';
 }
 
-function setStars(el, rating) {
+window.setStars = function(el, rating) {
     const container = el.parentElement;
     const weekId = container.dataset.week;
     const key = container.dataset.key;
@@ -424,7 +424,7 @@ function setStars(el, rating) {
     saveNutrition();
 }
 
-function toggleMealItem(checkbox, weekId, di, mi) {
+window.toggleMealItem = function(checkbox, weekId, di, mi) {
     const idx = checkbox.dataset.idx;
     const week = nutritionData.weeks.find(w => w.id === weekId);
     if (!week) return;
@@ -469,7 +469,7 @@ function toggleMealItem(checkbox, weekId, di, mi) {
     debouncedSaveNutrition();
 }
 
-function updateTotals(weekId, di) {
+window.updateTotals = function(weekId, di) {
     let s = { cal: 0, prot: 0, fat: 0, carb: 0 };
     document.querySelectorAll(`input[data-week="${weekId}"][data-day="${di}"][data-field]`).forEach(inp => {
         const f = inp.dataset.field;
@@ -534,7 +534,7 @@ function saveNutrition() {
     syncToCloud();
 }
 
-function exportMenuAsText() {
+window.exportMenuAsText = function() {
     const week = nutritionData.weeks.find(w => w.id === nutritionData.currentWeekId);
     if(!week) return;
     let text = `МЕНЮ: ${week.title}\n${'='.repeat(50)}\n\nЦель: 1250-1300 ккал | Б: 100-110г | Ж: 50-55г | У: 80-100г\n\n`;
@@ -556,7 +556,7 @@ function exportMenuAsText() {
     URL.revokeObjectURL(url);
 }
 
-function printMenu() {
+window.printMenu = function() {
     const week = nutritionData.weeks.find(w => w.id === nutritionData.currentWeekId);
     if(!week) return;
     document.querySelectorAll('.day-card').forEach(c => c.classList.remove('collapsed'));
