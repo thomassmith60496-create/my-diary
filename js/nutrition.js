@@ -1,6 +1,7 @@
 // ============================================
 // ПИТАНИЕ: ЛОГИКА
 // ============================================
+"use strict";
 
 function downloadMenuTemplate() {
     const today = new Date();
@@ -171,16 +172,6 @@ function createEmptyWeek() {
     renderNutritionAll();
 }
 
-function formatDateShort(dateStr) {
-    const d = new Date(dateStr);
-    return `${d.getDate().toString().padStart(2,'0')}.${(d.getMonth()+1).toString().padStart(2,'0')}.${d.getFullYear()}`;
-}
-
-function formatDateWithYear(dateStr) {
-    const d = new Date(dateStr);
-    return `${d.getDate().toString().padStart(2,'0')}.${(d.getMonth()+1).toString().padStart(2,'0')}.${d.getFullYear()}`;
-}
-
 function migrateNutritionDates() {
     if (!nutritionData || !nutritionData.weeks) return;
     
@@ -212,7 +203,6 @@ function migrateNutritionDates() {
     });
     
     if (needsUpdate) {
-        console.log('✅ Даты мигрированы к формату с годом');
         saveNutrition();
     }
 }
@@ -290,7 +280,7 @@ function renderDays() {
                         <div class="morning-title">🌅 Утренние показатели</div>
                         <div class="morning-field">
                             <label>⚖️ Вес утром, кг:</label>
-                            <input type="number" step="0.1" data-week="${week.id}" data-key="weight-${di}" data-day="${di}" data-field="weight" oninput="saveNutrition()" placeholder="65.4" value="${getWeekData(week.id, `weight-${di}`) !== '' ? getWeekData(week.id, `weight-${di}`) : ''}">
+                            <input type="number" step="0.1" data-week="${week.id}" data-key="weight-${di}" data-day="${di}" data-field="weight" oninput="debouncedSaveNutrition()" placeholder="65.4" value="${getWeekData(week.id, `weight-${di}`) !== '' ? getWeekData(week.id, `weight-${di}`) : ''}">
                         </div>
                     </div>
                     ${mealsHtml}
@@ -305,7 +295,7 @@ function renderDays() {
                         <div class="summary-grid">
                             <div class="summary-field">
                                 <label>😊 Самочувствие</label>
-                                <select class="mood-select" data-week="${week.id}" data-key="mood-${di}" onchange="saveNutrition()">
+                                <select class="mood-select" data-week="${week.id}" data-key="mood-${di}" onchange="debouncedSaveNutrition()">
                                     <option value="">— выбрать —</option>
                                     <option value="5" ${getWeekData(week.id, `mood-${di}`)==='5'?'selected':''}>⭐ Отлично</option>
                                     <option value="4" ${getWeekData(week.id, `mood-${di}`)==='4'?'selected':''}>🙂 Хорошо</option>
@@ -317,7 +307,7 @@ function renderDays() {
                         </div>
                         <div class="summary-field" style="margin-top:10px;">
                             <label>📝 Заметки дня</label>
-                            <textarea class="notes-input" data-week="${week.id}" data-key="notes-${di}" oninput="saveNutrition()" placeholder="Как прошёл день?">${getWeekData(week.id, `notes-${di}`) || ''}</textarea>
+                            <textarea class="notes-input" data-week="${week.id}" data-key="notes-${di}" oninput="debouncedSaveNutrition()" placeholder="Как прошёл день?">${getWeekData(week.id, `notes-${di}`) || ''}</textarea>
                         </div>
                     </div>
                 </div>
@@ -366,7 +356,7 @@ function renderMeal(m, di, mi, weekId) {
                             data-week="${weekId}" 
                             data-key="note-${di}-${mi}-${idx}"
                             value="${note.replace(/"/g, '"')}"
-                            oninput="saveNutrition()"
+                            oninput="debouncedSaveNutrition()"
                             placeholder="что вместо?" 
                             style="flex:1; min-width:120px; padding:4px 8px; border:1px solid #cbd5e1; border-radius:4px; font-size:12px; background:white;">` : ''}
                     </div>
@@ -396,7 +386,7 @@ function renderMeal(m, di, mi, weekId) {
                     ${[1,2,3,4,5].map(n=>`<span class="star ${n<=starsVal?'active':''}" data-rating="${n}" onclick="setStars(this,${n})">★</span>`).join('')}
                 </div>
             </div>
-            <textarea class="meal-comment" data-week="${weekId}" data-key="comment-${di}-${mi}" oninput="saveNutrition()" placeholder="💬 Комментарий...">${commentVal}</textarea>
+            <textarea class="meal-comment" data-week="${weekId}" data-key="comment-${di}-${mi}" oninput="debouncedSaveNutrition()" placeholder="💬 Комментарий...">${commentVal}</textarea>
         </div>
     `;
     
@@ -405,7 +395,7 @@ function renderMeal(m, di, mi, weekId) {
             <div class="meal-head">
                 <div class="meal-icon">${icon}</div>
                 <div class="meal-name">${m.name}</div>
-                ${showTime?`<input type="time" class="meal-time" data-week="${weekId}" data-key="time-${di}-${mi}" oninput="saveNutrition()" value="${timeVal}">`:''}
+                ${showTime?`<input type="time" class="meal-time" data-week="${weekId}" data-key="time-${di}-${mi}" oninput="debouncedSaveNutrition()" value="${timeVal}">`:''}
             </div>
             <div class="meal-content">${content}${trackerHtml}</div>
         </div>`;
@@ -440,8 +430,43 @@ function toggleMealItem(checkbox, weekId, di, mi) {
     if (!week) return;
     if (!week.data) week.data = {};
     week.data[`eaten-${di}-${mi}-${idx}`] = checkbox.checked ? '1' : '0';
-    renderDays();
-    saveNutrition();
+    
+    // Update only the visual state of this item without re-rendering all days
+    const itemDiv = checkbox.closest('div[style]');
+    if (itemDiv) {
+        const span = itemDiv.querySelector('span');
+        const noteInput = itemDiv.querySelector('input[type="text"]');
+        if (checkbox.checked) {
+            itemDiv.style.background = '#f0fdf4';
+            itemDiv.style.borderColor = '#bbf7d0';
+            if (span) {
+                span.style.textDecoration = 'none';
+                span.style.color = '#1e293b';
+            }
+            if (noteInput) noteInput.remove();
+        } else {
+            itemDiv.style.background = '#fef2f2';
+            itemDiv.style.borderColor = '#fecaca';
+            if (span) {
+                span.style.textDecoration = 'line-through';
+                span.style.color = '#94a3b8';
+            }
+            // Add note input if it doesn't exist
+            if (!noteInput) {
+                const newNote = document.createElement('input');
+                newNote.type = 'text';
+                newNote.dataset.week = weekId;
+                newNote.dataset.key = `note-${di}-${mi}-${idx}`;
+                newNote.value = week.data[`note-${di}-${mi}-${idx}`] || '';
+                newNote.placeholder = 'что вместо?';
+                newNote.style.cssText = 'flex:1; min-width:120px; padding:4px 8px; border:1px solid #cbd5e1; border-radius:4px; font-size:12px; background:white;';
+                newNote.oninput = function() { debouncedSaveNutrition(); };
+                itemDiv.appendChild(newNote);
+            }
+        }
+    }
+    
+    debouncedSaveNutrition();
 }
 
 function updateTotals(weekId, di) {
@@ -462,14 +487,28 @@ function updateTotals(weekId, di) {
     saveNutrition();
 }
 
+// Debounce timer for saveNutrition
+let _saveNutritionTimer = null;
+
+function debouncedSaveNutrition() {
+    if (_saveNutritionTimer) clearTimeout(_saveNutritionTimer);
+    _saveNutritionTimer = setTimeout(function() {
+        saveNutrition();
+        _saveNutritionTimer = null;
+    }, 300);
+}
+
 function saveNutrition() {
     const week = nutritionData.weeks.find(w => w.id === nutritionData.currentWeekId);
     if(!week) return;
     
     if(!week.data) week.data = {};
     
-    // Collect data from form elements only (skip divs, spans, etc.)
-    document.querySelectorAll(`[data-week="${week.id}"]`).forEach(el => {
+    // Collect data only from elements inside days-container (skip modal elements)
+    const container = document.getElementById('days-container');
+    if (!container) return;
+    
+    container.querySelectorAll(`[data-week="${week.id}"]`).forEach(el => {
         const key = el.dataset.key;
         if(!key) return;
         
@@ -486,7 +525,7 @@ function saveNutrition() {
         }
     });
     
-    document.querySelectorAll(`input[data-week="${week.id}"][data-field]`).forEach(inp => {
+    container.querySelectorAll(`input[data-week="${week.id}"][data-field]`).forEach(inp => {
         const key = `m-${inp.dataset.day}-${inp.dataset.meal}-${inp.dataset.field}`;
         week.data[key] = inp.value;
     });

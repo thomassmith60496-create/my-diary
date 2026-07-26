@@ -1,6 +1,7 @@
 // ============================================
 // ТРЕНИРОВКИ
 // ============================================
+"use strict";
 
 function saveWorkout() {
     const date = document.getElementById('f-train-date').value;
@@ -111,14 +112,6 @@ function renderTrainStats() {
     document.getElementById('stat-time').textContent = `⏱ ${totalTime} мин`;
 }
 
-function formatDate(dateStr) {
-    if(!dateStr) return '';
-    const d = new Date(dateStr);
-    const days = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
-    const months = ['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
-    return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}, ${days[d.getDay()]}`;
-}
-
 function renderWorkouts() {
     const list = document.getElementById('workouts-list');
     if(workouts.length === 0) {
@@ -140,7 +133,7 @@ function renderWorkouts() {
             <div class="workout-card" data-id="${w.id}">
                 <div class="workout-header" onclick="toggleWorkout('${w.id}')">
                     <div class="workout-header-left">
-                        <div class="workout-date">${formatDate(w.date)}</div>
+                        <div class="workout-date">${formatDateFull(w.date)}</div>
                         ${w.type ? `<div class="workout-type-badge">${typeLabels[w.type] || w.type}</div>` : ''}
                         ${ratingHtml}
                     </div>

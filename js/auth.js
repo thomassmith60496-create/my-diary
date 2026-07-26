@@ -1,4 +1,5 @@
 // ============ AUTH FUNCTIONS ============
+"use strict";
 
 function renderUserBar() {
     const container = document.getElementById('user-bar-container');
@@ -167,7 +168,6 @@ function registerUser() {
                 currentUserRole = 'admin';
                 isReadOnlyMode = false;
                 viewingUserId = uid;
-                console.log('✅ User registered as admin:', uid);
                 successEl.textContent = '✅ Регистрация успешна!';
                 successEl.style.display = 'block';
                 btn.disabled = false;
@@ -177,7 +177,6 @@ function registerUser() {
             });
         })
         .catch((error) => {
-            console.error('❌ Register error:', error);
             errorEl.textContent = '❌ ' + translateFirebaseError(error.code);
             errorEl.style.display = 'block';
             btn.disabled = false;
@@ -202,7 +201,6 @@ function loginUser() {
     firebase.auth().signInWithEmailAndPassword(email, password)
         .then((cred) => {
             const uid = cred.user.uid;
-            console.log('✅ User logged in:', uid);
             successEl.textContent = '✅ Вход выполнен!';
             successEl.style.display = 'block';
             btn.disabled = false;
@@ -211,7 +209,6 @@ function loginUser() {
             initUserSession(uid);
         })
         .catch((error) => {
-            console.error('❌ Login error:', error);
             errorEl.textContent = '❌ ' + translateFirebaseError(error.code);
             errorEl.style.display = 'block';
             btn.disabled = false;
@@ -229,9 +226,8 @@ function logoutUser() {
         document.getElementById('auth-overlay').classList.remove('hidden');
         renderUserBar();
         applyReadOnlyState();
-        console.log('✅ User logged out');
     }).catch((error) => {
-        console.error('❌ Logout error:', error);
+        // Silently handle logout errors
     });
 }
 
@@ -253,16 +249,17 @@ function switchAuthTab(tab) {
     document.querySelectorAll('.auth-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
     document.querySelectorAll('.auth-form-content').forEach(f => f.classList.toggle('active', f.id === 'auth-form-' + tab));
     
-    const btn = document.querySelector('#auth-form-register .auth-btn');
-    const errorEl = document.getElementById('auth-reg-error');
-    const successEl = document.getElementById('auth-reg-success');
-    errorEl.style.display = 'none';
-    successEl.style.display = 'none';
+    // Hide all error and success messages
+    document.querySelectorAll('.auth-error, .auth-success').forEach(el => {
+        el.style.display = 'none';
+    });
     
     if (tab === 'login') {
+        const btn = document.getElementById('auth-btn');
         btn.textContent = 'Войти';
         btn.onclick = loginUser;
     } else {
+        const btn = document.querySelector('#auth-form-register .auth-btn');
         btn.textContent = 'Зарегистрироваться';
         btn.onclick = registerUser;
     }
@@ -360,7 +357,6 @@ function loadDataForUser(uid) {
         // Apply read-only state AFTER all rendering is done
         applyReadOnlyState();
     }).catch(function(error) {
-        console.error('Load data error:', error);
         isInitialLoad = false;
     });
 }

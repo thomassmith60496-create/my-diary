@@ -1,6 +1,7 @@
 // ============================================
-// 💰 FINANCE MODAL FUNCTIONS
+// 💰 ФИНАНСЫ: МОДАЛКИ
 // ============================================
+"use strict";
 
 function openFinanceModal() {
     document.getElementById('f-fin-date').value = new Date().toISOString().slice(0,10);

@@ -1,6 +1,7 @@
 // ============================================
-// ОБЩИЙ МОДУЛЬ ДЛЯ SVG-ГРАФИКОВ
+// 📊 ГРАФИКИ
 // ============================================
+"use strict";
 
 /**
  * Универсальная функция для отрисовки SVG-линейного графика
@@ -73,33 +74,6 @@ function renderSVGLineChart(data, field, unit, color, gradientId, options) {
         pointsHtml +
         titleHtml +
     '</svg></div>';
-}
-
-/**
- * Универсальная функция для отрисовки блока статистики
- * @param {Array} data - массив объектов с полями date и valueField
- * @param {string} field - имя поля со значениями
- * @param {string} unit - единица измерения
- * @returns {string} HTML строка
- */
-function renderStatsBlock(data, field, unit) {
-    var values = data.map(function(d) { return d[field]; });
-    var first = values[0], last = values[values.length - 1];
-    var diff = last - first;
-    var max = Math.max.apply(null, values);
-    var min = Math.min.apply(null, values);
-    var avg = values.reduce(function(s, v) { return s + v; }, 0) / values.length;
-    var daysDiff = Math.round((new Date(data[data.length - 1].date) - new Date(data[0].date)) / (1000 * 60 * 60 * 24));
-    var periodText = daysDiff === 0 ? 'в один день' : 'за ' + daysDiff + ' дней';
-    var trendIcon = diff > 0 ? '📈' : (diff < 0 ? '📉' : '➡️');
-    var trendColor = diff > 0 ? '#166534' : (diff < 0 ? '#991b1b' : '#6b7280');
-    
-    return '<div class="dashboard-stats">' +
-        '<div class="stat-card"><div class="stat-label">Старт</div><div class="stat-value">' + first + ' ' + unit + '</div><div class="stat-sub">' + data[0].date + '</div></div>' +
-        '<div class="stat-card"><div class="stat-label">Сейчас</div><div class="stat-value">' + last + ' ' + unit + '</div><div class="stat-sub">' + data[data.length - 1].date + '</div></div>' +
-        '<div class="stat-card" style="border-left-color:' + trendColor + ';"><div class="stat-label">Изменение ' + trendIcon + '</div><div class="stat-value" style="color:' + trendColor + ';">' + (diff > 0 ? '+' : '') + Math.round(diff * 10) / 10 + ' ' + unit + '</div><div class="stat-sub">' + periodText + '</div></div>' +
-        '<div class="stat-card"><div class="stat-label">Среднее</div><div class="stat-value">' + Math.round(avg * 10) / 10 + ' ' + unit + '</div><div class="stat-sub">мин: ' + min + ' • макс: ' + max + '</div></div>' +
-    '</div>';
 }
 
 /**

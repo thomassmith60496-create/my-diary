@@ -1,6 +1,7 @@
 // ============================================
-// 💰 FINANCE IMPORT FUNCTIONS
+// 💰 ФИНАНСЫ: ИМПОРТ
 // ============================================
+"use strict";
 
 function importFinanceExcel(input) {
     const file = input.files[0];
@@ -127,7 +128,6 @@ function importFinanceExcel(input) {
             updateFinanceStats();
             alert(`✅ Импортировано ${imported} операций${errors ? `, пропущено с ошибками: ${errors}` : ''}`);
         } catch(err) {
-            console.error('Excel import error:', err);
             alert('❌ Ошибка при импорте Excel: ' + err.message);
         }
     };

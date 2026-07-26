@@ -1,12 +1,12 @@
 // ============================================
-// 💰 FINANCE SAVE FUNCTIONS
+// 💰 ФИНАНСЫ: СОХРАНЕНИЕ
 // ============================================
+"use strict";
 
 function migrateCategoryColors() {
     if (!financeData || !financeData.categories) return;
     // Don't save if Firebase Auth isn't ready yet
     if (!currentUser || !currentUserId) {
-        console.log('⏳ Category colors migration deferred: auth not ready');
         return;
     }
     
@@ -21,7 +21,6 @@ function migrateCategoryColors() {
     });
     
     if (needsUpdate) {
-        console.log('✅ Category colors migrated');
         // Delay save so auth has time to settle
         setTimeout(() => saveFinance(), 100);
     }
@@ -31,25 +30,20 @@ function saveFinance() {
     // Guard: block writes in read-only mode
     const isReadOnly = currentUserRole === 'reader' || window.isReadOnlyMode;
     if (isReadOnly) {
-        console.warn('⛔ Save blocked: read-only mode');
         return;
     }
     
     const targetUid = getTargetUid();
     const authUid = currentUser ? (currentUser.uid || currentUser.user_id) : null;
-    console.log('📝 saveFinance debug:', { targetUid, authUid, currentUserRole, isReadOnly, path: targetUid ? `lera_finance_v1/${targetUid}` : 'lera_finance_v1' });
     
     // If no targetUid, we can't write to a user-specific path - rules require $uid
     if (!targetUid) {
-        console.error('❌ saveFinance: no targetUid, cannot determine write path');
         showSyncStatus('❌ Ошибка: пользователь не определён', 'error');
         return;
     }
     
     // UID mismatch check: rules require auth.uid === $uid
     if (targetUid !== authUid) {
-        console.error('❌ saveFinance: UID MISMATCH — targetUid (' + targetUid + ') !== authUid (' + authUid + '). This will cause PERMISSION_DENIED.');
-        console.error('   Check: viewingUserId=' + viewingUserId + ' currentUserId=' + currentUserId + ' currentUserRole=' + currentUserRole);
         showSyncStatus('❌ UID mismatch: целевой пользователь не совпадает с текущим', 'error');
         return;
     }
@@ -64,11 +58,8 @@ function saveFinance() {
     
     db.ref(`lera_finance_v1/${targetUid}`).set(data)
     .then(() => {
-        console.log('✅ Finance data saved for user', targetUid);
         showSyncStatus('✅ Финансы сохранены!', 'success');
     }).catch((error) => {
-        console.error('❌ Firebase finance save error:', error);
-        console.error('   targetUid:', targetUid, 'authUid:', authUid, 'match:', targetUid === authUid);
         if (error.code === 'PERMISSION_DENIED') {
             showSyncStatus('❌ Нет прав на запись. Опубликуйте правила БД в Firebase Console → Realtime Database → Rules → Publish', 'error');
         } else {
@@ -207,6 +198,12 @@ function saveCategory() {
     if(window._editingCategoryId) {
         const cat = financeData.categories.find(c => c.id === window._editingCategoryId);
         if(cat) {
+            // When editing, check for duplicate name excluding current category
+            const duplicate = financeData.categories.find(c => c.id !== window._editingCategoryId && c.name.toLowerCase() === name.toLowerCase());
+            if(duplicate) {
+                alert('Такая категория уже существует');
+                return;
+            }
             cat.name = name;
             cat.type = type;
             cat.limit = limit;

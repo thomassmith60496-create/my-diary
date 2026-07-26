@@ -1,6 +1,7 @@
 // ============================================
-// 💰 FINANCE UTILITY FUNCTIONS
+// 💰 ФИНАНСЫ: УТИЛИТЫ
 // ============================================
+"use strict";
 
 // --- PARSE FORMULA ---
 
@@ -14,7 +15,9 @@ function parseAmountFormula(val) {
             if(typeof result === 'number' && isFinite(result) && result > 0) {
                 return Math.round(result * 100) / 100;
             }
-        } catch(e) {}
+    } catch(e) {
+        // Silently ignore formula parsing errors
+    }
     }
     return parseFloat(val);
 }

@@ -1,6 +1,7 @@
 // ============================================
-// 💰 FINANCE CATEGORY HELPERS
+// 💰 ФИНАНСЫ: КАТЕГОРИИ
 // ============================================
+"use strict";
 
 function updateFinanceCategoryOptions() {
     const typeSelect = document.getElementById('f-fin-type');

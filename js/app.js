@@ -1,6 +1,7 @@
 // ============================================
-// ГЛАВНЫЙ ФАЙЛ — ВКЛАДКИ, МОДАЛКИ, СИНХРОНИЗАЦИЯ
+// 🚀 ГЛАВНЫЙ ФАЙЛ ПРИЛОЖЕНИЯ
 // ============================================
+"use strict";
 
 // === ВКЛАДКИ ===
 
@@ -189,27 +190,29 @@ function syncToCloud() {
             nutrition: nutritionData,
             workouts: workouts,
             progress: progress,
+            financeData: financeData,
             lastUpdated: Date.now()
         };
         
-        const savePromise = targetUid
-            ? db.ref(`lera_diary_v1/${targetUid}`).set(data)
-            : diaryRef.set(data);
-        
-        savePromise.then(() => {
-            console.log('✅ Diary data saved' + (targetUid ? ` for user ${targetUid}` : ' (root)'));
-            showSyncStatus('✅ Сохранено!', 'success');
-        }).catch((error) => {
-            console.error('❌ Firebase diary save error:', error);
-            showSyncStatus('❌ Ошибка сохранения', 'error');
-        });
+        db.ref(`lera_diary_v1/${targetUid}`).set(data)
+            .then(() => {
+                showSyncStatus('✅ Сохранено!', 'success');
+            }).catch((error) => {
+                showSyncStatus('❌ Ошибка сохранения', 'error');
+            });
     }, 5000);
 }
 
 // === ЭКСПОРТ/ИМПОРТ ===
 
 function exportAllData() {
-    const data = { nutrition: nutritionData, workouts, progress: getProgressData(), exportedAt: new Date().toISOString() };
+    const data = { 
+        nutrition: nutritionData, 
+        workouts, 
+        progress: getProgressData(), 
+        financeData: financeData,
+        exportedAt: new Date().toISOString() 
+    };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -244,13 +247,40 @@ function importAllData(input) {
                 });
             }
             if(parsed.progress) localStorage.setItem('exercise-progress', JSON.stringify(parsed.progress));
+            if(parsed.financeData) {
+                if(parsed.financeData.transactions && Array.isArray(parsed.financeData.transactions)) {
+                    const existingIds = new Set(financeData.transactions.map(t => t.id));
+                    parsed.financeData.transactions.forEach(t => {
+                        if(t && t.id && !existingIds.has(t.id)) financeData.transactions.push(t);
+                    });
+                }
+                if(parsed.financeData.savings && Array.isArray(parsed.financeData.savings)) {
+                    const existingIds = new Set(financeData.savings.map(s => s.id));
+                    parsed.financeData.savings.forEach(s => {
+                        if(s && s.id && !existingIds.has(s.id)) financeData.savings.push(s);
+                    });
+                }
+                if(parsed.financeData.planned && Array.isArray(parsed.financeData.planned)) {
+                    const existingIds = new Set(financeData.planned.map(p => p.id));
+                    parsed.financeData.planned.forEach(p => {
+                        if(p && p.id && !existingIds.has(p.id)) financeData.planned.push(p);
+                    });
+                }
+                if(parsed.financeData.categories && Array.isArray(parsed.financeData.categories)) {
+                    const existingIds = new Set(financeData.categories.map(c => c.id));
+                    parsed.financeData.categories.forEach(c => {
+                        if(c && c.id && !existingIds.has(c.id)) financeData.categories.push(c);
+                    });
+                }
+            }
             syncToCloud();
             renderNutritionAll();
             renderTrainAll();
+            renderFinanceDashboard();
+            updateFinanceStats();
             alert('✅ Данные импортированы!');
         } catch(err) { 
             alert('❌ Ошибка чтения файла'); 
-            console.error('Import error:', err);
         }
     };
     reader.readAsText(file);
@@ -276,7 +306,6 @@ function importTrainData(input) {
             } else { alert('❌ Неверный формат'); }
         } catch(err) { 
             alert('❌ Ошибка чтения файла');
-            console.error('Import train error:', err);
         }
     };
     reader.readAsText(file);
@@ -286,21 +315,8 @@ function importTrainData(input) {
 function resetAllData() {
     if(confirm('Удалить ВСЕ данные (питание + тренировки + финансы)? Это нельзя отменить.')) {
         const targetUid = getTargetUid();
-        if (targetUid) {
-            db.ref(`lera_diary_v1/${targetUid}`).remove().catch(function(err) { 
-                console.error('❌ Firebase diary remove error:', err); 
-            });
-            db.ref(`lera_finance_v1/${targetUid}`).remove().catch(function(err) { 
-                console.error('❌ Firebase finance remove error:', err); 
-            });
-        } else {
-            diaryRef.remove().catch(function(err) { 
-                console.error('❌ Firebase diary remove error:', err); 
-            });
-            financeRef.remove().catch(function(err) { 
-                console.error('❌ Firebase finance remove error:', err); 
-            });
-        }
+        db.ref(`lera_diary_v1/${targetUid}`).remove();
+        db.ref(`lera_finance_v1/${targetUid}`).remove();
         localStorage.removeItem('exercise-progress');
         nutritionData = { weeks: [], currentWeekId: null };
         workouts = [];

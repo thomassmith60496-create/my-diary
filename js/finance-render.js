@@ -122,8 +122,8 @@ function renderFinanceDashboard() {
     const hasCats = catNames.length > 0;
     
     if(hasMonths || hasCats) {
-        html += `<div style="display:flex;gap:16px;flex-wrap:wrap;">
-            <div style="flex:1;min-width:300px;">`;
+        html += `<div class="finance-charts-row">
+            <div class="finance-chart-col">`;
     }
     
     if(hasMonths) {
@@ -133,8 +133,8 @@ function renderFinanceDashboard() {
         const svgWidth = Math.max(400, totalBarsWidth);
         const offsetX = months.length === 1 ? (svgWidth - 80) / 2 : 50;
         
-        html += `<h3 style="color:#7e22ce;margin:0 0 12px;font-size:15px;">📊 Доходы / Расходы по месяцам</h3>
-        <div class="dashboard-chart" style="background:#faf5ff;border-color:#e9d5ff;">
+        html += `<h3 class="finance-section-title">📊 Доходы / Расходы по месяцам</h3>
+        <div class="finance-chart-container">
             <svg viewBox="0 0 ${svgWidth} 260" style="width:100%;height:260px;">
                 <line x1="40" y1="230" x2="${svgWidth - 20}" y2="230" stroke="#7e22ce" stroke-width="1.5"/>
                 ${[0, 0.25, 0.5, 0.75, 1].map(pct => {
@@ -162,7 +162,7 @@ function renderFinanceDashboard() {
     }
     
     if(hasMonths && hasCats) {
-        html += `</div><div style="flex:1;min-width:300px;">`;
+        html += `</div><div class="finance-chart-col">`;
     }
     
     if(hasCats) {
@@ -176,8 +176,8 @@ function renderFinanceDashboard() {
             return { name, value, angle, startAngle, color: colors[i % colors.length] };
         });
         
-        html += `<h3 style="color:#7e22ce;margin:0 0 12px;font-size:15px;">🥧 Расходы по категориям</h3>
-        <div class="dashboard-chart" style="background:#faf5ff;border-color:#e9d5ff;display:flex;flex-wrap:wrap;gap:20px;align-items:center;min-height:260px;">
+        html += `<h3 class="finance-section-title">🥧 Расходы по категориям</h3>
+        <div class="finance-donut-container">
             ${renderDonutChart(sectors, totalExpense, totalExpense.toLocaleString('ru-RU'), 'всего расходов')}
         </div>`;
     }
@@ -209,34 +209,32 @@ function renderFinanceDashboard() {
                     const scPct = sc.limit > 0 ? Math.min(100, (sc.spent / sc.limit) * 100) : 0;
                     const scBarColor = scPct >= 100 ? '#b91c1c' : (scPct > 80 ? '#dc2626' : (scPct > 50 ? '#d97706' : '#16a34a'));
                     const limitDisplay = sc.limit > 0 ? `${Math.round(sc.spent).toLocaleString('ru-RU')} / ${sc.limit.toLocaleString('ru-RU')} ₽` : `${Math.round(sc.spent).toLocaleString('ru-RU')} ₽`;
-                    const barHtml = sc.limit > 0 ? `<div style="height:6px;background:#f3e8ff;border-radius:3px;overflow:hidden;margin-top:2px;">
-                        <div style="height:100%;width:${scPct}%;background:${scBarColor};border-radius:3px;transition:width 0.3s;"></div>
-                    </div>` : '';
-                    return `<div style="padding:4px 0 2px 12px;font-size:11px;">
-                        <div style="display:flex;justify-content:space-between;">
-                            <span style="color:#a855f7;">📂 ${sc.name}</span>
-                            <span style="color:#64748b;font-weight:600;">${limitDisplay}</span>
+                    const barHtml = sc.limit > 0 ? `<div class="finance-subcat-bar"><div class="finance-subcat-fill" style="width:${scPct}%;background:${scBarColor};"></div></div>` : '';
+                    return `<div class="finance-subcat-item">
+                        <div>
+                            <span class="finance-subcat-name">📂 ${sc.name}</span>
+                            <span class="finance-subcat-value">${limitDisplay}</span>
                         </div>
                         ${barHtml}
                     </div>`;
                 }).join('');
             }
             
-            return `<div style="margin-bottom:10px;">
-                <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;">
-                    <span style="font-weight:600;color:#7e22ce;">${c.name}</span>
-                    <span style="color:#334155;">${Math.round(spent).toLocaleString('ru-RU')} / ${c.limit.toLocaleString('ru-RU')} ₽</span>
+            return `<div class="finance-limit-item">
+                <div class="finance-limit-header">
+                    <span class="finance-limit-name">${c.name}</span>
+                    <span class="finance-limit-value">${Math.round(spent).toLocaleString('ru-RU')} / ${c.limit.toLocaleString('ru-RU')} ₽</span>
                 </div>
-                <div style="height:8px;background:#e9d5ff;border-radius:4px;overflow:hidden;">
-                    <div style="height:100%;width:${pct}%;background:${barColor};border-radius:4px;transition:width 0.3s;"></div>
+                <div class="finance-limit-bar">
+                    <div class="finance-limit-fill" style="width:${pct}%;background:${barColor};"></div>
                 </div>
                 ${subcatsHtml}
             </div>`;
         }).join('');
     
     if(limitHtml) {
-        html += `<h3 style="color:#7e22ce;margin:16px 0 12px;font-size:15px;">🏷 Лимиты категорий</h3>
-        <div style="background:#faf5ff;border:1px solid #e9d5ff;border-radius:12px;padding:16px;">${limitHtml}</div>`;
+        html += `<h3 class="finance-section-title">🏷 Лимиты категорий</h3>
+        <div class="finance-limits-container">${limitHtml}</div>`;
     }
     
     const savingsByGoal = {};
@@ -249,15 +247,15 @@ function renderFinanceDashboard() {
     if(goalNames.length > 0) {
         const goalHtml = goalNames.map(goal => {
             const total = savingsByGoal[goal];
-            const sign = total >= 0 ? 'green' : 'red';
-            return `<div style="margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:white;border-radius:8px;border:1px solid #e9d5ff;">
-                <span style="font-weight:600;color:#7e22ce;">🎯 ${goal}</span>
-                <span style="font-weight:700;color:${sign === 'green' ? '#16a34a' : '#dc2626'};">${total.toLocaleString('ru-RU')} ₽</span>
+            const signClass = total >= 0 ? 'positive' : 'negative';
+            return `<div class="finance-goal-item">
+                <span class="finance-goal-name">🎯 ${goal}</span>
+                <span class="finance-goal-value ${signClass}">${total.toLocaleString('ru-RU')} ₽</span>
             </div>`;
         }).join('');
         
-        html += `<h3 style="color:#7e22ce;margin:16px 0 12px;font-size:15px;">🏦 Накопления по целям</h3>
-        <div style="background:#faf5ff;border:1px solid #e9d5ff;border-radius:12px;padding:16px;">${goalHtml}</div>`;
+        html += `<h3 class="finance-section-title">🏦 Накопления по целям</h3>
+        <div class="finance-savings-container">${goalHtml}</div>`;
     }
     
     container.innerHTML = html;
@@ -276,18 +274,18 @@ function renderFinanceTransactions() {
         return;
     }
     
-    let html = `<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:flex-end;">
-        <div style="flex:1;min-width:150px;">
-            <label style="font-size:11px;font-weight:700;color:#7e22ce;display:block;margin-bottom:2px;">Период</label>
-            <select id="fin-filter-period" onchange="renderFinanceTransactions()" style="width:100%;padding:6px 8px;border:1px solid #d8b4fe;border-radius:6px;font-size:12px;font-family:inherit;background:#faf5ff;">
+    let html = `<div class="finance-filter-row">
+        <div class="finance-filter-group">
+            <label class="finance-filter-label">Период</label>
+            <select id="fin-filter-period" onchange="renderFinanceTransactions()" class="finance-filter-select">
                 <option value="all">Все время</option>
                 <option value="month">Этот месяц</option>
                 <option value="3months">Последние 3 месяца</option>
             </select>
         </div>
-        <div style="flex:1;min-width:150px;">
-            <label style="font-size:11px;font-weight:700;color:#7e22ce;display:block;margin-bottom:2px;">Тип</label>
-            <select id="fin-filter-type" onchange="renderFinanceTransactions()" style="width:100%;padding:6px 8px;border:1px solid #d8b4fe;border-radius:6px;font-size:12px;font-family:inherit;background:#faf5ff;">
+        <div class="finance-filter-group">
+            <label class="finance-filter-label">Тип</label>
+            <select id="fin-filter-type" onchange="renderFinanceTransactions()" class="finance-filter-select">
                 <option value="all">Все</option>
                 <option value="income">📈 Доходы</option>
                 <option value="expense">📉 Расходы</option>
@@ -317,22 +315,22 @@ function renderFinanceTransactions() {
     filtered.sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt);
     
     if(filtered.length === 0) {
-        container.innerHTML = html + `<div style="text-align:center;padding:30px;color:#7e22ce;">Нет операций по выбранным фильтрам</div>`;
+        container.innerHTML = html + `<div class="finance-no-data">Нет операций по выбранным фильтрам</div>`;
         return;
     }
     
     const totalInc = filtered.filter(t => t.type === 'income').reduce((s, t) => s + Math.abs(t.amount), 0);
     const totalExp = filtered.filter(t => t.type === 'expense').reduce((s, t) => s + Math.abs(t.amount), 0);
     
-    html += `<div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
-        <div style="background:#f0fdf4;padding:8px 14px;border-radius:8px;border:1px solid #bbf7d0;font-size:13px;font-weight:600;">
-            📈 Доходы: <span style="color:#16a34a;">${totalInc.toLocaleString('ru-RU')} ₽</span>
+    html += `<div class="finance-summary-row">
+        <div class="finance-summary-box finance-summary-income">
+            📈 Доходы: <span class="finance-summary-value">${totalInc.toLocaleString('ru-RU')} ₽</span>
         </div>
-        <div style="background:#fef2f2;padding:8px 14px;border-radius:8px;border:1px solid #fecaca;font-size:13px;font-weight:600;">
-            📉 Расходы: <span style="color:#dc2626;">${totalExp.toLocaleString('ru-RU')} ₽</span>
+        <div class="finance-summary-box finance-summary-expense">
+            📉 Расходы: <span class="finance-summary-value">${totalExp.toLocaleString('ru-RU')} ₽</span>
         </div>
-        <div style="background:#f0fdf4;padding:8px 14px;border-radius:8px;border:1px solid #bbf7d0;font-size:13px;font-weight:600;">
-            💵 Баланс: <span style="color:${totalInc - totalExp >= 0 ? '#16a34a' : '#dc2626'};">${(totalInc - totalExp).toLocaleString('ru-RU')} ₽</span>
+        <div class="finance-summary-box finance-summary-income">
+            💵 Баланс: <span class="finance-summary-value" style="color:${totalInc - totalExp >= 0 ? '#16a34a' : '#dc2626'};">${(totalInc - totalExp).toLocaleString('ru-RU')} ₽</span>
         </div>
     </div>`;
     
@@ -341,14 +339,14 @@ function renderFinanceTransactions() {
         const catName = cat ? cat.name : '—';
         const catColor = cat ? (cat.color || '#7e22ce') : '#7e22ce';
         const isExpense = t.type === 'expense';
-        return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:white;border-radius:8px;border:1px solid #e9d5ff;margin-bottom:6px;flex-wrap:wrap;">
-            <span style="font-size:12px;font-weight:600;color:#64748b;min-width:70px;">${formatFinanceDate(t.date)}</span>
-            <span style="font-size:13px;font-weight:700;color:${isExpense ? '#dc2626' : '#16a34a'};min-width:80px;">${isExpense ? '−' : '+'}${Math.abs(t.amount).toLocaleString('ru-RU')} ₽</span>
-            <span style="font-size:12px;color:${catColor};font-weight:600;min-width:100px;">${catName}${t.subcategory ? ' › ' + t.subcategory : ''}</span>
-            <span style="font-size:11px;color:#94a3b8;flex:1;">${t.comment || ''}</span>
+        return `<div class="finance-transaction-item">
+            <span class="finance-transaction-date">${formatFinanceDate(t.date)}</span>
+            <span class="finance-transaction-amount ${isExpense ? 'expense' : 'income'}">${isExpense ? '−' : '+'}${Math.abs(t.amount).toLocaleString('ru-RU')} ₽</span>
+            <span class="finance-transaction-category" style="color:${catColor};">${catName}${t.subcategory ? ' › ' + t.subcategory : ''}</span>
+            <span class="finance-transaction-comment">${t.comment || ''}</span>
             ${isReadOnlyActive() ? '' : `
-            <button class="action-btn edit" onclick="editFinanceTransaction('${t.id}')" style="padding:3px 8px;font-size:11px;">✏️</button>
-            <button class="action-btn delete" onclick="deleteFinanceItem('transaction','${t.id}')" style="padding:3px 8px;font-size:11px;">🗑</button>`}
+            <button class="action-btn edit" onclick="editFinanceTransaction('${t.id}')">✏️</button>
+            <button class="action-btn delete" onclick="deleteFinanceItem('transaction','${t.id}')">🗑</button>`}
         </div>`;
     }).join('');
     
@@ -377,17 +375,17 @@ function renderFinanceSavings() {
     
     let html = Object.keys(byGoal).map(goal => {
         const g = byGoal[goal];
-        return `<div style="background:white;border-radius:10px;border:1px solid #e9d5ff;margin-bottom:12px;overflow:hidden;">
-            <div style="padding:10px 14px;background:#faf5ff;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #e9d5ff;">
-                <span style="font-weight:700;color:#7e22ce;">🎯 ${goal}</span>
-                <span style="font-weight:700;color:#16a34a;">${g.total.toLocaleString('ru-RU')} ₽</span>
+        return `<div class="finance-savings-card">
+            <div class="finance-savings-header">
+                <span class="finance-savings-title">🎯 ${goal}</span>
+                <span class="finance-savings-total">${g.total.toLocaleString('ru-RU')} ₽</span>
             </div>
-            <div style="padding:8px 14px;">
+            <div class="finance-savings-entries">
                 ${g.entries.slice().reverse().map(e => `
-                    <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px dashed #f3e8ff;font-size:13px;">
+                    <div class="finance-savings-entry">
                         <span style="color:#64748b;">${formatFinanceDate(e.date)}</span>
                         <span style="font-weight:600;color:${e.amount >= 0 ? '#16a34a' : '#dc2626'};">${e.amount >= 0 ? '+' : ''}${e.amount.toLocaleString('ru-RU')} ₽</span>
-                        ${isReadOnlyActive() ? '' : `<button class="action-btn delete" onclick="deleteFinanceItem('savings','${e.id}')" style="padding:2px 6px;font-size:10px;">🗑</button>`}
+                        ${isReadOnlyActive() ? '' : `<button class="action-btn delete" onclick="deleteFinanceItem('savings','${e.id}')">🗑</button>`}
                     </div>
                 `).join('')}
             </div>
@@ -414,15 +412,15 @@ function renderFinancePlanned() {
     container.innerHTML = sorted.map(p => {
         const cat = financeData.categories.find(c => c.id === p.category);
         const catName = cat ? cat.name : '—';
-        return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:white;border-radius:8px;border:1px solid #e9d5ff;margin-bottom:6px;flex-wrap:wrap;${p.done ? 'opacity:0.6;' : ''}">
-            <span style="font-size:12px;font-weight:600;color:#64748b;min-width:70px;">${formatFinanceDate(p.date)}</span>
-            <span style="font-size:13px;font-weight:700;color:#dc2626;min-width:80px;">${p.amount.toLocaleString('ru-RU')} ₽</span>
-            <span style="font-size:12px;color:#7e22ce;font-weight:600;min-width:100px;">${catName}${p.subcategory ? ' › ' + p.subcategory : ''}</span>
+        return `<div class="finance-planned-item${p.done ? ' done' : ''}">
+            <span class="finance-transaction-date">${formatFinanceDate(p.date)}</span>
+            <span class="finance-transaction-amount expense">${p.amount.toLocaleString('ru-RU')} ₽</span>
+            <span class="finance-transaction-category" style="color:#7e22ce;">${catName}${p.subcategory ? ' › ' + p.subcategory : ''}</span>
             <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:12px;margin-left:auto;">
-                <input type="checkbox" ${p.done ? 'checked' : ''} onchange="togglePlannedDone('${p.id}')" style="width:16px;height:16px;cursor:pointer;">
+                <input type="checkbox" ${p.done ? 'checked' : ''} onchange="togglePlannedDone('${p.id}')">
                 Выполнено
             </label>
-            ${isReadOnlyActive() ? '' : `<button class="action-btn delete" onclick="deleteFinanceItem('planned','${p.id}')" style="padding:3px 8px;font-size:11px;">🗑</button>`}
+            ${isReadOnlyActive() ? '' : `<button class="action-btn delete" onclick="deleteFinanceItem('planned','${p.id}')">🗑</button>`}
         </div>`;
     }).join('');
 }
@@ -442,24 +440,24 @@ function renderFinanceCategories() {
     container.innerHTML = financeData.categories.map(c => {
         const typeLabel = c.type === 'expense' ? '📉 Расход' : '📈 Доход';
         const limitDisplay = c.limit > 0 ? `${c.limit.toLocaleString('ru-RU')} ₽` : 'Без лимита';
-        const catColor = c.color || '#7e22ce'; // Use category color or default to purple
+        const catColor = c.color || '#7e22ce';
         const subcatsHtml = c.subcategories.length > 0 
             ? c.subcategories.map(sc => `<span class="subcat-tag" style="margin:2px;">${sc}</span>`).join('')
             : '<span style="color:#94a3b8;font-size:11px;">Нет подкатегорий</span>';
-        return `<div style="background:white;border-radius:10px;border-left:4px solid ${catColor};padding:12px 14px;margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:6px;">
+        return `<div class="finance-category-card" style="border-left:4px solid ${catColor};">
+            <div class="finance-category-header">
                 <div>
-                    <span style="font-weight:700;color:${catColor};">${c.name}</span>
-                    <span style="font-size:11px;color:#94a3b8;margin-left:6px;">${typeLabel}</span>
+                    <span class="finance-category-name" style="color:${catColor};">${c.name}</span>
+                    <span class="finance-category-type">${typeLabel}</span>
                 </div>
-                <div style="display:flex;align-items:center;gap:8px;">
-                    <span style="font-size:12px;font-weight:600;color:#065f46;">💰 ${limitDisplay}</span>
+                <div class="finance-category-actions">
+                    <span class="finance-category-limit">💰 ${limitDisplay}</span>
                     ${isReadOnlyActive() ? '' : `
-                    <button class="action-btn edit" onclick="openCategoryModal('${c.id}')" style="padding:2px 8px;font-size:11px;">✏️</button>
-                    <button class="action-btn delete" onclick="deleteFinanceItem('category','${c.id}')" style="padding:2px 8px;font-size:11px;">🗑</button>`}
+                    <button class="action-btn edit" onclick="openCategoryModal('${c.id}')">✏️</button>
+                    <button class="action-btn delete" onclick="deleteFinanceItem('category','${c.id}')">🗑</button>`}
                 </div>
             </div>
-            <div>${subcatsHtml}</div>
+            <div class="finance-subcategory-list">${subcatsHtml}</div>
         </div>`;
     }).join('');
 }
