@@ -209,9 +209,9 @@ function renderFinanceDashboard() {
                     const scPct = sc.limit > 0 ? Math.min(100, (sc.spent / sc.limit) * 100) : 0;
                     const scBarColor = scPct >= 100 ? '#b91c1c' : (scPct > 80 ? '#dc2626' : (scPct > 50 ? '#d97706' : '#16a34a'));
                     const limitDisplay = sc.limit > 0 ? `${Math.round(sc.spent).toLocaleString('ru-RU')} / ${sc.limit.toLocaleString('ru-RU')} ₽` : `${Math.round(sc.spent).toLocaleString('ru-RU')} ₽`;
-                    const barHtml = sc.limit > 0 ? `<div class="finance-subcat-bar"><div class="finance-subcat-fill" style="width:${scPct}%;background:${scBarColor};"></div></div>` : '';
+                    const barHtml = sc.limit > 0 ? `<div class="finance-progress-sub"><div class="finance-progress-sub-fill" style="width:${scPct}%;background:${scBarColor};"></div></div>` : '';
                     return `<div class="finance-subcat-item">
-                        <div>
+                        <div style="flex:1;min-width:0;">
                             <span class="finance-subcat-name">📂 ${sc.name}</span>
                             <span class="finance-subcat-value">${limitDisplay}</span>
                         </div>
