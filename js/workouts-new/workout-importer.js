@@ -52,6 +52,9 @@ window.runParsing = function() {
   }
 
   _renderParsedPreview(_parsedResults);
+
+  // Обновляем бейдж «Требует проверки»
+  if (typeof updateUnmatchedBadge === 'function') updateUnmatchedBadge();
 };
 
 function showImportError(message) {
