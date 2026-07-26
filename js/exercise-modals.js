@@ -8,8 +8,8 @@
 let editingExerciseId = null;
 let editingBaseExerciseId = null;
 let editingVariantId = null;
-let window._editingExerciseSubcategories = [];
-let window._editingExerciseSubcategoryLimits = {};
+window._editingExerciseSubcategories = [];
+window._editingExerciseSubcategoryLimits = {};
 
 // === КАТЕГОРИИ УПРАЖНЕНИЙ ===
 
@@ -360,7 +360,7 @@ window.renderExerciseCategories = function() {
                         </div>
                     </div>
                     <div class="category-actions">
-                        <button class="action-btn edit" onclick="openCategoryModal('${cat.id}')">✏️</button>
+<button class="action-btn edit" onclick="openExerciseCategoryModal('${cat.id}')">✏️</button>
                         <button class="action-btn delete" onclick="deleteExerciseCategory('${cat.id}')">🗑</button>
                     </div>
                 </div>
