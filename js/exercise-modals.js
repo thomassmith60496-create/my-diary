@@ -13,7 +13,7 @@ let window._editingExerciseSubcategoryLimits = {};
 
 // === КАТЕГОРИИ УПРАЖНЕНИЙ ===
 
-function openCategoryModal(id = null) {
+function openExerciseCategoryModal(id = null) {
     editingExerciseId = id;
     const modal = document.getElementById('exercise-category-modal');
     const title = document.getElementById('exercise-category-modal-title');
