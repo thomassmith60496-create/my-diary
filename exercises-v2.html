@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Core — Упражнения (v2)</title>
+<!-- Новая система тренировок -->
+<script src="js/workouts-new/workouts-schema.js"></script>
+<script src="js/workouts-new/workouts-store.js"></script>
+<script src="js/workouts-new/workouts-seed.js"></script>
+<script src="js/workouts-new/workouts-init.js"></script>
+<!-- UI новой системы -->
+<script src="js/workouts-new/workouts-ui.js"></script>
+<!-- Парсер и импортёр -->
+<script src="js/workouts-new/workout-parser.js"></script>
+<script src="js/workouts-new/workout-importer.js"></script>
+<!-- Стили новой системы -->
+<link rel="stylesheet" href="css/workouts-v2.css">
+</head>
+<body>
+  <div class="v2-container">
+    <div class="v2-top-bar">
+      <a href="index.html" class="v2-back-link">← Назад в дневник</a>
+      <span class="v2-badge">v2 • редактор</span>
+    </div>
+
+    <header class="v2-header">
+      <h1>🏋️ Упражнения</h1>
+      <div class="v2-subtitle">Редактор базы упражнений</div>
+    </header>
+
+    <!-- Табы -->
+    <div class="v2-tabs">
+      <button class="v2-tab active" id="v2-tab-exercises" onclick="switchTab('exercises')">📋 Упражнения</button>
+      <button class="v2-tab" id="v2-tab-review" onclick="switchTab('review')">⚠️ Требует проверки <span class="v2-tab-badge" id="v2-review-count">0</span></button>
+      <button class="v2-tab" id="v2-tab-import" onclick="switchTab('import')">📥 Импорт</button>
+    </div>
+
+    <!-- Вкладка: Упражнения -->
+    <div class="v2-tab-content active" id="v2-tab-content-exercises">
+      <!-- Поиск и фильтры -->
+    <div class="v2-controls">
+      <div class="v2-search-wrap">
+        <input type="text" class="v2-search" id="v2-search" placeholder="🔍 Поиск упражнений..." oninput="renderExerciseList()">
+      </div>
+      <div class="v2-filter-wrap">
+        <select class="v2-filter" id="v2-filter-muscle" onchange="renderExerciseList()">
+          <option value="all">Все категории мышц</option>
+        </select>
+      </div>
+      <div class="v2-filter-wrap">
+        <select class="v2-filter" id="v2-filter-load" onchange="renderExerciseList()">
+          <option value="all">Все типы нагрузки</option>
+          <option value="strength">💪 Силовое</option>
+          <option value="cardio">🏃 Кардио</option>
+          <option value="bodyweight">🤸 Повторения без веса</option>
+          <option value="other">📌 Другое</option>
+        </select>
+      </div>
+      <div class="v2-stats" id="v2-stats"></div>
+      <button class="v2-btn v2-btn-outline" onclick="openMergeBasesModal()" title="Объединить базовые упражнения">🔗</button>
+    </div>
+
+    <!-- Список упражнений -->
+    <div class="v2-list" id="v2-exercise-list">
+      <div class="v2-empty">
+        <div class="v2-empty-icon">🏋️</div>
+        <div class="v2-empty-title">Загрузка...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Вкладка: Требует проверки -->
+  <div class="v2-tab-content" id="v2-tab-content-review">
+    <div class="v2-controls">
+      <div class="v2-search-wrap">
+        <input type="text" class="v2-search" id="v2-review-search" placeholder="🔍 Поиск в записях..." oninput="renderUnmatchedList()">
+      </div>
+      <div class="v2-stats" id="v2-review-stats"></div>
+    </div>
+    <div class="v2-list" id="v2-unmatched-list">
+      <div class="v2-empty">
+        <div class="v2-empty-icon">✅</div>
+        <div class="v2-empty-title">Нет записей</div>
+        <div class="v2-empty-text">Сюда попадают названия упражнений, которые не удалось распознать.</div>
+      </div>
+    </div>
+    </div>
+  </div>
+
+  <!-- Вкладка: Импорт тренировки -->
+  <div class="v2-tab-content" id="v2-tab-content-import">
+    <div class="v2-card">
+      <div class="v2-card-header">
+        <h3>📥 Импорт тренировки</h3>
+        <div class="v2-card-subtitle">Вставьте текст тренировки и нажмите «Разобрать»</div>
+      </div>
+      <div class="v2-card-body">
+        <div class="v2-import-meta">
+          <div class="v2-import-meta-field">
+            <label>📅 Дата</label>
+            <input type="date" id="v2-import-date">
+          </div>
+          <div class="v2-import-meta-field">
+            <label>⏱ Длительность (мин)</label>
+            <input type="number" id="v2-import-duration" placeholder="0" min="0">
+          </div>
+        </div>
+        <div class="v2-import-textarea-wrap">
+          <textarea class="v2-import-textarea" id="v2-import-text" placeholder="Вставьте текст тренировки&#10;&#10;Пример:&#10;26 июля 2026, 60 мин&#10;1) Жим лежа · штанга&#10;80кг*8&#10;80кг*7&#10;75кг*8&#10;2) Приседания со штангой&#10;100кг*5&#10;100кг*5"></textarea>
+        </div>
+        <div class="v2-import-actions">
+          <button class="v2-btn v2-btn-primary" onclick="runParsing()">🔍 Разобрать</button>
+          <button class="v2-btn v2-btn-ghost" onclick="clearImportForm()">🗑 Очистить</button>
+        </div>
+      </div>
+    </div>
+    <div id="v2-import-preview"></div>
+  </div>
+
+  <!-- ===== МОДАЛКА: Базовое упражнение (создание/редактирование) ===== -->
+  <div class="v2-modal-overlay" id="v2-modal-base" onclick="if(event.target===this)closeModal('v2-modal-base')">
+    <div class="v2-modal">
+      <div class="v2-modal-header">
+        <h3 class="v2-modal-title" id="v2-modal-base-title">➕ Создать базовое упражнение</h3>
+        <button class="v2-modal-close" onclick="closeModal('v2-modal-base')">✕</button>
+      </div>
+      <div class="v2-modal-body">
+        <div class="v2-form-grid">
+          <div class="v2-form-field full">
+            <label>📛 Название</label>
+            <input type="text" id="v2-f-base-name" placeholder="Например: Жим лежа">
+          </div>
+          <div class="v2-form-field full">
+            <label>🏋️ Категории мышц (можно выбрать несколько)</label>
+            <div class="v2-checkbox-group" id="v2-f-base-muscles"></div>
+          </div>
+        </div>
+      </div>
+      <div class="v2-modal-footer">
+        <button class="v2-btn" onclick="closeModal('v2-modal-base')">Отмена</button>
+        <button class="v2-btn v2-btn-primary" onclick="saveBaseExercise()">💾 Сохранить</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== МОДАЛКА: Вариант (создание/редактирование) ===== -->
+  <div class="v2-modal-overlay" id="v2-modal-variant" onclick="if(event.target===this)closeModal('v2-modal-variant')">
+    <div class="v2-modal">
+      <div class="v2-modal-header">
+        <h3 class="v2-modal-title" id="v2-modal-variant-title">➕ Создать вариант</h3>
+        <button class="v2-modal-close" onclick="closeModal('v2-modal-variant')">✕</button>
+      </div>
+      <div class="v2-modal-body">
+        <div class="v2-form-grid">
+          <div class="v2-form-field full">
+            <label>📛 Название</label>
+            <input type="text" id="v2-f-var-name" placeholder="Например: Жим лежа · штанга">
+          </div>
+          <div class="v2-form-field">
+            <label>💪 Тип нагрузки</label>
+            <select id="v2-f-var-load" onchange="onVariantLoadChange()">
+              <option value="strength">💪 Силовое</option>
+              <option value="cardio">🏃 Кардио</option>
+              <option value="bodyweight">🤸 Повторения без веса</option>
+              <option value="other">📌 Другое</option>
+            </select>
+          </div>
+          <div class="v2-form-field">
+            <label>📐 Тип измерения</label>
+            <select id="v2-f-var-measurement">
+              <option value="weight_reps">Вес + повторения</option>
+              <option value="time">Время</option>
+              <option value="distance_time">Дистанция + время</option>
+              <option value="reps_only">Только повторения</option>
+              <option value="weight_time">Вес + время</option>
+              <option value="distance_only">Только дистанция</option>
+              <option value="time_reps">Время + повторения</option>
+              <option value="none">Без метрик</option>
+            </select>
+          </div>
+          <div class="v2-form-field">
+            <label>🔧 Оборудование</label>
+            <select id="v2-f-var-equipment"></select>
+          </div>
+          <div class="v2-form-field full">
+            <label>🏋️ Мышцы (можно выбрать несколько)</label>
+            <div class="v2-checkbox-group" id="v2-f-var-muscles"></div>
+          </div>
+        </div>
+      </div>
+      <div class="v2-modal-footer">
+        <button class="v2-btn" onclick="closeModal('v2-modal-variant')">Отмена</button>
+        <button class="v2-btn v2-btn-primary" onclick="saveVariant()">💾 Сохранить</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== МОДАЛКА: Перенос варианта ===== -->
+  <div class="v2-modal-overlay" id="v2-modal-move" onclick="if(event.target===this)closeModal('v2-modal-move')">
+    <div class="v2-modal">
+      <div class="v2-modal-header">
+        <h3 class="v2-modal-title">📂 Перенести вариант</h3>
+        <button class="v2-modal-close" onclick="closeModal('v2-modal-move')">✕</button>
+      </div>
+      <div class="v2-modal-body">
+        <div class="v2-form-grid">
+          <div class="v2-form-field full">
+            <label>📝 Вариант</label>
+            <div class="v2-modal-info" id="v2-move-variant-name"></div>
+          </div>
+          <div class="v2-form-field full">
+            <label>🎯 Перенести в базовое упражнение</label>
+            <select id="v2-f-move-base"></select>
+          </div>
+        </div>
+      </div>
+      <div class="v2-modal-footer">
+        <button class="v2-btn" onclick="closeModal('v2-modal-move')">Отмена</button>
+        <button class="v2-btn v2-btn-primary" onclick="saveMoveVariant()">💾 Перенести</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== МОДАЛКА: Объединение базовых упражнений ===== -->
+  <div class="v2-modal-overlay" id="v2-modal-merge" onclick="if(event.target===this)closeModal('v2-modal-merge')">
+    <div class="v2-modal">
+      <div class="v2-modal-header">
+        <h3 class="v2-modal-title">🔗 Объединить базовые упражнения</h3>
+        <button class="v2-modal-close" onclick="closeModal('v2-modal-merge')">✕</button>
+      </div>
+      <div class="v2-modal-body">
+        <div class="v2-form-grid">
+          <div class="v2-form-field full">
+            <label>📦 Источник (будет удалён после объединения)</label>
+            <select id="v2-f-merge-source"></select>
+          </div>
+          <div class="v2-form-field full">
+            <label>🎯 Цель (все варианты перейдут сюда)</label>
+            <select id="v2-f-merge-target"></select>
+          </div>
+          <div class="v2-form-field full">
+            <div class="v2-warning">
+              ⚠️ Все варианты из источника будут перенесены в цель. Источник будет удалён.
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="v2-modal-footer">
+        <button class="v2-btn" onclick="closeModal('v2-modal-merge')">Отмена</button>
+        <button class="v2-btn v2-btn-danger" onclick="saveMergeBases()">🔗 Объединить</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== МОДАЛКА: Привязать несопоставленную запись к варианту ===== -->
+  <div class="v2-modal-overlay" id="v2-modal-resolve" onclick="if(event.target===this)closeModal('v2-modal-resolve')">
+    <div class="v2-modal">
+      <div class="v2-modal-header">
+        <h3 class="v2-modal-title">🔗 Привязать к варианту</h3>
+        <button class="v2-modal-close" onclick="closeModal('v2-modal-resolve')">✕</button>
+      </div>
+      <div class="v2-modal-body">
+        <div class="v2-form-grid">
+          <div class="v2-form-field full">
+            <label>📝 Запись</label>
+            <div class="v2-modal-info" id="v2-resolve-entry-name"></div>
+          </div>
+          <div class="v2-form-field full">
+            <label>🎯 Выберите существующий вариант</label>
+            <select id="v2-f-resolve-variant"></select>
+          </div>
+          <div class="v2-form-field full">
+            <div class="v2-info-text">
+              После привязки система запомнит соответствие и в будущем будет распознавать это название автоматически.
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="v2-modal-footer">
+        <button class="v2-btn" onclick="closeModal('v2-modal-resolve')">Отмена</button>
+        <button class="v2-btn v2-btn-primary" onclick="saveResolveUnmatched()">🔗 Привязать</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== МОДАЛКА: Создать вариант из несопоставленной записи ===== -->
+  <div class="v2-modal-overlay" id="v2-modal-create-from-unmatched" onclick="if(event.target===this)closeModal('v2-modal-create-from-unmatched')">
+    <div class="v2-modal">
+      <div class="v2-modal-header">
+        <h3 class="v2-modal-title">➕ Создать вариант из записи</h3>
+        <button class="v2-modal-close" onclick="closeModal('v2-modal-create-from-unmatched')">✕</button>
+      </div>
+      <div class="v2-modal-body">
+        <div class="v2-form-grid">
+          <div class="v2-form-field full">
+            <label>📝 Запись</label>
+            <div class="v2-modal-info" id="v2-create-from-entry-name"></div>
+          </div>
+          <div class="v2-form-field full">
+            <label>📛 Название варианта</label>
+            <input type="text" id="v2-f-create-var-name" placeholder="Название варианта">
+          </div>
+          <div class="v2-form-field full">
+            <label>🎯 Базовое упражнение</label>
+            <select id="v2-f-create-var-base"></select>
+          </div>
+          <div class="v2-form-field">
+            <label>💪 Тип нагрузки</label>
+            <select id="v2-f-create-var-load" onchange="onVariantLoadChange()">
+              <option value="strength">💪 Силовое</option>
+              <option value="cardio">🏃 Кардио</option>
+              <option value="bodyweight">🤸 Повторения без веса</option>
+              <option value="other">📌 Другое</option>
+            </select>
+          </div>
+          <div class="v2-form-field">
+            <label>📐 Тип измерения</label>
+            <select id="v2-f-create-var-measurement">
+              <option value="weight_reps">Вес + повторения</option>
+              <option value="time">Время</option>
+              <option value="distance_time">Дистанция + время</option>
+              <option value="reps_only">Только повторения</option>
+              <option value="weight_time">Вес + время</option>
+              <option value="distance_only">Только дистанция</option>
+              <option value="time_reps">Время + повторения</option>
+              <option value="none">Без метрик</option>
+            </select>
+          </div>
+          <div class="v2-form-field">
+            <label>🔧 Оборудование</label>
+            <select id="v2-f-create-var-equipment"></select>
+          </div>
+          <div class="v2-form-field full">
+            <label>🏋️ Мышцы (можно выбрать несколько)</label>
+            <div class="v2-checkbox-group" id="v2-f-create-var-muscles"></div>
+          </div>
+        </div>
+      </div>
+      <div class="v2-modal-footer">
+        <button class="v2-btn" onclick="closeModal('v2-modal-create-from-unmatched')">Отмена</button>
+        <button class="v2-btn v2-btn-primary" onclick="saveCreateVariantFromUnmatched()">💾 Создать</button>
+      </div>
+    </div>
+  </div>
+
+  <script>    
+    setTimeout(() => {
+      renderExerciseList();
+      populateFilterOptions();
+      renderUnmatchedList();
+    }, 100);
+  </script>
+</body>
+</html>
