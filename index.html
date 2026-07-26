@@ -188,8 +188,10 @@
         <div class="toolbar">
             <button class="btn orange primary" onclick="openTrainModal()">➕ Добавить тренировку</button>
             <button class="btn orange" onclick="exportAllData()">💾 Экспорт</button>
-            <button class="btn orange" onclick="document.getElementById('import-train-file').click()">📂 Импорт</button>
+            <button class="btn orange" onclick="document.getElementById('import-train-file').click()">📂 Импорт JSON</button>
             <input type="file" id="import-train-file" accept=".json" style="display:none;" onchange="importTrainData(this)">
+            <button class="btn orange" onclick="document.getElementById('import-gymkeeper-file').click()">📥 Из GymKeeper</button>
+            <input type="file" id="import-gymkeeper-file" accept=".txt" style="display:none;" onchange="importGymKeeperData(this)">
         </div>
         <div class="progress-section" id="progress-section" style="display:none;">
             <h2 class="progress-title">📈 Прогресс по упражнениям</h2>
@@ -620,6 +622,7 @@
 <script src="js/finance-save.js"></script>
 <script src="js/finance-render.js"></script>
 <script src="js/finance-import.js"></script>
+<script src="js/gymkeeper-parser.js"></script>
 <script src="js/dashboard.js"></script>
 <script src="js/app.js"></script>
 </body>
