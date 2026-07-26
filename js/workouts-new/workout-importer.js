@@ -308,14 +308,20 @@ window.finalizeImport = function() {
   // Обновляем UI
   const container = document.getElementById('v2-import-preview');
   if (container) {
+    const entryCount = result.entries.length;
+    const totalSets = result.entries.reduce((s, e) => s + e.sets.length, 0);
+
     container.innerHTML = `
       <div class="v2-import-success">
         <div class="v2-import-success-icon">✅</div>
         <div class="v2-import-success-title">Тренировка сохранена!</div>
         <div class="v2-import-success-text">
-          📅 ${result.workout.date} · ${result.entries.length} упражнений
+          📅 ${result.workout.date} · ${entryCount} упражнений · ${totalSets} подходов
         </div>
-        <button class="v2-btn v2-btn-primary" onclick="clearImportForm()">🔄 Импортировать ещё</button>
+        <div class="v2-import-success-actions">
+          <button class="v2-btn v2-btn-primary" onclick="clearImportForm()">🔄 Импортировать ещё</button>
+          <button class="v2-btn v2-btn-ghost" onclick="console.log('Saved workout:', WorkoutStore.findWorkoutById('${result.workout.id}'), '\\nEntries:', WorkoutStore.findEntriesByWorkout('${result.workout.id}')); showImportWorkoutSummary('${result.workout.id}')">📋 Показать детали</button>
+        </div>
       </div>`;
   }
 
@@ -334,6 +340,47 @@ window.clearImportForm = function() {
   _parsedResults = [];
   _lastImportDate = '';
   _lastImportDuration = 0;
+};
+
+window.showImportWorkoutSummary = function(workoutId) {
+  const workout = WorkoutStore.findWorkoutById(workoutId);
+  if (!workout) return;
+  const entries = WorkoutStore.findEntriesByWorkout(workoutId);
+  const container = document.getElementById('v2-import-preview');
+  if (!container) return;
+
+  let html = `
+    <div class="v2-import-summary">
+      <div class="v2-import-summary-row">📅 ${workout.date} · ⏱ ${workout.duration || '?'} мин</div>
+      <div class="v2-import-summary-stats">
+        <span class="v2-import-stat">📋 Упражнений: <strong>${entries.length}</strong></span>
+      </div>
+    </div>
+    <div class="v2-import-exercise-list">`;
+
+  entries.forEach((entry, i) => {
+    const variant = WorkoutStore.findVariantById(entry.variantId);
+    const variantName = variant ? variant.name : 'неизвестно';
+    html += `
+      <div class="v2-import-ex-row matched">
+        <div class="v2-import-ex-header">
+          <span class="v2-import-ex-number">${i + 1}</span>
+          <span class="v2-import-ex-name">${escapeHtml(variantName)}</span>
+        </div>
+        <div class="v2-import-ex-body">
+          <div class="v2-import-ex-sets">
+            ${entry.sets.map(s => `<span class="v2-import-set-badge">${_formatSetPreview(s)}</span>`).join('')}
+          </div>
+        </div>
+      </div>`;
+  });
+
+  html += `</div>
+    <div class="v2-import-finalize">
+      <button class="v2-btn v2-btn-primary" onclick="clearImportForm()">🔄 Импортировать ещё</button>
+    </div>`;
+
+  container.innerHTML = html;
 };
 
 // ============================================

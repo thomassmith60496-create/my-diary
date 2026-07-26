@@ -609,6 +609,13 @@ body {
   margin-bottom: 16px;
 }
 
+.v2-import-success-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
 .v2-import-error {
   background: #fef2f2;
   border: 1px solid #fca5a5;

@@ -296,7 +296,7 @@ function normalizeExerciseName(name) {
     .replace(/ё/g, 'е')
     .replace(/[ьъ]/g, '')
     .replace(/\s+/g, ' ')
-    .replace(/[^\w\s·-]/g, '')
+    .replace(/[^\w\s·-]/gu, '')
     .trim();
 }
 
