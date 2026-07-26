@@ -192,29 +192,66 @@
             <input type="file" id="import-train-file" accept=".json" style="display:none;" onchange="importTrainData(this)">
             <button class="btn orange" onclick="document.getElementById('import-gymkeeper-file').click()">📥 Из GymKeeper</button>
             <input type="file" id="import-gymkeeper-file" accept=".txt" style="display:none;" onchange="importGymKeeperData(this)">
+            <button class="btn orange" onclick="switchTrainSubTab('exercises')">🏋️ Упражнения</button>
         </div>
-        <div class="progress-section" id="progress-section" style="display:none;">
-            <h2 class="progress-title">📈 Прогресс по упражнениям</h2>
-            <div class="progress-controls">
-                <div class="progress-select-wrap">
-                    <label>Упражнение</label>
-                    <select class="progress-select" id="progress-exercise-select" onchange="renderTrainChart()">
-                        <option value="">— выберите упражнение —</option>
-                    </select>
-                </div>
-                <div>
-                    <label style="display:block;font-size:12px;font-weight:700;color:#9a3412;margin-bottom:4px;">Показывать</label>
-                    <div class="metric-toggle">
-                        <button class="metric-btn active" data-metric="weight" onclick="setTrainMetric('weight')">Макс. вес</button>
-                        <button class="metric-btn" data-metric="volume" onclick="setTrainMetric('volume')">Объём</button>
+        
+        <!-- Подвкладки тренировок -->
+        <div class="sub-tabs">
+            <button class="sub-tab-btn active" onclick="switchTrainSubTab('workouts', event)">📋 Тренировки</button>
+            <button class="sub-tab-btn" onclick="switchTrainSubTab('exercises', event)">🏋️ Упражнения</button>
+        </div>
+        
+        <!-- Подвкладка: Тренировки -->
+        <div class="sub-tab-content active" id="train-sub-workouts">
+            <div class="progress-section" id="progress-section" style="display:none;">
+                <h2 class="progress-title">📈 Прогресс по упражнениям</h2>
+                <div class="progress-controls">
+                    <div class="progress-select-wrap">
+                        <label>Упражнение</label>
+                        <select class="progress-select" id="progress-exercise-select" onchange="renderTrainChart()">
+                            <option value="">— выберите упражнение —</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display:block;font-size:12px;font-weight:700;color:#9a3412;margin-bottom:4px;">Показывать</label>
+                        <div class="metric-toggle">
+                            <button class="metric-btn active" data-metric="weight" onclick="setTrainMetric('weight')">Макс. вес</button>
+                            <button class="metric-btn" data-metric="volume" onclick="setTrainMetric('volume')">Объём</button>
+                        </div>
                     </div>
                 </div>
+                <div id="progress-chart-container"></div>
+                <div id="progress-stats-container"></div>
+                <div id="progress-history-container"></div>
             </div>
-            <div id="progress-chart-container"></div>
-            <div id="progress-stats-container"></div>
-            <div id="progress-history-container"></div>
+            <div class="workouts-list" id="workouts-list"></div>
         </div>
-        <div class="workouts-list" id="workouts-list"></div>
+        
+        <!-- Подвкладка: Упражнения -->
+        <div class="sub-tab-content" id="train-sub-exercises">
+            <div class="toolbar">
+                <button class="btn orange primary" onclick="openCategoryModal()">➕ Категория</button>
+                <button class="btn orange" onclick="openBaseExerciseModal()">➕ Базовое упражнение</button>
+                <button class="btn orange" onclick="openVariantModal()">➕ Вариант</button>
+            </div>
+            
+            <div class="exercise-management">
+                <div class="exercise-section">
+                    <h3 class="exercise-section-title">📂 Категории</h3>
+                    <div id="exercise-categories-list"></div>
+                </div>
+                
+                <div class="exercise-section">
+                    <h3 class="exercise-section-title">🏋️ Базовые упражнения</h3>
+                    <div id="base-exercises-list"></div>
+                </div>
+                
+                <div class="exercise-section">
+                    <h3 class="exercise-section-title">📝 Варианты упражнений</h3>
+                    <div id="exercise-variants-list"></div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="main-tab-content" id="main-tab-finance">
@@ -559,6 +596,114 @@
     </div>
 </div>
 
+<!-- ===== EXERCISE MANAGEMENT MODALS ===== -->
+
+<!-- Модалка: Категория упражнения -->
+<div class="modal-overlay" id="exercise-category-modal" onclick="if(event.target===this)closeAllModals()">
+    <div class="modal">
+        <div class="modal-header train">
+            <h3 class="modal-title" id="exercise-category-modal-title">➕ Добавить категорию</h3>
+            <button class="modal-close" onclick="closeAllModals()">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-grid">
+                <div class="form-field train">
+                    <label>📛 Название</label>
+                    <input type="text" id="f-ex-cat-name" placeholder="Например: Силовые">
+                </div>
+                <div class="form-field train">
+                    <label>📊 Тип</label>
+                    <select id="f-ex-cat-type">
+                        <option value="strength">💪 Силовые</option>
+                        <option value="cardio">🏃 Кардио</option>
+                        <option value="bodyweight">🏋️ Повторения без веса</option>
+                        <option value="timed">⏱ На время</option>
+                    </select>
+                </div>
+                <div class="form-field train">
+                    <label>😊 Иконка</label>
+                    <input type="text" id="f-ex-cat-icon" placeholder="💪" maxlength="2">
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer train">
+            <button class="btn orange" onclick="closeAllModals()">Отмена</button>
+            <button class="btn orange primary" onclick="saveExerciseCategory()">💾 Сохранить</button>
+        </div>
+    </div>
+</div>
+
+<!-- Модалка: Базовое упражнение -->
+<div class="modal-overlay" id="base-exercise-modal" onclick="if(event.target===this)closeAllModals()">
+    <div class="modal">
+        <div class="modal-header train">
+            <h3 class="modal-title" id="base-exercise-modal-title">➕ Добавить базовое упражнение</h3>
+            <button class="modal-close" onclick="closeAllModals()">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-grid">
+                <div class="form-field train">
+                    <label>📛 Название</label>
+                    <input type="text" id="f-base-ex-name" placeholder="Например: Жим лежа">
+                </div>
+                <div class="form-field train">
+                    <label>📂 Категория</label>
+                    <select id="f-base-ex-category">
+                        <option value="">— выбрать —</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer train">
+            <button class="btn orange" onclick="closeAllModals()">Отмена</button>
+            <button class="btn orange primary" onclick="saveBaseExercise()">💾 Сохранить</button>
+        </div>
+    </div>
+</div>
+
+<!-- Модалка: Вариант упражнения -->
+<div class="modal-overlay" id="exercise-variant-modal" onclick="if(event.target===this)closeAllModals()">
+    <div class="modal">
+        <div class="modal-header train">
+            <h3 class="modal-title" id="exercise-variant-modal-title">➕ Добавить вариант</h3>
+            <button class="modal-close" onclick="closeAllModals()">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-grid">
+                <div class="form-field train">
+                    <label>📛 Название варианта</label>
+                    <input type="text" id="f-variant-name" placeholder="Например: Жим штанги лежа">
+                </div>
+                <div class="form-field train">
+                    <label>🏋️ Базовое упражнение</label>
+                    <select id="f-variant-base">
+                        <option value="">— выбрать —</option>
+                    </select>
+                </div>
+                <div class="form-field train">
+                    <label>📊 Тип</label>
+                    <select id="f-variant-type">
+                        <option value="strength">💪 Силовые</option>
+                        <option value="cardio">🏃 Кардио</option>
+                        <option value="bodyweight">🏋️ Повторения без веса</option>
+                        <option value="timed">⏱ На время</option>
+                    </select>
+                </div>
+                <div class="form-field train">
+                    <label>📈 Метрики</label>
+                    <select id="f-variant-metric">
+                        <option value="weight">Вес + повторения</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer train">
+            <button class="btn orange" onclick="closeAllModals()">Отмена</button>
+            <button class="btn orange primary" onclick="saveExerciseVariant()">💾 Сохранить</button>
+        </div>
+    </div>
+</div>
+
 <!-- Модалка 1.4: Добавить/редактировать категорию -->
 <div class="modal-overlay" id="category-modal" onclick="if(event.target===this)closeAllModals()">
     <div class="modal">
@@ -623,6 +768,7 @@
 <script src="js/finance-render.js"></script>
 <script src="js/finance-import.js"></script>
 <script src="js/gymkeeper-parser.js"></script>
+<script src="js/exercises.js"></script>
 <script src="js/dashboard.js"></script>
 <script src="js/app.js"></script>
 </body>

@@ -49,6 +49,37 @@ function switchFinanceSubTab(tab, event) {
     setTimeout(() => applyReadOnlyState(), 50);
 }
 
+function switchTrainSubTab(tab, event) {
+    const trainContent = document.getElementById('main-tab-train');
+    trainContent.querySelectorAll('.sub-tab-btn').forEach(b => b.classList.remove('active'));
+    trainContent.querySelectorAll('.sub-tab-content').forEach(c => c.classList.remove('active'));
+    
+    if(event) {
+        event.target.classList.add('active');
+    } else {
+        // If no event provided, find the button for this tab
+        const buttons = trainContent.querySelectorAll('.sub-tab-btn');
+        buttons.forEach(b => {
+            if(b.getAttribute('onclick').includes(`'${tab}'`)) {
+                b.classList.add('active');
+            }
+        });
+    }
+    
+    document.getElementById(`train-sub-${tab}`).classList.add('active');
+    
+    if(tab === 'exercises') {
+        renderExerciseCategories();
+        renderBaseExercises();
+        renderExerciseVariants();
+    } else if(tab === 'workouts') {
+        renderTrainAll();
+    }
+    
+    // Re-apply read-only state after rendering dynamic content
+    setTimeout(() => applyReadOnlyState(), 50);
+}
+
 // === МОДАЛКИ ===
 
 function openNutritionModal() {
@@ -191,6 +222,9 @@ function syncToCloud() {
             workouts: workouts,
             progress: progress,
             financeData: financeData,
+            exerciseCategories: exerciseCategories,
+            baseExercises: baseExercises,
+            exerciseVariants: exerciseVariants,
             lastUpdated: Date.now()
         };
         
@@ -247,6 +281,15 @@ function importAllData(input) {
                 });
             }
             if(parsed.progress) localStorage.setItem('exercise-progress', JSON.stringify(parsed.progress));
+            if(parsed.exerciseCategories && Array.isArray(parsed.exerciseCategories)) {
+                exerciseCategories = parsed.exerciseCategories;
+            }
+            if(parsed.baseExercises && Array.isArray(parsed.baseExercises)) {
+                baseExercises = parsed.baseExercises;
+            }
+            if(parsed.exerciseVariants && Array.isArray(parsed.exerciseVariants)) {
+                exerciseVariants = parsed.exerciseVariants;
+            }
             if(parsed.financeData) {
                 if(parsed.financeData.transactions && Array.isArray(parsed.financeData.transactions)) {
                     const existingIds = new Set(financeData.transactions.map(t => t.id));
@@ -343,6 +386,16 @@ function saveTrainings() {
     // Migrate category colors
     if (typeof migrateCategoryColors === 'function') {
         migrateCategoryColors();
+    }
+    
+    // Initialize exercise data
+    if (typeof initExerciseData === 'function') {
+        initExerciseData();
+    }
+    
+    // Migrate old exercises to new structure
+    if (typeof migrateOldExercises === 'function') {
+        migrateOldExercises();
     }
     
     // Render with initial data (auth state will reload if needed)

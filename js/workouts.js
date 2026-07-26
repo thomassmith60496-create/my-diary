@@ -46,24 +46,136 @@ function extractExercises(text) {
     const lines = text.split('\n').map(l => l.trim()).filter(l => l);
     const exercises = [];
     let current = null;
+    
     for(let i = 0; i < lines.length; i++) {
         const line = lines[i];
         if(line.match(/^(СУПЕРСЕТ|КРУГОВАЯ|🏋️|GymKeeper)/i)) continue;
+        
         const isExercise = line.match(/^\d+\)\s+.+/) || (line.includes('·') && !line.match(/\d+(кг|lb)\*/i));
+        
         if(isExercise) {
             if(current) exercises.push(current);
-            current = { name: line.replace(/^\d+\)\s*/, '').trim(), sets: [] };
-        } else if(current && line.match(/\d+(кг|lb)\*/i)) {
-            const match = line.match(/(\d+)(кг|lb)\*(\d+)/i);
+            
+            const exerciseName = line.replace(/^\d+\)\s*/, '').trim();
+            const exerciseData = findOrCreateExerciseForImport(exerciseName);
+            
+            current = {
+                name: exerciseName,
+                exerciseId: exerciseData ? exerciseData.variant.id : null,
+                baseExerciseId: exerciseData ? exerciseData.baseExercise.id : null,
+                type: exerciseData ? exerciseData.variant.type : 'strength',
+                metricType: exerciseData ? exerciseData.variant.metricType : 'weight',
+                sets: []
+            };
+        } else if(current) {
+            // Парсим разные форматы
+            
+            // Формат 1: Вес + повторения (20кг*10, 20кг*10, 100lb*5)
+            let match = line.match(/(\d+(?:\.\d+)?)(кг|lb)\*(\d+)/i);
             if(match) {
-                const weight = parseInt(match[1]);
+                const weight = parseFloat(match[1]);
                 const unit = match[2].toLowerCase();
                 const reps = parseInt(match[3]);
-                current.sets.push({ weight: unit === 'lb' ? Math.round(weight * 0.4536) : weight, reps });
+                current.sets.push({ 
+                    weight: unit === 'lb' ? Math.round(weight * 0.4536) : weight, 
+                    reps: reps 
+                });
+                continue;
+            }
+            
+            // Формат 2: Время + вес (30сек*0кг, 1мин*5кг)
+            match = line.match(/(\d+)(сек|мин|ч)\*(\d+(?:\.\d+)?)(кг|lb)?/i);
+            if(match) {
+                const timeValue = parseInt(match[1]);
+                const timeUnit = match[2].toLowerCase();
+                const weight = match[4] ? parseFloat(match[3]) : 0;
+                const unit = match[4] ? match[4].toLowerCase() : 'кг';
+                
+                // Конвертируем в секунды
+                let timeInSeconds = timeValue;
+                if(timeUnit === 'мин') timeInSeconds = timeValue * 60;
+                if(timeUnit === 'ч') timeInSeconds = timeValue * 3600;
+                
+                current.sets.push({ 
+                    time: timeInSeconds,
+                    weight: unit === 'lb' ? Math.round(weight * 0.4536) : weight,
+                    reps: 0 
+                });
+                continue;
+            }
+            
+            // Формат 3: Кардио (25мин:3.8км, 30мин, 5км)
+            match = line.match(/(\d+)(сек|мин|ч)?\s*[:]\s*(\d+(?:\.\d+)?)(км|м)?/i);
+            if(match) {
+                const timeValue = parseInt(match[1]);
+                const timeUnit = match[2] ? match[2].toLowerCase() : 'мин';
+                const distance = parseFloat(match[3]);
+                const distanceUnit = match[4] ? match[4].toLowerCase() : 'км';
+                
+                let timeInSeconds = timeValue;
+                if(timeUnit === 'мин') timeInSeconds = timeValue * 60;
+                if(timeUnit === 'ч') timeInSeconds = timeValue * 3600;
+                
+                let distanceInMeters = distance;
+                if(distanceUnit === 'км') distanceInMeters = distance * 1000;
+                
+                current.sets.push({ 
+                    time: timeInSeconds,
+                    distance: distanceInMeters,
+                    reps: 0 
+                });
+                continue;
+            }
+            
+            // Формат 4: Только время (30сек, 1мин, 2ч)
+            match = line.match(/^(\d+)(сек|мин|ч)$/i);
+            if(match) {
+                const timeValue = parseInt(match[1]);
+                const timeUnit = match[2].toLowerCase();
+                
+                let timeInSeconds = timeValue;
+                if(timeUnit === 'мин') timeInSeconds = timeValue * 60;
+                if(timeUnit === 'ч') timeInSeconds = timeValue * 3600;
+                
+                current.sets.push({ 
+                    time: timeInSeconds,
+                    weight: 0,
+                    reps: 0 
+                });
+                continue;
+            }
+            
+            // Формат 5: Только повторения (15 раз, 20 повторений)
+            match = line.match(/^(\d+)\s*(раз|повторений|повт)/i);
+            if(match) {
+                const reps = parseInt(match[1]);
+                current.sets.push({ 
+                    weight: 0,
+                    reps: reps 
+                });
+                continue;
+            }
+            
+            // Формат 6: Только дистанция (5км, 1000м)
+            match = line.match(/^(\d+(?:\.\d+)?)\s*(км|м)$/i);
+            if(match) {
+                const distance = parseFloat(match[1]);
+                const unit = match[2].toLowerCase();
+                const distanceInMeters = unit === 'км' ? distance * 1000 : distance;
+                
+                current.sets.push({ 
+                    time: 0,
+                    distance: distanceInMeters,
+                    reps: 0 
+                });
+                continue;
             }
         }
     }
+    
     if(current) exercises.push(current);
+    
+    // Фильтруем упражнения с подходами
     return exercises.filter(e => e.sets.length > 0);
 }
 
@@ -73,13 +185,56 @@ function saveExerciseProgress(workout) {
         allProgress[exName] = allProgress[exName].filter(e => e.workoutId !== workout.id);
         if(allProgress[exName].length === 0) delete allProgress[exName];
     });
+    
     workout.parsedExercises.forEach(ex => {
-        if(!allProgress[ex.name]) allProgress[ex.name] = [];
-        const maxWeight = Math.max(...ex.sets.map(s => s.weight));
-        const totalReps = ex.sets.reduce((sum, s) => sum + s.reps, 0);
-        const volume = ex.sets.reduce((sum, s) => sum + s.weight * s.reps, 0);
-        allProgress[ex.name].push({ date: workout.date, workoutId: workout.id, sets: ex.sets.length, maxWeight, totalReps, volume });
+        // Используем exerciseId если есть, иначе имя
+        const progressKey = ex.exerciseId || ex.name;
+        if(!allProgress[progressKey]) allProgress[progressKey] = [];
+        
+        // Вычисляем метрики в зависимости от типа упражнения
+        let maxWeight = 0;
+        let totalReps = 0;
+        let volume = 0;
+        let maxTime = 0;
+        let maxDistance = 0;
+        
+        ex.sets.forEach(s => {
+            if(s.weight > maxWeight) maxWeight = s.weight;
+            if(s.reps > 0) totalReps += s.reps;
+            if(s.weight > 0 && s.reps > 0) volume += s.weight * s.reps;
+            if(s.time > maxTime) maxTime = s.time;
+            if(s.distance > maxDistance) maxDistance = s.distance;
+        });
+        
+        const entry = {
+            date: workout.date,
+            workoutId: workout.id,
+            sets: ex.sets.length,
+            exerciseId: ex.exerciseId,
+            baseExerciseId: ex.baseExerciseId,
+            type: ex.type,
+            metricType: ex.metricType
+        };
+        
+        // Добавляем метрики в зависимости от типа
+        if(ex.type === 'strength' || ex.type === 'bodyweight') {
+            entry.maxWeight = maxWeight;
+            entry.totalReps = totalReps;
+            entry.volume = volume;
+        }
+        if(ex.type === 'cardio') {
+            entry.maxTime = maxTime;
+            entry.maxDistance = maxDistance;
+            entry.avgSpeed = maxTime > 0 ? (maxDistance / maxTime * 3600) : 0; // км/ч
+        }
+        if(ex.type === 'timed') {
+            entry.maxTime = maxTime;
+            entry.maxWeight = maxWeight;
+        }
+        
+        allProgress[progressKey].push(entry);
     });
+    
     localStorage.setItem('exercise-progress', JSON.stringify(allProgress));
     // Also sync to Firebase immediately so progress isn't lost
     syncToCloud();
@@ -190,10 +345,66 @@ function renderTrainChart() {
     const allProgress = JSON.parse(localStorage.getItem('exercise-progress') || '{}');
     const history = allProgress[name];
     if(!history || history.length === 0) { chartC.innerHTML = '<div class="chart-empty">Нет данных</div>'; return; }
+    
     const sorted = [...history].sort((a, b) => a.date.localeCompare(b.date));
-    const values = sorted.map(e => currentTrainMetric === 'weight' ? e.maxWeight : e.volume);
-    const unit = currentTrainMetric === 'weight' ? 'кг' : 'кг·повт';
-    const metricLabel = currentTrainMetric === 'weight' ? 'Макс. вес' : 'Объём';
+    
+    // Определяем тип упражнения из первой записи
+    const exerciseType = sorted[0].type || 'strength';
+    const metricType = sorted[0].metricType || 'weight';
+    
+    // Выбираем метрики в зависимости от типа упражнения
+    let values, unit, metricLabel;
+    
+    if(exerciseType === 'cardio') {
+        // Для кардио показываем скорость по умолчанию
+        if(currentTrainMetric === 'distance') {
+            values = sorted.map(e => e.maxDistance / 1000); // в км
+            unit = 'км';
+            metricLabel = 'Дистанция';
+        } else if(currentTrainMetric === 'time') {
+            values = sorted.map(e => e.maxTime / 60); // в минутах
+            unit = 'мин';
+            metricLabel = 'Время';
+        } else {
+            // По умолчанию скорость
+            values = sorted.map(e => e.avgSpeed || 0);
+            unit = 'км/ч';
+            metricLabel = 'Средняя скорость';
+        }
+    } else if(exerciseType === 'timed') {
+        // Для упражнений на время
+        if(currentTrainMetric === 'weight') {
+            values = sorted.map(e => e.maxWeight || 0);
+            unit = 'кг';
+            metricLabel = 'Макс. вес';
+        } else {
+            values = sorted.map(e => e.maxTime / 60); // в минутах
+            unit = 'мин';
+            metricLabel = 'Время';
+        }
+    } else if(exerciseType === 'bodyweight') {
+        // Для повторений без веса
+        if(currentTrainMetric === 'reps') {
+            values = sorted.map(e => e.totalReps || 0);
+            unit = 'повт';
+            metricLabel = 'Повторения';
+        } else {
+            values = sorted.map(e => e.maxWeight || 0);
+            unit = 'кг';
+            metricLabel = 'Макс. вес';
+        }
+    } else {
+        // Силовые (по умолчанию)
+        if(currentTrainMetric === 'volume') {
+            values = sorted.map(e => e.volume || 0);
+            unit = 'кг·повт';
+            metricLabel = 'Объём';
+        } else {
+            values = sorted.map(e => e.maxWeight || 0);
+            unit = 'кг';
+            metricLabel = 'Макс. вес';
+        }
+    }
     
     // Use shared chart with train-specific styling
     chartC.innerHTML = renderTrainSVGChart(sorted, values, unit, metricLabel);

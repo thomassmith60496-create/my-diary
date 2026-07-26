@@ -11,6 +11,16 @@ let workouts = [];
 let editingWorkoutId = null;
 let currentTrainMetric = 'weight';
 
+// --- Данные упражнений ---
+let exerciseCategories = [
+    { id: 'cat-strength', name: 'Силовые', type: 'strength', icon: '💪' },
+    { id: 'cat-cardio', name: 'Кардио', type: 'cardio', icon: '🏃' },
+    { id: 'cat-bodyweight', name: 'Повторения без веса', type: 'bodyweight', icon: '🏋️' },
+    { id: 'cat-timed', name: 'Упражнения на время', type: 'timed', icon: '⏱' }
+];
+let baseExercises = []; // { id, name, categoryId, normalizedName }
+let exerciseVariants = []; // { id, baseExerciseId, name, normalizedName, type, metricType, needsReview, originalName }
+
 // --- Данные финансов ---
 let financeData = {
     transactions: [],
