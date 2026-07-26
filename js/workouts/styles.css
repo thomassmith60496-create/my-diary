@@ -1,0 +1,15 @@
+.workout-v2-container { padding: 12px; }
+
+.wf-header-actions { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+
+.wf-stats { display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; font-size: 13px; color: #9a3412; }
+.wf-stat { background: #fff7ed; padding: 4px 12px; border-radius: 20px; border: 1px solid #fdba74; }
+
+.wf-list { display: flex; flex-direction: column; gap: 12px; }
+
+.wf-parsed-list { display: flex; flex-direction: column; gap: 6px; padding: 8px; background: #fff7ed; border-radius: 8px; }
+.wf-parsed-item { display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: white; border-radius: 6px; border: 1px solid #fed7aa; }
+.wf-parsed-name { font-weight: 600; color: #7c2d12; font-size: 14px; }
+.wf-parsed-stats { color: #9a3412; font-size: 12px; }
+
+.wf-unrecognized-warn { background: #fef3c7; border: 1px solid #f59e0b; color: #92400e; padding: 8px 12px; border-radius: 8px; font-size: 13px; margin-top: 8px; }
