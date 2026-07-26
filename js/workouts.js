@@ -37,6 +37,21 @@ function deleteWorkout(id) {
     renderTrainAll();
 }
 
+function deleteAllWorkouts() {
+    if(!confirm('Удалить ВСЕ тренировки? Это нельзя отменить.')) return;
+    if(!confirm('Вы уверены? Все данные о прогрессе будут удалены.')) return;
+    
+    // Очищаем прогресс
+    localStorage.removeItem('exercise-progress');
+    
+    // Очищаем тренировки
+    workouts = [];
+    saveTrainings();
+    renderTrainAll();
+    
+    alert('✅ Все тренировки удалены');
+}
+
 function toggleWorkout(id) {
     const card = document.querySelector(`.workout-card[data-id="${id}"]`);
     if(card) card.classList.toggle('collapsed');
