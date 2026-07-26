@@ -9,6 +9,7 @@ function normalizeName(name) {
     if (!name) return '';
     return name.toLowerCase()
         .replace(/ё/g, 'е')
+        .replace(/[ьъ]/g, '')
         .replace(/\s+/g, ' ')
         .trim();
 }
@@ -17,6 +18,7 @@ function normalizeExerciseName(name) {
     if (!name) return '';
     return name.toLowerCase()
         .replace(/ё/g, 'е')
+        .replace(/[ьъ]/g, '')
         .replace(/\s+/g, ' ')
         .replace(/[^\w\s]/g, '')
         .trim();
@@ -288,6 +290,149 @@ function saveExerciseData() {
     } catch (e) {
         console.error('Ошибка сохранения данных упражнений:', e);
     }
+}
+
+// === РАССТОЯНИЕ ЛЕВЕНШТЕЙНА ДЛЯ ПОИСКА ПОХОЖИХ НАЗВАНИЙ ===
+
+function levenshteinDistance(a, b) {
+    const matrix = [];
+    for(let i = 0; i <= b.length; i++) {
+        matrix[i] = [i];
+    }
+    for(let j = 0; j <= a.length; j++) {
+        matrix[0][j] = j;
+    }
+    for(let i = 1; i <= b.length; i++) {
+        for(let j = 1; j <= a.length; j++) {
+            const cost = a[j - 1] === b[i - 1] ? 0 : 1;
+            matrix[i][j] = Math.min(
+                matrix[i - 1][j] + 1,
+                matrix[i][j - 1] + 1,
+                matrix[i - 1][j - 1] + cost
+            );
+        }
+    }
+    return matrix[b.length][a.length];
+}
+
+function findSimilarExercises(name, threshold = 0.4) {
+    const normalized = normalizeExerciseName(name);
+    const results = [];
+    
+    exerciseVariants.forEach(variant => {
+        const variantNorm = normalizeExerciseName(variant.name);
+        if (variantNorm === normalized) {
+            results.push({ variant, distance: 0, matchType: 'exact' });
+            return;
+        }
+        
+        // Проверяем вхождение одного названия в другое
+        if (normalized.includes(variantNorm) || variantNorm.includes(normalized)) {
+            results.push({ variant, distance: 0.1, matchType: 'substring' });
+            return;
+        }
+        
+        // Проверяем расстояние Левенштейна
+        const maxLen = Math.max(normalized.length, variantNorm.length);
+        if (maxLen === 0) return;
+        const distance = levenshteinDistance(normalized, variantNorm);
+        const ratio = distance / maxLen;
+        
+        if (ratio <= threshold) {
+            results.push({ variant, distance: ratio, matchType: 'fuzzy' });
+        }
+    });
+    
+    // Сортируем по близости совпадения
+    results.sort((a, b) => a.distance - b.distance);
+    return results;
+}
+
+function suggestMerge() {
+    const suggestions = [];
+    const checked = new Set();
+    
+    exerciseVariants.forEach((v1, i) => {
+        if (checked.has(v1.id)) return;
+        
+        const similar = findSimilarExercises(v1.name, 0.3);
+        const duplicates = similar.filter(s => {
+            if (s.variant.id === v1.id) return false;
+            if (checked.has(s.variant.id)) return false;
+            // Не предлагаем объединять если названия отличаются ключевыми словами
+            const words1 = new Set(normalizeExerciseName(v1.name).split(' '));
+            const words2 = new Set(normalizeExerciseName(s.variant.name).split(' '));
+            // Проверяем, что разница только в регистре/ё/опечатках
+            return s.distance < 0.2 || s.matchType === 'substring';
+        });
+        
+        if (duplicates.length > 0) {
+            suggestions.push({
+                target: v1,
+                duplicates: duplicates.map(d => d.variant),
+                reason: duplicates[0].matchType
+            });
+            checked.add(v1.id);
+            duplicates.forEach(d => checked.add(d.variant.id));
+        }
+    });
+    
+    return suggestions;
+}
+
+function reassignVariantToBaseExercise(variantId, newBaseExerciseId) {
+    const variant = findVariantById(variantId);
+    if (!variant) return false;
+    
+    variant.baseExerciseId = newBaseExerciseId;
+    saveExerciseData();
+    syncToCloud();
+    return true;
+}
+
+function splitVariant(name1, name2) {
+    // Разделить ошибочно объединённый вариант на два
+    const sourceVariant = findVariantByName(name1);
+    if (!sourceVariant) return null;
+    
+    // Создаём новый вариант для name2
+    const newVariant = createVariant(
+        name2,
+        sourceVariant.baseExerciseId,
+        sourceVariant.type,
+        sourceVariant.metricType
+    );
+    
+    // Переносим прогресс (половину записей) в новый вариант
+    const progress = getProgressData();
+    const sourceKey = sourceVariant.id || sourceVariant.name;
+    const sourceProgress = progress[sourceKey];
+    
+    if (sourceProgress && sourceProgress.length > 1) {
+        const mid = Math.floor(sourceProgress.length / 2);
+        const movedEntries = sourceProgress.splice(mid);
+        
+        movedEntries.forEach(entry => {
+            entry.exerciseId = newVariant.id;
+            entry.baseExerciseId = newVariant.baseExerciseId;
+            entry.type = newVariant.type;
+            entry.metricType = newVariant.metricType;
+        });
+        
+        progress[newVariant.id] = movedEntries;
+        
+        if (sourceProgress.length === 0) {
+            delete progress[sourceKey];
+        } else {
+            progress[sourceKey] = sourceProgress;
+        }
+        
+        localStorage.setItem('exercise-progress', JSON.stringify(progress));
+    }
+    
+    saveExerciseData();
+    syncToCloud();
+    return newVariant;
 }
 
 // === ИНИЦИАЛИЗАЦИЯ ===

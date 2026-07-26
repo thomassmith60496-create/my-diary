@@ -83,7 +83,9 @@ function extractExercises(text) {
                 sets: []
             };
         } else if(current) {
-            // Парсим разные форматы
+            // Сохраняем оригинальный текст строки для аудита
+            const originalText = line;
+            let parsed = false;
             
             // Формат 1: Вес + повторения (20кг*10, 20кг*10, 100lb*5)
             let match = line.match(/(\d+(?:\.\d+)?)(кг|lb)\*(\d+)/i);
@@ -93,105 +95,140 @@ function extractExercises(text) {
                 const reps = parseInt(match[3]);
                 current.sets.push({ 
                     weight: unit === 'lb' ? Math.round(weight * 0.4536) : weight, 
-                    reps: reps 
+                    reps: reps,
+                    originalText: originalText
                 });
-                continue;
+                parsed = true;
             }
             
             // Формат 2: Время + вес (30сек*0кг, 1мин*5кг)
-            match = line.match(/(\d+)(сек|мин|ч)\*(\d+(?:\.\d+)?)(кг|lb)?/i);
-            if(match) {
-                const timeValue = parseInt(match[1]);
-                const timeUnit = match[2].toLowerCase();
-                const weight = match[4] ? parseFloat(match[3]) : 0;
-                const unit = match[4] ? match[4].toLowerCase() : 'кг';
-                
-                // Конвертируем в секунды
-                let timeInSeconds = timeValue;
-                if(timeUnit === 'мин') timeInSeconds = timeValue * 60;
-                if(timeUnit === 'ч') timeInSeconds = timeValue * 3600;
-                
-                current.sets.push({ 
-                    time: timeInSeconds,
-                    weight: unit === 'lb' ? Math.round(weight * 0.4536) : weight,
-                    reps: 0 
-                });
-                continue;
+            if(!parsed) {
+                match = line.match(/(\d+)(сек|мин|ч)\*(\d+(?:\.\d+)?)(кг|lb)?/i);
+                if(match) {
+                    const timeValue = parseInt(match[1]);
+                    const timeUnit = match[2].toLowerCase();
+                    const weight = match[4] ? parseFloat(match[3]) : 0;
+                    const unit = match[4] ? match[4].toLowerCase() : 'кг';
+                    
+                    let timeInSeconds = timeValue;
+                    if(timeUnit === 'мин') timeInSeconds = timeValue * 60;
+                    if(timeUnit === 'ч') timeInSeconds = timeValue * 3600;
+                    
+                    current.sets.push({ 
+                        time: timeInSeconds,
+                        weight: unit === 'lb' ? Math.round(weight * 0.4536) : weight,
+                        reps: 0,
+                        originalText: originalText
+                    });
+                    parsed = true;
+                }
             }
             
             // Формат 3: Кардио (25мин:3.8км, 30мин, 5км)
-            match = line.match(/(\d+)(сек|мин|ч)?\s*[:]\s*(\d+(?:\.\d+)?)(км|м)?/i);
-            if(match) {
-                const timeValue = parseInt(match[1]);
-                const timeUnit = match[2] ? match[2].toLowerCase() : 'мин';
-                const distance = parseFloat(match[3]);
-                const distanceUnit = match[4] ? match[4].toLowerCase() : 'км';
-                
-                let timeInSeconds = timeValue;
-                if(timeUnit === 'мин') timeInSeconds = timeValue * 60;
-                if(timeUnit === 'ч') timeInSeconds = timeValue * 3600;
-                
-                let distanceInMeters = distance;
-                if(distanceUnit === 'км') distanceInMeters = distance * 1000;
-                
-                current.sets.push({ 
-                    time: timeInSeconds,
-                    distance: distanceInMeters,
-                    reps: 0 
-                });
-                continue;
+            if(!parsed) {
+                match = line.match(/(\d+)(сек|мин|ч)?\s*[:]\s*(\d+(?:\.\d+)?)(км|м)?/i);
+                if(match) {
+                    const timeValue = parseInt(match[1]);
+                    const timeUnit = match[2] ? match[2].toLowerCase() : 'мин';
+                    const distance = parseFloat(match[3]);
+                    const distanceUnit = match[4] ? match[4].toLowerCase() : 'км';
+                    
+                    let timeInSeconds = timeValue;
+                    if(timeUnit === 'мин') timeInSeconds = timeValue * 60;
+                    if(timeUnit === 'ч') timeInSeconds = timeValue * 3600;
+                    
+                    let distanceInMeters = distance;
+                    if(distanceUnit === 'км') distanceInMeters = distance * 1000;
+                    
+                    current.sets.push({ 
+                        time: timeInSeconds,
+                        distance: distanceInMeters,
+                        reps: 0,
+                        originalText: originalText
+                    });
+                    parsed = true;
+                }
             }
             
             // Формат 4: Только время (30сек, 1мин, 2ч)
-            match = line.match(/^(\d+)(сек|мин|ч)$/i);
-            if(match) {
-                const timeValue = parseInt(match[1]);
-                const timeUnit = match[2].toLowerCase();
-                
-                let timeInSeconds = timeValue;
-                if(timeUnit === 'мин') timeInSeconds = timeValue * 60;
-                if(timeUnit === 'ч') timeInSeconds = timeValue * 3600;
-                
-                current.sets.push({ 
-                    time: timeInSeconds,
-                    weight: 0,
-                    reps: 0 
-                });
-                continue;
+            if(!parsed) {
+                match = line.match(/^(\d+)(сек|мин|ч)$/i);
+                if(match) {
+                    const timeValue = parseInt(match[1]);
+                    const timeUnit = match[2].toLowerCase();
+                    
+                    let timeInSeconds = timeValue;
+                    if(timeUnit === 'мин') timeInSeconds = timeValue * 60;
+                    if(timeUnit === 'ч') timeInSeconds = timeValue * 3600;
+                    
+                    current.sets.push({ 
+                        time: timeInSeconds,
+                        weight: 0,
+                        reps: 0,
+                        originalText: originalText
+                    });
+                    parsed = true;
+                }
             }
             
             // Формат 5: Только повторения (15 раз, 20 повторений)
-            match = line.match(/^(\d+)\s*(раз|повторений|повт)/i);
-            if(match) {
-                const reps = parseInt(match[1]);
-                current.sets.push({ 
-                    weight: 0,
-                    reps: reps 
-                });
-                continue;
+            if(!parsed) {
+                match = line.match(/^(\d+)\s*(раз|повторений|повт|раза)/i);
+                if(match) {
+                    const reps = parseInt(match[1]);
+                    current.sets.push({ 
+                        weight: 0,
+                        reps: reps,
+                        originalText: originalText
+                    });
+                    parsed = true;
+                }
             }
             
             // Формат 6: Только дистанция (5км, 1000м)
-            match = line.match(/^(\d+(?:\.\d+)?)\s*(км|м)$/i);
-            if(match) {
-                const distance = parseFloat(match[1]);
-                const unit = match[2].toLowerCase();
-                const distanceInMeters = unit === 'км' ? distance * 1000 : distance;
-                
-                current.sets.push({ 
-                    time: 0,
-                    distance: distanceInMeters,
-                    reps: 0 
+            if(!parsed) {
+                match = line.match(/^(\d+(?:\.\d+)?)\s*(км|м)$/i);
+                if(match) {
+                    const distance = parseFloat(match[1]);
+                    const unit = match[2].toLowerCase();
+                    const distanceInMeters = unit === 'км' ? distance * 1000 : distance;
+                    
+                    current.sets.push({ 
+                        time: 0,
+                        distance: distanceInMeters,
+                        reps: 0,
+                        originalText: originalText
+                    });
+                    parsed = true;
+                }
+            }
+            
+            // Если формат не распознан — сохраняем как есть, помечаем needsReview
+            if(!parsed) {
+                current.sets.push({
+                    weight: 0,
+                    reps: 0,
+                    originalText: originalText,
+                    unrecognized: true
                 });
-                continue;
+                current.hasUnrecognized = true;
+                
+                // Помечаем вариант упражнения как требующий проверки
+                if (current.exerciseId) {
+                    const variant = findVariantById(current.exerciseId);
+                    if (variant) {
+                        variant.needsReview = true;
+                        saveExerciseData();
+                    }
+                }
             }
         }
     }
     
     if(current) exercises.push(current);
     
-    // Фильтруем упражнения с подходами
-    return exercises.filter(e => e.sets.length > 0);
+    // Не фильтруем упражнения без подходов — сохраняем даже пустые для аудита
+    return exercises;
 }
 
 function saveExerciseProgress(workout) {

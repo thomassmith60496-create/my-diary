@@ -200,6 +200,8 @@
         <div class="sub-tabs">
             <button class="sub-tab-btn active" onclick="switchTrainSubTab('workouts', event)">📋 Тренировки</button>
             <button class="sub-tab-btn" onclick="switchTrainSubTab('exercises', event)">🏋️ Упражнения</button>
+            <button class="sub-tab-btn" onclick="switchTrainSubTab('all-exercises', event)">📝 Все упражнения</button>
+            <button class="sub-tab-btn" onclick="switchTrainSubTab('needs-review', event)">⚠️ Требует проверки</button>
         </div>
         
         <!-- Подвкладка: Тренировки -->
@@ -251,6 +253,20 @@
                     <h3 class="exercise-section-title">📝 Варианты упражнений</h3>
                     <div id="exercise-variants-list"></div>
                 </div>
+            </div>
+        </div>
+        
+        <!-- Подвкладка: Все упражнения -->
+        <div class="sub-tab-content" id="train-sub-all-exercises">
+            <div id="all-exercises-list"></div>
+            <div id="merge-suggestions-container"></div>
+        </div>
+        
+        <!-- Подвкладка: Требует проверки -->
+        <div class="sub-tab-content" id="train-sub-needs-review">
+            <div class="needs-review-section">
+                <h3 class="exercise-section-title">⚠️ Упражнения, требующие проверки</h3>
+                <div id="needs-review-list"></div>
             </div>
         </div>
     </div>
@@ -745,6 +761,89 @@
         <div class="modal-footer finance">
             <button class="btn" onclick="closeAllModals()">Отмена</button>
             <button class="btn primary" style="background:#a855f7; border-color:#7e22ce; color:white;" onclick="saveCategory()">💾 Сохранить</button>
+        </div>
+    </div>
+</div>
+
+<!-- ===== NEW EXERCISE MODALS ===== -->
+
+<!-- Модалка: Переназначение базового упражнения -->
+<div class="modal-overlay" id="reassign-modal" onclick="if(event.target===this)closeAllModals()">
+    <div class="modal">
+        <div class="modal-header train">
+            <h3 class="modal-title" id="reassign-modal-title">📂 Переназначить вариант</h3>
+            <button class="modal-close" onclick="closeAllModals()">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-grid">
+                <div class="form-field full train">
+                    <label>🎯 Новое базовое упражнение</label>
+                    <select id="f-reassign-base">
+                        <option value="">— выбрать —</option>
+                    </select>
+                    <input type="hidden" id="f-reassign-variant-id">
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer train">
+            <button class="btn orange" onclick="closeAllModals()">Отмена</button>
+            <button class="btn orange primary" onclick="saveReassign()">💾 Сохранить</button>
+        </div>
+    </div>
+</div>
+
+<!-- Модалка: Объединение вариантов -->
+<div class="modal-overlay" id="merge-modal" onclick="if(event.target===this)closeAllModals()">
+    <div class="modal">
+        <div class="modal-header train">
+            <h3 class="modal-title" id="merge-modal-title">🔗 Объединить варианты</h3>
+            <button class="modal-close" onclick="closeAllModals()">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-grid">
+                <div class="form-field full train">
+                    <label>🎯 Выберите целевой вариант (в него будут перенесены данные)</label>
+                    <select id="f-merge-target">
+                        <option value="">— выбрать —</option>
+                    </select>
+                    <input type="hidden" id="f-merge-source-id">
+                    <div style="font-size:12px;color:#9a3412;margin-top:8px;padding:8px;background:#fff7ed;border-radius:6px;">
+                        ⚠️ Все данные прогресса из исходного варианта будут перенесены в целевой. Исходный вариант будет удалён.
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer train">
+            <button class="btn orange" onclick="closeAllModals()">Отмена</button>
+            <button class="btn orange primary" onclick="saveMerge()">🔗 Объединить</button>
+        </div>
+    </div>
+</div>
+
+<!-- Модалка: Массовое переназначение -->
+<div class="modal-overlay" id="bulk-reassign-modal" onclick="if(event.target===this)closeAllModals()">
+    <div class="modal">
+        <div class="modal-header train">
+            <h3 class="modal-title">📂 Массовое переназначение</h3>
+            <button class="modal-close" onclick="closeAllModals()">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-grid">
+                <div class="form-field full train">
+                    <label>🎯 Назначить на базовое упражнение</label>
+                    <select id="f-bulk-reassign-base">
+                        <option value="">— выбрать —</option>
+                    </select>
+                </div>
+                <div class="form-field full train">
+                    <label>📝 Выберите варианты для переназначения</label>
+                    <div id="f-bulk-reassign-variants" style="max-height:300px;overflow-y:auto;border:1px solid #fdba74;border-radius:8px;padding:8px;background:#fff7ed;"></div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer train">
+            <button class="btn orange" onclick="closeAllModals()">Отмена</button>
+            <button class="btn orange primary" onclick="saveBulkReassign()">💾 Переназначить</button>
         </div>
     </div>
 </div>

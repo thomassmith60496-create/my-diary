@@ -479,6 +479,412 @@ window.renderExerciseVariants = function() {
     container.innerHTML = html;
 }
 
+// === ВСЕ УПРАЖНЕНИЯ (СВОДНЫЙ СПИСОК) ===
+
+window.renderAllExercises = function() {
+    const container = document.getElementById('all-exercises-list');
+    if (!container) return;
+    
+    const needsReviewCount = exerciseVariants.filter(v => v.needsReview).length;
+    
+    let html = `
+        <div class="all-exercises-toolbar">
+            <div class="all-exercises-stats">
+                <span class="stat-badge">📝 Всего: ${exerciseVariants.length}</span>
+                <span class="stat-badge review">⚠️ Требуют проверки: ${needsReviewCount}</span>
+                <span class="stat-badge base">🏋️ Базовых: ${baseExercises.length}</span>
+            </div>
+            <div class="all-exercises-actions">
+                <button class="action-btn" onclick="suggestAndShowMerges()">🔗 Найти дубли</button>
+                <button class="action-btn" onclick="openBulkReassignModal()">📂 Массовое переназначение</button>
+            </div>
+        </div>
+    `;
+    
+    if (exerciseVariants.length === 0) {
+        html += `
+            <div class="empty-state">
+                <div class="empty-state-icon">📝</div>
+                <div class="empty-state-title">Нет упражнений</div>
+                <div class="empty-state-text">Упражнения появятся после импорта тренировок</div>
+            </div>
+        `;
+        container.innerHTML = html;
+        return;
+    }
+    
+    // Группируем по базовым упражнениям
+    const grouped = {};
+    const unassigned = [];
+    
+    exerciseVariants.forEach(v => {
+        if (v.baseExerciseId && findBaseExerciseById(v.baseExerciseId)) {
+            if (!grouped[v.baseExerciseId]) grouped[v.baseExerciseId] = [];
+            grouped[v.baseExerciseId].push(v);
+        } else {
+            unassigned.push(v);
+        }
+    });
+    
+    // Сортируем группы: сначала с дублями, потом остальные
+    const sortedBaseIds = Object.keys(grouped).sort((a, b) => {
+        const countA = grouped[a].length;
+        const countB = grouped[b].length;
+        return countB - countA;
+    });
+    
+    // Рендерим группы
+    sortedBaseIds.forEach(baseId => {
+        const base = findBaseExerciseById(baseId);
+        const variants = grouped[baseId];
+        const cat = base ? getCategoryById(base.categoryId) : null;
+        const progress = getProgressData();
+        
+        html += `
+            <div class="base-group-card">
+                <div class="base-group-header">
+                    <div class="base-group-info">
+                        <div class="base-group-name">${base ? base.name : 'Без названия'}</div>
+                        <div class="base-group-meta">
+                            ${cat ? (cat.icon || '') + ' ' + cat.name : 'Без категории'}
+                            • ${variants.length} вариантов
+                            • ${getBaseExerciseTotalWorkouts(baseId, progress)} тренировок
+                        </div>
+                    </div>
+                    <div class="base-group-actions">
+                        <button class="action-btn edit" onclick="openBaseExerciseModal('${baseId}')">✏️</button>
+                    </div>
+                </div>
+                <div class="base-group-variants">
+                    ${variants.map(v => {
+                        const variantProgress = progress[v.id] || progress[v.name] || [];
+                        const lastDate = variantProgress.length > 0 ? variantProgress[variantProgress.length - 1].date : '—';
+                        return `
+                            <div class="all-variant-row ${v.needsReview ? 'needs-review' : ''}">
+                                <div class="variant-main-info">
+                                    <div class="variant-name-row">
+                                        <span class="variant-name-text">${v.name}</span>
+                                        ${v.needsReview ? '<span class="review-badge">⚠️ Требует проверки</span>' : ''}
+                                        ${v.name !== v.originalName ? `<span class="original-name-badge">📝 ${v.originalName}</span>` : ''}
+                                    </div>
+                                    <div class="variant-details-row">
+                                        <span class="detail-tag type">${v.type}</span>
+                                        <span class="detail-tag metric">${v.metricType}</span>
+                                        <span class="detail-tag sets">${variantProgress.length} записей</span>
+                                        <span class="detail-tag date">📅 ${lastDate}</span>
+                                    </div>
+                                </div>
+                                <div class="variant-row-actions">
+                                    <button class="action-btn edit" onclick="openVariantModal('${v.id}')" title="Редактировать">✏️</button>
+                                    <button class="action-btn" onclick="openReassignModal('${v.id}')" title="Переназначить базовое">📂</button>
+                                    <button class="action-btn" onclick="openMergeSelectModal('${v.id}')" title="Объединить">🔗</button>
+                                    <button class="action-btn delete" onclick="deleteExerciseVariant('${v.id}')" title="Удалить">🗑</button>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+        `;
+    });
+    
+    // Непривязанные варианты
+    if (unassigned.length > 0) {
+        html += `
+            <div class="base-group-card unassigned">
+                <div class="base-group-header">
+                    <div class="base-group-info">
+                        <div class="base-group-name">📂 Без базового упражнения</div>
+                        <div class="base-group-meta">${unassigned.length} вариантов</div>
+                    </div>
+                </div>
+                <div class="base-group-variants">
+                    ${unassigned.map(v => {
+                        const progress = getProgressData();
+                        const variantProgress = progress[v.id] || progress[v.name] || [];
+                        return `
+                            <div class="all-variant-row ${v.needsReview ? 'needs-review' : ''}">
+                                <div class="variant-main-info">
+                                    <div class="variant-name-row">
+                                        <span class="variant-name-text">${v.name}</span>
+                                        ${v.needsReview ? '<span class="review-badge">⚠️ Требует проверки</span>' : ''}
+                                    </div>
+                                    <div class="variant-details-row">
+                                        <span class="detail-tag type">${v.type}</span>
+                                        <span class="detail-tag metric">${v.metricType}</span>
+                                        <span class="detail-tag sets">${variantProgress.length} записей</span>
+                                    </div>
+                                </div>
+                                <div class="variant-row-actions">
+                                    <button class="action-btn edit" onclick="openVariantModal('${v.id}')">✏️</button>
+                                    <button class="action-btn" onclick="openReassignModal('${v.id}')">📂</button>
+                                    <button class="action-btn delete" onclick="deleteExerciseVariant('${v.id}')">🗑</button>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+        `;
+    }
+    
+    container.innerHTML = html;
+}
+
+function getBaseExerciseTotalWorkouts(baseId, progress) {
+    const variants = findVariantByBaseExercise(baseId);
+    let total = 0;
+    variants.forEach(v => {
+        const p = progress[v.id] || progress[v.name] || [];
+        total += p.length;
+    });
+    return total;
+}
+
+// === РАЗДЕЛ "ТРЕБУЕТ ПРОВЕРКИ" ===
+
+window.renderNeedsReviewSection = function() {
+    const container = document.getElementById('needs-review-list');
+    if (!container) return;
+    
+    const needsReview = exerciseVariants.filter(v => v.needsReview);
+    
+    if (needsReview.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state-mini">
+                <div class="empty-state-mini-icon">✅</div>
+                <div class="empty-state-mini-text">Нет упражнений, требующих проверки</div>
+            </div>
+        `;
+        return;
+    }
+    
+    let html = `
+        <div class="needs-review-header">
+            <span class="review-count">⚠️ ${needsReview.length} упражнений требуют проверки</span>
+            <button class="action-btn" onclick="approveAllReviewed()">✅ Подтвердить все</button>
+        </div>
+    `;
+    
+    html += needsReview.map(v => `
+        <div class="review-item">
+            <div class="review-item-header">
+                <div class="review-item-name">${v.name}</div>
+                <div class="review-item-original">📝 Оригинал: ${v.originalName || v.name}</div>
+            </div>
+            <div class="review-item-details">
+                <span class="detail-tag type">${v.type}</span>
+                <span class="detail-tag metric">${v.metricType}</span>
+            </div>
+            <div class="review-item-actions">
+                <button class="action-btn edit" onclick="approveVariant('${v.id}')">✅ Подтвердить</button>
+                <button class="action-btn edit" onclick="openVariantModal('${v.id}')">✏️ Исправить</button>
+                <button class="action-btn delete" onclick="deleteExerciseVariant('${v.id}')">🗑 Удалить</button>
+            </div>
+        </div>
+    `).join('');
+    
+    container.innerHTML = html;
+}
+
+function approveVariant(id) {
+    const variant = findVariantById(id);
+    if (!variant) return;
+    variant.needsReview = false;
+    saveExerciseData();
+    syncToCloud();
+    renderAllExercises();
+    renderNeedsReviewSection();
+    renderExerciseVariants();
+}
+
+function approveAllReviewed() {
+    exerciseVariants.forEach(v => { v.needsReview = false; });
+    saveExerciseData();
+    syncToCloud();
+    renderAllExercises();
+    renderNeedsReviewSection();
+    renderExerciseVariants();
+}
+
+// === МОДАЛКА ПЕРЕНАЗНАЧЕНИЯ БАЗОВОГО УПРАЖНЕНИЯ ===
+
+function openReassignModal(variantId) {
+    const variant = findVariantById(variantId);
+    if (!variant) return;
+    
+    const modal = document.getElementById('reassign-modal');
+    const select = document.getElementById('f-reassign-base');
+    const title = document.getElementById('reassign-modal-title');
+    
+    title.textContent = `📂 Переназначить: ${variant.name}`;
+    document.getElementById('f-reassign-variant-id').value = variantId;
+    
+    select.innerHTML = '<option value="">— выбрать —</option>' +
+        baseExercises.map(b => {
+            const cat = getCategoryById(b.categoryId);
+            return `<option value="${b.id}" ${b.id === variant.baseExerciseId ? 'selected' : ''}>${cat ? (cat.icon || '') + ' ' : ''}${b.name}</option>`;
+        }).join('');
+    
+    modal.classList.add('visible');
+}
+
+function saveReassign() {
+    const variantId = document.getElementById('f-reassign-variant-id').value;
+    const newBaseId = document.getElementById('f-reassign-base').value;
+    
+    if (!newBaseId) {
+        alert('Выберите базовое упражнение');
+        return;
+    }
+    
+    reassignVariantToBaseExercise(variantId, newBaseId);
+    closeAllModals();
+    renderAllExercises();
+    renderExerciseVariants();
+    alert('✅ Вариант переназначен');
+}
+
+// === МОДАЛКА ВЫБОРА ДЛЯ ОБЪЕДИНЕНИЯ ===
+
+function openMergeSelectModal(variantId) {
+    const variant = findVariantById(variantId);
+    if (!variant) return;
+    
+    const modal = document.getElementById('merge-modal');
+    const title = document.getElementById('merge-modal-title');
+    const select = document.getElementById('f-merge-target');
+    
+    title.textContent = `🔗 Объединить варианты для: ${variant.name}`;
+    document.getElementById('f-merge-source-id').value = variantId;
+    
+    // Показываем похожие варианты + все остальные
+    const similar = findSimilarExercises(variant.name, 0.5);
+    
+    select.innerHTML = '<option value="">— выбрать целевой вариант —</option>' +
+        exerciseVariants
+            .filter(v => v.id !== variantId)
+            .map(v => {
+                const isSimilar = similar.some(s => s.variant.id === v.id);
+                const base = findBaseExerciseById(v.baseExerciseId);
+                const label = isSimilar ? '🔗 ' : '  ';
+                return `<option value="${v.id}">${label}${v.name}${base ? ' (' + base.name + ')' : ''}</option>`;
+            }).join('');
+    
+    modal.classList.add('visible');
+}
+
+function saveMerge() {
+    const sourceId = document.getElementById('f-merge-source-id').value;
+    const targetId = document.getElementById('f-merge-target').value;
+    
+    if (!targetId) {
+        alert('Выберите целевой вариант для объединения');
+        return;
+    }
+    
+    mergeVariants(sourceId, targetId);
+    closeAllModals();
+    renderAllExercises();
+    renderExerciseVariants();
+}
+
+// === АВТОМАТИЧЕСКИЙ ПОИСК ДУБЛЕЙ ===
+
+function suggestAndShowMerges() {
+    const suggestions = suggestMerge();
+    
+    if (suggestions.length === 0) {
+        alert('✅ Дубли не найдены! Все упражнения уникальны.');
+        return;
+    }
+    
+    const container = document.getElementById('merge-suggestions-container');
+    if (!container) return;
+    
+    let html = `
+        <div class="merge-suggestions-header">
+            <span class="merge-count">🔗 Найдено ${suggestions.length} групп дублей</span>
+            <button class="action-btn" onclick="document.getElementById('merge-suggestions-container').innerHTML = ''">✕ Закрыть</button>
+        </div>
+    `;
+    
+    suggestions.forEach((group, idx) => {
+        html += `
+            <div class="merge-group-card">
+                <div class="merge-group-title">Группа ${idx + 1}: ${group.target.name}</div>
+                <div class="merge-group-reason">Причина: ${group.reason === 'exact' ? 'Точное совпадение' : group.reason === 'substring' ? 'Одно содержит другое' : 'Похожие названия'}</div>
+                <div class="merge-group-variants">
+                    <div class="merge-variant-item main">
+                        <span>✅ ${group.target.name}</span>
+                        <span class="merge-variant-id">(основной)</span>
+                    </div>
+                    ${group.duplicates.map(d => `
+                        <div class="merge-variant-item">
+                            <span>📝 ${d.name}</span>
+                            <button class="action-btn" onclick="quickMerge('${d.id}', '${group.target.id}')">🔗 Объединить</button>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+    container.scrollIntoView({ behavior: 'smooth' });
+}
+
+function quickMerge(sourceId, targetId) {
+    if (!confirm('Объединить варианты?')) return;
+    mergeVariants(sourceId, targetId);
+    suggestAndShowMerges();
+    renderAllExercises();
+    renderExerciseVariants();
+}
+
+// === МАССОВОЕ ПЕРЕНАЗНАЧЕНИЕ ===
+
+function openBulkReassignModal() {
+    const modal = document.getElementById('bulk-reassign-modal');
+    const select = document.getElementById('f-bulk-reassign-base');
+    const list = document.getElementById('f-bulk-reassign-variants');
+    
+    select.innerHTML = '<option value="">— выбрать базовое —</option>' +
+        baseExercises.map(b => {
+            const cat = getCategoryById(b.categoryId);
+            return `<option value="${b.id}">${cat ? (cat.icon || '') + ' ' : ''}${b.name}</option>`;
+        }).join('');
+    
+    list.innerHTML = exerciseVariants
+        .filter(v => !v.baseExerciseId || !findBaseExerciseById(v.baseExerciseId))
+        .map(v => `
+            <label class="bulk-variant-item">
+                <input type="checkbox" value="${v.id}">
+                <span>${v.name}</span>
+                <span class="variant-meta">${v.type} • ${v.metricType}</span>
+            </label>
+        `).join('');
+    
+    modal.classList.add('visible');
+}
+
+function saveBulkReassign() {
+    const baseId = document.getElementById('f-bulk-reassign-base').value;
+    if (!baseId) { alert('Выберите базовое упражнение'); return; }
+    
+    const checkboxes = document.querySelectorAll('#f-bulk-reassign-variants input:checked');
+    let count = 0;
+    
+    checkboxes.forEach(cb => {
+        if (reassignVariantToBaseExercise(cb.value, baseId)) count++;
+    });
+    
+    closeAllModals();
+    renderAllExercises();
+    renderExerciseVariants();
+    alert(`✅ Переназначено ${count} вариантов`);
+}
+
 // === ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ===
 
 function updateExerciseSelectOptions() {
@@ -493,3 +899,27 @@ function updateExerciseSelectOptions() {
             return `<option value="${v.id}">${cat ? (cat.icon || '') + ' ' : ''}${v.name}</option>`;
         }).join('');
 }
+
+// === ДОПОЛНИТЕЛЬНЫЕ ФУНКЦИИ ДЛЯ НОВЫХ ВКЛАДОК ===
+
+window.approveNeedsReview = function(variantId) {
+    const variant = findVariantById(variantId);
+    if (!variant) return;
+    variant.needsReview = false;
+    saveExerciseData();
+    syncToCloud();
+    renderNeedsReviewSection();
+    renderAllExercises();
+    renderExerciseVariants();
+    alert('✅ Упражнение подтверждено');
+};
+
+window.approveAllReviewed = function() {
+    exerciseVariants.forEach(v => { v.needsReview = false; });
+    saveExerciseData();
+    syncToCloud();
+    renderNeedsReviewSection();
+    renderAllExercises();
+    renderExerciseVariants();
+    alert('✅ Все упражнения подтверждены');
+};

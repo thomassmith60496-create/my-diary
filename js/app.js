@@ -74,6 +74,10 @@ window.switchTrainSubTab = function(tab, event) {
         renderExerciseVariants();
     } else if(tab === 'workouts') {
         renderTrainAll();
+    } else if(tab === 'all-exercises') {
+        renderAllExercises();
+    } else if(tab === 'needs-review') {
+        renderNeedsReviewSection();
     }
     
     // Re-apply read-only state after rendering dynamic content
