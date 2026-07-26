@@ -11,7 +11,7 @@ window.switchMainTab = function(tab) {
     document.querySelector(`.main-tab-btn.${tab}`).classList.add('active');
     document.getElementById(`main-tab-${tab}`).classList.add('active');
     if(tab === 'home') renderHomePage();
-    if(tab === 'train') { renderTrainAll(); WorkoutIndex.render(); }
+    if(tab === 'train') renderTrainAll();
     if(tab === 'finance') renderFinanceDashboard();
     if(tab === 'food') {
         renderNutritionAll();
