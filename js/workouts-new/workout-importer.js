@@ -330,6 +330,11 @@ window.finalizeImport = function() {
 
   // Обновляем бейдж проверки
   if (typeof renderUnmatchedList === 'function') renderUnmatchedList();
+
+  // Переключаемся на таб тренировок
+  if (typeof switchTab === 'function') {
+    setTimeout(() => switchTab('workouts'), 300);
+  }
 }
 
 window.clearImportForm = function() {
@@ -340,6 +345,93 @@ window.clearImportForm = function() {
   _parsedResults = [];
   _lastImportDate = '';
   _lastImportDuration = 0;
+};
+
+// ============================================
+// 6. СПИСОК ТРЕНИРОВОК
+// ============================================
+
+window.renderWorkoutList = function() {
+  const container = document.getElementById('v2-workout-list');
+  if (!container) return;
+
+  const searchQuery = (document.getElementById('v2-workout-search')?.value || '').toLowerCase().trim();
+  let workouts = WorkoutStore.getWorkouts();
+
+  if (searchQuery) {
+    workouts = workouts.filter(w => w.date.includes(searchQuery));
+  }
+
+  workouts.sort((a, b) => b.date.localeCompare(a.date));
+
+  const statsEl = document.getElementById('v2-workout-stats');
+  if (statsEl) {
+    const total = WorkoutStore.getWorkouts().length;
+    statsEl.textContent = `🏋️ ${total} тренировок`;
+  }
+
+  if (workouts.length === 0) {
+    container.innerHTML = searchQuery
+      ? `<div class="v2-empty"><div class="v2-empty-icon">🔍</div><div class="v2-empty-title">Ничего не найдено</div></div>`
+      : `<div class="v2-empty">
+          <div class="v2-empty-icon">🏋️</div>
+          <div class="v2-empty-title">Нет тренировок</div>
+          <div class="v2-empty-text">Импортируйте первую тренировку на вкладке «Импорт».</div>
+        </div>`;
+    return;
+  }
+
+  container.innerHTML = workouts.map(w => _renderWorkoutCard(w)).join('');
+};
+
+function _renderWorkoutCard(workout) {
+  const entries = WorkoutStore.findEntriesByWorkout(workout.id);
+  const stats = WorkoutStore.getWorkoutStats(workout.id);
+
+  return `
+    <div class="v2-workout-card" data-workout-id="${workout.id}">
+      <div class="v2-workout-header" onclick="toggleWorkoutCard('${workout.id}')">
+        <div class="v2-workout-header-left">
+          <span class="v2-workout-date">📅 ${workout.date}</span>
+          <span class="v2-workout-meta">
+            ⏱ ${workout.duration || '?'} мин · 
+            ${stats ? stats.exerciseCount : 0} упр · 
+            ${stats ? stats.totalSets : 0} подходов
+          </span>
+        </div>
+        <span class="v2-workout-toggle">▼</span>
+      </div>
+      <div class="v2-workout-body">
+        ${entries.map((entry, i) => {
+          const variant = WorkoutStore.findVariantById(entry.variantId);
+          return `
+            <div class="v2-workout-entry">
+              <div class="v2-workout-entry-header">
+                <span class="v2-workout-entry-num">${i + 1}</span>
+                <span class="v2-workout-entry-name">${variant ? escapeHtml(variant.name) : 'неизвестно'}</span>
+              </div>
+              <div class="v2-workout-entry-sets">
+                ${entry.sets.map(s => `<span class="v2-import-set-badge">${_formatSetPreview(s)}</span>`).join('')}
+              </div>
+            </div>`;
+        }).join('')}
+        ${workout.note ? `<div class="v2-workout-note">📝 ${escapeHtml(workout.note)}</div>` : ''}
+        <div class="v2-workout-actions">
+          <button class="v2-btn v2-btn-ghost v2-btn-sm" onclick="deleteWorkoutCard('${workout.id}')">🗑 Удалить</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+window.toggleWorkoutCard = function(id) {
+  const card = document.querySelector(`.v2-workout-card[data-workout-id="${id}"]`);
+  if (card) card.classList.toggle('collapsed');
+};
+
+window.deleteWorkoutCard = function(id) {
+  if (!confirm('Удалить тренировку?')) return;
+  WorkoutStore.removeWorkout(id);
+  renderWorkoutList();
 };
 
 window.showImportWorkoutSummary = function(workoutId) {

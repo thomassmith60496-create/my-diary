@@ -32,6 +32,7 @@
     <!-- Табы -->
     <div class="v2-tabs">
       <button class="v2-tab active" id="v2-tab-exercises" onclick="switchTab('exercises')">📋 Упражнения</button>
+      <button class="v2-tab" id="v2-tab-workouts" onclick="switchTab('workouts')">🏋️ Тренировки</button>
       <button class="v2-tab" id="v2-tab-review" onclick="switchTab('review')">⚠️ Требует проверки <span class="v2-tab-badge" id="v2-review-count">0</span></button>
       <button class="v2-tab" id="v2-tab-import" onclick="switchTab('import')">📥 Импорт</button>
     </div>
@@ -66,6 +67,23 @@
       <div class="v2-empty">
         <div class="v2-empty-icon">🏋️</div>
         <div class="v2-empty-title">Загрузка...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Вкладка: Тренировки -->
+  <div class="v2-tab-content" id="v2-tab-content-workouts">
+    <div class="v2-controls">
+      <div class="v2-search-wrap">
+        <input type="text" class="v2-search" id="v2-workout-search" placeholder="🔍 Поиск по дате..." oninput="renderWorkoutList()">
+      </div>
+      <div class="v2-stats" id="v2-workout-stats"></div>
+    </div>
+    <div class="v2-list" id="v2-workout-list">
+      <div class="v2-empty">
+        <div class="v2-empty-icon">🏋️</div>
+        <div class="v2-empty-title">Нет тренировок</div>
+        <div class="v2-empty-text">Импортируйте первую тренировку на вкладке «Импорт».</div>
       </div>
     </div>
   </div>
@@ -349,6 +367,7 @@
       renderExerciseList();
       populateFilterOptions();
       renderUnmatchedList();
+      renderWorkoutList();
     }, 100);
   </script>
 </body>
