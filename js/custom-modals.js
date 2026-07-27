@@ -40,7 +40,7 @@ window.showCustomModal = function(options) {
                 ${showInput ? `<input type="text" class="custom-modal-input" id="custom-modal-input" placeholder="${escapeHtml(inputPlaceholder)}" value="${escapeHtml(inputValue)}">` : ''}
             </div>
             <div class="custom-modal-footer">
-                ${cancelText ? `<button class="btn" onclick="closeCustomModal()">${escapeHtml(cancelText)}</button>` : ''}
+                ${cancelText ? `<button class="btn" onclick="closeCustomModal(false)">${escapeHtml(cancelText)}</button>` : ''}
                 <button class="btn primary" onclick="confirmCustomModal()">${escapeHtml(confirmText)}</button>
             </div>
         </div>
@@ -63,14 +63,14 @@ window.showCustomModal = function(options) {
     // Закрытие по клику на оверлей
     overlay.addEventListener('click', (e) => {
         if (e.target === overlay) {
-            closeCustomModal(false);
+            closeCustomModal(null);
         }
     });
 
     // Закрытие по Escape
     const escapeHandler = (e) => {
         if (e.key === 'Escape') {
-            closeCustomModal(false);
+            closeCustomModal(null);
             document.removeEventListener('keydown', escapeHandler);
         }
     };
@@ -94,7 +94,7 @@ window.closeCustomModal = function(result) {
 
 window.confirmCustomModal = function() {
     const input = document.getElementById('custom-modal-input');
-    const value = input ? input.value : null;
+    const value = input ? input.value : true;
     closeCustomModal(value);
 };
 

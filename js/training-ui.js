@@ -526,6 +526,7 @@ window.renderTrainingWorkouts = function() {
     html += '<div class="train-control-panel">';
     html += '<div class="train-actions-row">';
     html += '<button class="btn primary" onclick="openCreateWorkoutModal()">➕ Новая тренировка</button>';
+    html += '<button class="btn" onclick="openImportTraining()" style="margin-left:8px;">📥 Импорт из GymKeeper</button>';
     html += '</div>';
     html += '</div>';
 

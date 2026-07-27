@@ -283,28 +283,28 @@ function _findVariant(exerciseName) {
     }
 
     // 0. Совпадение по алиасам варианта
-    match = allVariants.find(item => item.variant.aliases && item.variant.aliases.some(a => _normalize(a) === normalized));
-    if (match) return match;
+    var match0 = allVariants.find(item => item.variant.aliases && item.variant.aliases.some(a => _normalize(a) === normalized));
+    if (match0) return match0;
 
     // 1. Полное совпадение (базовое + вариант)
-    match = allVariants.find(item => item.fullName === normalized);
-    if (match) return match;
+    var match1 = allVariants.find(item => item.fullName === normalized);
+    if (match1) return match1;
 
     // 2. Совпадение по базовому имени
-    match = allVariants.find(item => item.exName === normalized);
-    if (match) return match;
+    var match2 = allVariants.find(item => item.exName === normalized);
+    if (match2) return match2;
 
     // 3. Совпадение по имени варианта
-    match = allVariants.find(item => item.vName === normalized);
-    if (match) return match;
+    var match3 = allVariants.find(item => item.vName === normalized);
+    if (match3) return match3;
 
     // 4. Базовое имя содержится в импортированном
-    match = allVariants.find(item => normalized.includes(item.exName) || item.exName.includes(normalized));
-    if (match) return match;
+    var match4 = allVariants.find(item => normalized.includes(item.exName) || item.exName.includes(normalized));
+    if (match4) return match4;
 
     // 5. Вариант содержится в импортированном
-    match = allVariants.find(item => normalized.includes(item.vName) || item.vName.includes(normalized));
-    if (match) return match;
+    var match5 = allVariants.find(item => normalized.includes(item.vName) || item.vName.includes(normalized));
+    if (match5) return match5;
 
     return null;
 }
