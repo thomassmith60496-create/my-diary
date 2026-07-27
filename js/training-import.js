@@ -282,8 +282,12 @@ function _findVariant(exerciseName) {
         }
     }
 
+    // 0. Совпадение по алиасам варианта
+    match = allVariants.find(item => item.variant.aliases && item.variant.aliases.some(a => _normalize(a) === normalized));
+    if (match) return match;
+
     // 1. Полное совпадение (базовое + вариант)
-    let match = allVariants.find(item => item.fullName === normalized);
+    match = allVariants.find(item => item.fullName === normalized);
     if (match) return match;
 
     // 2. Совпадение по базовому имени

@@ -232,7 +232,8 @@ const TrainingExerciseAPI = {
             loadType: data.loadType || 'weight',
             measurementType: data.measurementType || 'reps_weight',
             equipment: data.equipment || '',
-            categories: data.categories || []
+            categories: data.categories || [],
+            aliases: data.aliases || []
         };
         exercise.variants.push(variant);
         this.save();
@@ -254,6 +255,7 @@ const TrainingExerciseAPI = {
         if (data.measurementType !== undefined) variant.measurementType = data.measurementType;
         if (data.equipment !== undefined) variant.equipment = data.equipment;
         if (data.categories !== undefined) variant.categories = data.categories;
+        if (data.aliases !== undefined) variant.aliases = data.aliases;
         this.save();
         return true;
     },
