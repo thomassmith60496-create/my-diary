@@ -339,14 +339,20 @@ window.renderFinanceTransactions = function() {
         const catName = cat ? cat.name : '—';
         const catColor = cat ? (cat.color || '#7e22ce') : '#7e22ce';
         const isExpense = t.type === 'expense';
+        const typeIcon = isExpense ? '📉' : '📈';
         return `<div class="finance-transaction-item">
-            <span class="finance-transaction-date">${formatFinanceDate(t.date)}</span>
-            <span class="finance-transaction-amount ${isExpense ? 'expense' : 'income'}">${isExpense ? '−' : '+'}${Math.abs(t.amount).toLocaleString('ru-RU')} ₽</span>
-            <span class="finance-transaction-category" style="color:${catColor};">${catName}${t.subcategory ? ' › ' + t.subcategory : ''}</span>
-            <span class="finance-transaction-comment">${t.comment || ''}</span>
+            <div class="finance-transaction-type ${isExpense ? 'expense' : 'income'}">${typeIcon}</div>
+            <div class="finance-transaction-info">
+                <div class="finance-transaction-amount ${isExpense ? 'expense' : 'income'}">${isExpense ? '−' : '+'}${Math.abs(t.amount).toLocaleString('ru-RU')} ₽</div>
+                <div class="finance-transaction-category" style="color:${catColor};">${catName}${t.subcategory ? ' › ' + t.subcategory : ''}</div>
+                <div class="finance-transaction-date">${formatFinanceDate(t.date)}</div>
+                ${t.comment ? `<div class="finance-transaction-comment">${t.comment}</div>` : ''}
+            </div>
             ${isReadOnlyActive() ? '' : `
-            <button class="action-btn edit" onclick="editFinanceTransaction('${t.id}')">✏️</button>
-            <button class="action-btn delete" onclick="deleteFinanceItem('transaction','${t.id}')">🗑</button>`}
+            <div class="finance-transaction-actions">
+                <button class="action-btn edit" onclick="editFinanceTransaction('${t.id}')">✏️</button>
+                <button class="action-btn delete" onclick="deleteFinanceItem('transaction','${t.id}')">🗑</button>
+            </div>`}
         </div>`;
     }).join('');
     
@@ -413,10 +419,12 @@ window.renderFinancePlanned = function() {
         const cat = financeData.categories.find(c => c.id === p.category);
         const catName = cat ? cat.name : '—';
         return `<div class="finance-planned-item${p.done ? ' done' : ''}">
-            <span class="finance-transaction-date">${formatFinanceDate(p.date)}</span>
-            <span class="finance-transaction-amount expense">${p.amount.toLocaleString('ru-RU')} ₽</span>
-            <span class="finance-transaction-category" style="color:#7e22ce;">${catName}${p.subcategory ? ' › ' + p.subcategory : ''}</span>
-            <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:12px;margin-left:auto;">
+            <span class="finance-planned-date">${formatFinanceDate(p.date)}</span>
+            <span class="finance-planned-amount">${p.amount.toLocaleString('ru-RU')} ₽</span>
+            <div class="finance-planned-info">
+                <span class="finance-planned-category" style="color:#7e22ce;">${catName}${p.subcategory ? ' › ' + p.subcategory : ''}</span>
+            </div>
+            <label class="finance-planned-done">
                 <input type="checkbox" ${p.done ? 'checked' : ''} onchange="togglePlannedDone('${p.id}')">
                 Выполнено
             </label>
