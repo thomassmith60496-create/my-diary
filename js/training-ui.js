@@ -640,7 +640,7 @@ window.renderSetSummary = function(sets, variant) {
         case 'time':
             return sets.map(s => (s.time || '—') + ' с').join(', ');
         case 'distance':
-            return sets.map(s => (s.distance || '—') + ' м').join(', ');
+            return sets.map(s => (s.distance || '—') + ' км').join(', ');
         case 'weight_only':
             return sets.map(s => (s.weight ? s.weight + 'кг' : '—')).join(', ');
         default:
@@ -830,7 +830,7 @@ window.renderSetHeaderRow = function(mt) {
             html += '<span class="train-set-col time">Время, с</span>';
             break;
         case 'distance':
-            html += '<span class="train-set-col dist">Дист., м</span>';
+            html += '<span class="train-set-col dist">Дист., км</span>';
             break;
         case 'weight_only':
             html += '<span class="train-set-col weight">Вес, кг</span>';
@@ -1631,24 +1631,13 @@ window.renderTrainingProgress = function() {
                     var linePath = chartPoints.map(function(p) { return p.x + ',' + p.y; }).join(' L');
                     var areaPath = 'M ' + padLeft + ',' + (padTop + plotH) + ' L ' + chartPoints.map(function(p) { return p.x + ',' + p.y; }).join(' L') + ' L ' + (padLeft + (chartPoints.length - 1) * xStep) + ',' + (padTop + plotH) + ' Z';
 
-                    var yTicks = 4;
-                    var yAxisLabels = '';
-                    for (var t = 0; t <= yTicks; t++) {
-                        var yVal = minVal + (yRange * t / yTicks);
-                        var yPos = padTop + plotH - (yRange * t / yTicks) * plotH;
-                        var yLabel = mt === 'time' ? Math.round(yVal) + 'с' : mt === 'distance' ? Math.round(yVal) + 'м' : Math.round(yVal) + '';
-                        yAxisLabels += '<text x="' + (padLeft - 4) + '" y="' + (yPos + 3) + '" text-anchor="end" font-size="11" fill="#94a3b8">' + yLabel + '</text>';
-                    }
-                    yAxisLabels += '<text x="' + (padLeft - 4) + '" y="' + (padTop + plotH + 16) + '" text-anchor="end" font-size="10" fill="#64748b" font-weight="700">мин</text>';
-                    yAxisLabels += '<text x="' + (padLeft - 4) + '" y="' + (padTop - 6) + '" text-anchor="end" font-size="10" fill="#64748b" font-weight="700">макс</text>';
-
                     var dateStep = Math.max(1, Math.floor(entries.length / 5));
                     var xAxisLabels = '';
                     chartPoints.forEach(function(p, i) {
                         if (i % dateStep === 0 || i === entries.length - 1) {
                             var dateParts = p.date.split('-');
                             var dateLabel = dateParts.length === 3 ? dateParts[2] + '.' + dateParts[1] : p.date.slice(5);
-                            xAxisLabels += '<text x="' + p.x + '" y="' + (chartHeight - 4) + '" text-anchor="middle" font-size="11" fill="#94a3b8">' + dateLabel + '</text>';
+                            xAxisLabels += '<text x="' + p.x + '" y="' + (chartHeight - 14) + '" text-anchor="middle" font-size="11" fill="#94a3b8">' + dateLabel + '</text>';
                         }
                     });
 
@@ -1658,8 +1647,6 @@ window.renderTrainingProgress = function() {
                     chartSvg += '<stop offset="100%" stop-color="#6366f1" stop-opacity="0.02"/>';
                     chartSvg += '</linearGradient></defs>';
                     chartSvg += '<line x1="' + padLeft + '" y1="' + (padTop + plotH) + '" x2="' + (padLeft + plotW) + '" y2="' + (padTop + plotH) + '" stroke="#e2e8f0" stroke-width="1"/>';
-                    chartSvg += '<line x1="' + padLeft + '" y1="' + padTop + '" x2="' + padLeft + '" y2="' + (padTop + plotH) + '" stroke="#e2e8f0" stroke-width="1"/>';
-                    chartSvg += yAxisLabels;
                     chartSvg += xAxisLabels;
                     chartSvg += '<path d="' + areaPath + '" fill="url(#grad-' + safeName + '-' + v.id + ')"/>';
                     chartSvg += '<path d="M ' + linePath + '" fill="none" stroke="#6366f1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>';
@@ -1704,7 +1691,7 @@ function getVariantBestValue(overall, mt) {
         case 'reps_weight': return (overall.bestWeight || 0) + ' кг';
         case 'reps': return (overall.maxReps || 0) + ' повт';
         case 'time': return (overall.bestTime || 0) + ' с';
-        case 'distance': return (overall.bestDistance || 0) + ' м';
+        case 'distance': return (overall.bestDistance || 0) + ' км';
         case 'weight_only': return (overall.bestWeight || 0) + ' кг';
         default: return '-';
     }
@@ -1809,7 +1796,7 @@ window.showVariantProgress = function(variantId) {
                     detailText = 'Лучшее: ' + (entry.bestTime || 0) + ' с, Общее: ' + (entry.totalTime || 0) + ' с';
                     break;
                 case 'distance':
-                    detailText = 'Лучшее: ' + (entry.bestDistance || 0) + ' м, Общее: ' + (entry.totalDistance || 0) + ' м';
+                    detailText = 'Лучшее: ' + (entry.bestDistance || 0) + ' км, Общее: ' + (entry.totalDistance || 0) + ' км';
                     break;
                 case 'weight_only':
                     detailText = 'Лучший вес: ' + (entry.bestWeight || 0) + ' кг';
@@ -1838,7 +1825,7 @@ window.showVariantProgress = function(variantId) {
                         setDetail = (s.time || 0) + ' с' + warmupLabel;
                         break;
                     case 'distance':
-                        setDetail = (s.distance || 0) + ' м' + warmupLabel;
+                        setDetail = (s.distance || 0) + ' км' + warmupLabel;
                         break;
                     case 'weight_only':
                         setDetail = (s.weight || 0) + ' кг' + warmupLabel;
@@ -1895,7 +1882,7 @@ function getVariantSetValue(entry, mt) {
         case 'reps_weight': return (entry.bestWeight || 0) + ' кг';
         case 'reps': return (entry.maxReps || 0) + ' повт';
         case 'time': return (entry.bestTime || 0) + ' с';
-        case 'distance': return (entry.bestDistance || 0) + ' м';
+        case 'distance': return (entry.bestDistance || 0) + ' км';
         case 'weight_only': return (entry.bestWeight || 0) + ' кг';
         default: return '-';
     }

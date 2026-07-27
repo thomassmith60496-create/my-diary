@@ -1019,7 +1019,7 @@ header .macro-badge {
 .train-set-col.weight { width: 72px; font-size: 13px; }
 .train-set-col.reps { width: 60px; font-size: 13px; }
 .train-set-col.time { width: 68px; font-size: 13px; }
-.train-set-col.dist { width: 68px; font-size: 13px; }
+.train-set-col.dist { width: 76px; font-size: 13px; }
 .train-set-col.comment { flex: 1; font-size: 13px; color: #78716c; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .train-set-col.actions { width: 90px; display: flex; gap: 2px; justify-content: flex-end; }
 
