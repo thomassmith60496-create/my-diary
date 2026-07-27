@@ -1856,6 +1856,9 @@ header .macro-badge {
     background: #059669; color: white; border-color: #059669;
 }
 .train-progress-summary { display: flex; gap: 12px; margin-bottom: 20px; }
+.train-progress-summary > .train-progress-card:nth-child(1),
+.train-progress-summary > .train-progress-card:nth-child(2) { flex: 1; max-width: 25%; text-align: center; }
+.train-progress-summary > .train-progress-card:nth-child(3) { flex: 2; min-width: 0; }
 .train-progress-card {
     flex: 1; background: white; border-radius: 12px; padding: 16px; text-align: center;
     box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 1px solid #e2e8f0;

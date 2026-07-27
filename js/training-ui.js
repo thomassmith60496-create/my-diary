@@ -1435,12 +1435,12 @@ window.renderTrainingProgress = function() {
     }
 
     html += '<div class="train-progress-summary">';
-    html += '<div class="train-progress-card" style="flex:0 0 auto;width:70px;">';
+    html += '<div class="train-progress-card">';
     html += '<div class="train-progress-card-icon">🏋️</div>';
     html += '<div class="train-progress-card-value">' + totalWorkouts + '</div>';
     html += '<div class="train-progress-card-label">Тренировок</div>';
     html += '</div>';
-    html += '<div class="train-progress-card" style="flex:0 0 auto;width:70px;">';
+    html += '<div class="train-progress-card">';
     html += '<div class="train-progress-card-icon">💪</div>';
     html += '<div class="train-progress-card-value">' + uniqueVariants.size + '</div>';
     html += '<div class="train-progress-card-label">Упражнений</div>';
