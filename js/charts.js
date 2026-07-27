@@ -16,7 +16,7 @@
  * @param {string} options.gridColor - цвет сетки
  * @returns {string} HTML/SVG строка
  */
-function renderSVGLineChart(data, field, unit, color, gradientId, options) {
+window.renderSVGLineChart = function(data, field, unit, color, gradientId, options) {
     options = options || {};
     var width = 800, height = 300;
     var padding = { top: 30, right: 30, bottom: 60, left: 60 };
@@ -93,7 +93,7 @@ function renderSVGLineChart(data, field, unit, color, gradientId, options) {
  * @param {string} centerSubtext - подтекст в центре
  * @returns {string} HTML/SVG строка
  */
-function renderDonutChart(sectors, total, centerText, centerSubtext) {
+window.renderDonutChart = function(sectors, total, centerText, centerSubtext) {
     var outerR = 90, innerR = 50;
     var cx = 120, cy = 120;
     var cumulativeAngle = 0;
