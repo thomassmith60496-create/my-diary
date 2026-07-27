@@ -1358,7 +1358,14 @@ window.renderTrainingProgress = function() {
     const exercises = TrainingExerciseAPI.getExercises();
     const workouts = TrainingWorkoutAPI.getWorkouts();
 
-    const period = progressUIState.period || 'all';
+    var variantMap = {};
+    exercises.forEach(function(ex) {
+        ex.variants.forEach(function(v) {
+            variantMap[v.id] = { name: v.name, baseExerciseName: ex.name };
+        });
+    });
+
+    var period = progressUIState.period || 'all';
     const now = new Date();
     let cutoffDate = null;
     if (period === 'week') {
@@ -1393,7 +1400,7 @@ window.renderTrainingProgress = function() {
     const uniqueExercises = new Set();
     filteredWorkouts.forEach(function(w) {
         (w.exercises || []).forEach(function(e) {
-            const v = TrainingExerciseAPI.getVariantById(e.variantId);
+            const v = variantMap[e.variantId];
             if (v && v.baseExerciseName) uniqueExercises.add(v.baseExerciseName);
         });
     });
@@ -1426,7 +1433,7 @@ window.renderTrainingProgress = function() {
 
         filteredWorkouts.forEach(function(w) {
             (w.exercises || []).forEach(function(ex) {
-                var v = TrainingExerciseAPI.getVariantById(ex.variantId);
+                var v = variantMap[ex.variantId] || null;
                 if (!v) return;
                 var cat = MUSCLE_CATEGORIES.find(function(c) {
                     return v.name.toLowerCase().indexOf(c.toLowerCase()) >= 0 ||
