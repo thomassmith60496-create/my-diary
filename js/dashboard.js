@@ -69,7 +69,7 @@ window.renderHomePage = function() {
     container.innerHTML = html;
 }
 
-function getGreeting(hour) {
+window.getGreeting = function(hour) {
     if(hour >= 5 && hour < 12) return 'Доброе утро';
     if(hour >= 12 && hour < 17) return 'Добрый день';
     if(hour >= 17 && hour < 22) return 'Добрый вечер';
@@ -87,7 +87,7 @@ window.openFinanceModalWithType = function(type) {
 
 // === КАРТОЧКА ПИТАНИЯ ===
 
-function renderNutritionCard(todayData, dateStr) {
+window.renderNutritionCard = function(todayData, dateStr) {
     const hasData = todayData.mealsCount > 0;
     const calProgress = Math.min(100, (todayData.calories / 1300) * 100);
     const protProgress = Math.min(100, (todayData.protein / 110) * 100);
@@ -146,7 +146,7 @@ function renderNutritionCard(todayData, dateStr) {
     `;
 }
 
-function getTodayNutrition(dateStr) {
+window.getTodayNutrition = function(dateStr) {
     let mealsCount = 0;
     let calories = 0;
     let protein = 0;
@@ -191,7 +191,7 @@ function getTodayNutrition(dateStr) {
     return { mealsCount, calories: Math.round(calories), protein: Math.round(protein), fat: Math.round(fat), carbs: Math.round(carbs) };
 }
 
-function normalizeDate(dateStr) {
+window.normalizeDate = function(dateStr) {
     if(!dateStr) return '';
     if(dateStr.includes('-') && dateStr.length === 10) {
         return dateStr;
@@ -210,7 +210,7 @@ function normalizeDate(dateStr) {
 
 // === КАРТОЧКА ФИНАНСОВ ===
 
-function renderFinanceCard(todayData, dateStr) {
+window.renderFinanceCard = function(todayData, dateStr) {
     const hasTransactions = todayData.hasTransactions;
     
     return `
@@ -256,7 +256,7 @@ function renderFinanceCard(todayData, dateStr) {
     `;
 }
 
-function getTodayFinance(dateStr) {
+window.getTodayFinance = function(dateStr) {
     const now = new Date();
     const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     const monthTransactions = financeData.transactions.filter(t => t.date && t.date.startsWith(currentMonth));
@@ -291,7 +291,7 @@ function getTodayFinance(dateStr) {
 
 // === ПОСЛЕДНЯЯ АКТИВНОСТЬ ===
 
-function renderRecentActivity(activity) {
+window.renderRecentActivity = function(activity) {
     let html = `
         <div class="home-card activity-card">
             <div class="home-card-header">
@@ -343,7 +343,7 @@ function renderRecentActivity(activity) {
     return html;
 }
 
-function getRecentActivity() {
+window.getRecentActivity = function() {
     let lastMeal = null;
     let lastFinance = null;
     
@@ -551,7 +551,7 @@ window.renderKbjuChart = function() {
     `;
 }
 
-function renderWeeklyAvg() {
+window.renderWeeklyAvg = function() {
     const container = document.getElementById('weekly-avg-container');
     
     const weeklyData = [];
@@ -608,7 +608,7 @@ function renderWeeklyAvg() {
     container.innerHTML = html;
 }
 
-function getPlural(count, forms) {
+window.getPlural = function(count, forms) {
     if(count % 10 === 1 && count % 100 !== 11) return forms[1] || '';
     if(count % 10 >= 2 && count % 10 <= 4 && (count % 100 < 10 || count % 100 >= 20)) return forms[2] || forms[0] || '';
     return forms[0] || '';

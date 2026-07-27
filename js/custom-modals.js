@@ -7,7 +7,7 @@ let customModalCallback = null;
 
 // === ОТОБРАЖЕНИЕ МОДАЛКИ ===
 
-function showCustomModal(options) {
+window.showCustomModal = function(options) {
     const {
         title = 'Уведомление',
         message = '',
@@ -144,7 +144,7 @@ window.customPrompt = function(message, placeholder = '', defaultValue = '', tit
 
 // === ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ ===
 
-function escapeHtml(str) {
+window.escapeHtml = function(str) {
     if (!str) return '';
     const div = document.createElement('div');
     div.appendChild(document.createTextNode(str));
