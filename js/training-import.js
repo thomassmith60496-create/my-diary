@@ -8,6 +8,12 @@ let _importState = null;
 
 // === ПАРСИНГ ===
 
+const RU_MONTHS = {
+    'янв': '01', 'фев': '02', 'мар': '03', 'апр': '04',
+    'май': '05', 'июн': '06', 'июл': '07', 'авг': '08',
+    'сен': '09', 'окт': '10', 'ноя': '11', 'дек': '12'
+};
+
 function _normalize(s) {
     return s.trim().toLowerCase().replace(/\s+/g, ' ');
 }
@@ -16,114 +22,151 @@ function _tryParseDate(str) {
     // DD.MM.YYYY or DD/MM/YYYY
     let m = str.match(/(\d{1,2})[./](\d{1,2})[./](\d{4})/);
     if (m) return m[3] + '-' + m[2].padStart(2, '0') + '-' + m[1].padStart(2, '0');
-    // YYYY-MM-DD already
+    // YYYY-MM-DD
     m = str.match(/(\d{4})-(\d{2})-(\d{2})/);
     if (m) return m[0];
+    // Russian: D month YYYY  (23 июл. 2026)
+    const ruRe = str.match(/(\d{1,2})\s+(янв|фев|мар|апр|май|июн|июл|авг|сен|окт|ноя|дек)\S*\s+(\d{4})/i);
+    if (ruRe) return ruRe[3] + '-' + (RU_MONTHS[ruRe[2].toLowerCase().slice(0, 3)] || '01') + '-' + ruRe[1].padStart(2, '0');
     return null;
 }
 
 function _parseDuration(str) {
-    const m = str.match(/(\d+)\s*ч(?:ас)?(?:\s*(\d+)\s*мин)?|(\d+)\s*мин/);
-    if (!m) return null;
-    let min = 0;
-    if (m[1] !== undefined) min += parseInt(m[1]) * 60;
-    if (m[2] !== undefined) min += parseInt(m[2]);
-    if (m[3] !== undefined) min += parseInt(m[3]);
+    // "59 мин", "1ч 15мин", "1 час 30 мин"
+    let m = str.match(/(\d+)\s*(?:мин|min)/i);
+    let min = m ? parseInt(m[1]) : 0;
+    m = str.match(/(\d+)\s*(?:ч|час)/i);
+    if (m) min += parseInt(m[1]) * 60;
     return min || null;
 }
 
-// Парсинг одного сета (токена)
-function _parseSetToken(token) {
-    const t = token.trim();
-    if (!t) return null;
+// === ПАРСИНГ ОДНОГО СЕТА ===
 
-    // Извлекаем комментарий в скобках и trailing comment (норм/тяжел/легк)
-    let body = t;
-    let comment = '';
-    const parenM = t.match(/\(([^)]*)\)/);
-    if (parenM) {
-        comment = parenM[1].trim();
-        body = body.replace(/\([^)]*\)/, '').trim();
-    }
-    const trailing = body.match(/\s+(норм|тяжел|легк|norm|heavy|light|easy)\s*$/i);
-    if (trailing) {
-        comment = (comment ? comment + '; ' : '') + trailing[1];
-        body = body.replace(/\s+норм|тяжел|легк|norm|heavy|light|easy\s*$/i, '').trim();
+function _parseSetToken(body) {
+    if (!body || !body.trim()) return null;
+    const t = body.trim();
+
+    // Комментарий-слово
+    if (t.match(/^(норм|тяжел|легк|norm|heavy|light|easy)$/i)) {
+        return { type: 'comment', val: t };
     }
 
-    // Паттерн A: weight*reps  (10кг*15, 60lb*10, 0кг*8)
-    let m = body.match(/^(\d+(?:[.,]\d+)?)\s*(кг|lb|kg|lbs?)?\s*[*×x]\s*(\d+(?:[.,]\d+)?)$/);
-    if (m) {
-        const weight = parseFloat(m[1].replace(',', '.'));
-        const unit = m[2] ? m[2].toLowerCase() : 'кг';
-        const reps = parseInt(m[3]);
-        return { type: 'reps_weight', weight, unit, reps, comment, raw: t };
-    }
+    // Паттерн 1: weight*reps  (10кг*15, 60lb*10, 7.5кг*12)
+    let m = t.match(/^(\d+(?:[.,]\d+)?)\s*(кг|lb|kg|lbs?|kgs?)?\s*[*×x]\s*(\d+(?:[.,]\d+)?)$/i);
+    if (m) return {
+        type: 'reps_weight',
+        weight: parseFloat(m[1].replace(',', '.')),
+        unit: (m[2] || 'кг').toLowerCase(),
+        reps: parseInt(m[3])
+    };
 
-    // Паттерн B: time:distance  (25мин:3.8км)
-    m = body.match(/^(\d+(?:[.,]\d+)?)\s*(мин|сек|с|min|sec|s)?\s*[:]\s*(\d+(?:[.,]\d+)?)\s*(км|м|миль|km|m|mi)?$/i);
-    if (m) {
-        const time = parseFloat(m[1].replace(',', '.'));
-        const timeUnit = m[2] ? m[2].toLowerCase() : 'мин';
-        const distance = parseFloat(m[3].replace(',', '.'));
-        const distUnit = m[4] ? m[4].toLowerCase() : 'км';
-        return { type: 'cardio', time, timeUnit, distance, distUnit, comment, raw: t };
-    }
+    // Паттерн 2: time:distance  (25мин:3.8км)
+    m = t.match(/^(\d+(?:[.,]\d+)?)\s*(мин|min)?\s*[:]\s*(\d+(?:[.,]\d+)?)\s*(км|м|миль|km|m|mi)$/i);
+    if (m) return {
+        type: 'cardio',
+        time: parseFloat(m[1].replace(',', '.')),
+        timeUnit: 'мин',
+        distance: parseFloat(m[3].replace(',', '.')),
+        distUnit: m[4].toLowerCase()
+    };
 
-    // Паттерн C: time*0  (30сек*0, 30сек*0кг)
-    m = body.match(/^(\d+(?:[.,]\d+)?)\s*(сек|с|мин|sec|s|min)?\s*[*×x]\s*0\s*(кг|lb|kg|lbs?)?$/i);
-    if (m) {
-        const time = parseFloat(m[1].replace(',', '.'));
-        const timeUnit = m[2] ? m[2].toLowerCase() : 'сек';
-        return { type: 'time', time, timeUnit, comment, raw: t };
-    }
+    // Паттерн 2b: time:distance with seconds
+    m = t.match(/^(\d+(?:[.,]\d+)?)\s*(сек|с|sec|s)?\s*[:]\s*(\d+(?:[.,]\d+)?)\s*(м|m)$/i);
+    if (m) return {
+        type: 'cardio',
+        time: parseFloat(m[1].replace(',', '.')),
+        timeUnit: (m[2] || 'сек').toLowerCase(),
+        distance: parseFloat(m[3].replace(',', '.')),
+        distUnit: m[4].toLowerCase()
+    };
 
-    // Паттерн D: time:0  (10сек:0)
-    m = body.match(/^(\d+(?:[.,]\d+)?)\s*(сек|с|мин|sec|s|min)?\s*[:]\s*0$/i);
-    if (m) {
-        const time = parseFloat(m[1].replace(',', '.'));
-        const timeUnit = m[2] ? m[2].toLowerCase() : 'сек';
-        return { type: 'time', time, timeUnit, comment, raw: t };
-    }
+    // Паттерн 3: time*0 or time:0  (30сек*0кг, 30сек:0, 10сек:0)
+    m = t.match(/^(\d+(?:[.,]\d+)?)\s*(сек|с|мин|sec|s|min)?\s*(?:[*×x]\s*0\s*(?:кг|lb)?|[:]\s*0)$/i);
+    if (m) return {
+        type: 'time',
+        time: parseFloat(m[1].replace(',', '.')),
+        timeUnit: (m[2] || 'сек').toLowerCase()
+    };
 
-    // Паттерн E: weight*reps (альтернативный разделитель)
-    m = body.match(/^(\d+(?:[.,]\d+)?)\s*(кг|lb|kg|lbs?)?\s*[*×x]\s*(\d+(?:[.,]\d+)?)$/i);
-    if (m) {
-        const weight = parseFloat(m[1].replace(',', '.'));
-        const unit = m[2] ? m[2].toLowerCase() : 'кг';
-        const reps = parseInt(m[3]);
-        return { type: 'reps_weight', weight, unit, reps, comment, raw: t };
-    }
+    // Паттерн 4: lone number — reps only (6)
+    m = t.match(/^(\d+(?:[.,]\d+)?)$/);
+    if (m) return {
+        type: 'reps_weight',
+        weight: 0,
+        unit: 'кг',
+        reps: parseInt(m[1])
+    };
 
-    // Если ничего не подошло — просто комментарий (тип none)
-    return { type: 'unknown', raw: t, comment };
+    return null;
 }
 
-function _tryParseSetLine(line) {
-    // Разбиваем по запятым, каждую часть парсим как сет
-    const parts = line.split(',').filter(p => p.trim());
+// === ПАРСИНГ СТРОКИ С ПОДХОДАМИ ===
+
+function _parseSetLine(line) {
+    // 1. Извлекаем всё в скобках (комментарий)
+    const parens = [];
+    let clean = line.replace(/\(([^)]*)\)/g, (_, c) => { parens.push(c.trim()); return ''; });
+    clean = clean.replace(/\s+/g, ' ').trim();
+
+    // 2. Разбиваем по запятой
+    const parts = clean.split(',').map(p => p.trim()).filter(Boolean);
+    if (!parts.length) return null;
+
     const sets = [];
+    let pendingComment = '';
+
     for (const part of parts) {
         const parsed = _parseSetToken(part);
-        if (parsed) sets.push(parsed);
+        if (!parsed) continue;
+
+        if (parsed.type === 'comment') {
+            pendingComment = (pendingComment ? pendingComment + '; ' : '') + parsed.val;
+            continue;
+        }
+
+        if (pendingComment) {
+            parsed.comment = pendingComment;
+            pendingComment = '';
+        }
+
+        sets.push(parsed);
     }
+
+    // Остаток комментария + paren — к последнему сету
+    const parts_c = [];
+    if (pendingComment) parts_c.push(pendingComment);
+    if (parens.length) parts_c.push(parens[0]);
+    const allPending = parts_c.join('; ');
+    if (allPending && sets.length) {
+        const last = sets[sets.length - 1];
+        last.comment = last.comment ? last.comment + '; ' + allPending : allPending;
+    }
+
     return sets.length ? sets : null;
 }
 
-function _isExerciseNameLine(line) {
-    // Если строка не похожа на сет, не пустая, не дата, не длительность, не заголовок
-    const s = line.trim();
-    if (!s) return false;
-    if (s.match(/^тренировк/i)) return false;
-    if (s.match(/^длительность/i)) return false;
-    if (_tryParseDate(s)) return false;
-    if (_tryParseSetLine(s)) return false;
-    if (s.match(/^упражнени/i)) return false;
-    if (s.match(/^[-=]{3,}$/)) return false;
-    return true;
+// === ОСНОВНОЙ ПАРСИНГ ===
+
+const _SKIP_HEADERS = /^(тренировк|упражнени|суперсет|круговая|сет|подход|[•·\-–—=]{2,})|\(\s*отдых/i;
+
+function _isNoteLine(line) {
+    const s = line.trim().toLowerCase();
+    // Строка с "подхода", "суперсет" и т.п. без данных подходов
+    if (s.match(/^(суперсет|круговая|сет|подход|отдых)/i)) return true;
+    if (s.match(/\d+\s*подход/i)) return true;
+    if (s.match(/из\s+\d+\s+упражнени/i)) return true;
+    if (s.match(/отдых\s+(между|после)/i)) return true;
+    return false;
 }
 
-// === ОСНОВНОЙ ПАРСИНГ ===
+function _cleanExerciseName(name) {
+    let s = name.trim();
+    // Убираем нумерацию: "1) Приседания" → "Приседания"
+    s = s.replace(/^\d+\s*[)\].]\s*/, '');
+    // Убираем лишнюю пунктуацию
+    s = s.replace(/:$/, '').trim();
+    return s;
+}
 
 function parseGymKeeperText(text) {
     const lines = text.split('\n');
@@ -131,107 +174,88 @@ function parseGymKeeperText(text) {
     let current = null;
     let currentExercise = null;
 
+    function flushExercise() {
+        if (currentExercise && current) {
+            // Пустые упражнения не сохраняем
+            if (currentExercise.sets.length > 0) {
+                current.exercises.push(currentExercise);
+            }
+            currentExercise = null;
+        }
+    }
+
+    function flushWorkout() {
+        flushExercise();
+        if (current && (current.exercises.length > 0 || current.date || current.duration)) {
+            workouts.push(current);
+        }
+        current = null;
+    }
+
     for (let raw of lines) {
         const line = raw.trim();
-        if (!line) {
-            if (currentExercise && current) {
-                current.exercises.push(currentExercise);
-                currentExercise = null;
-            }
+        if (!line) { flushExercise(); continue; }
+
+        // Дата (включая строки с "GymKeeper" + дата)
+        const date = _tryParseDate(line);
+        if (date) {
+            flushWorkout();
+            const dur = _parseDuration(line);
+            current = { date, duration: dur, exercises: [] };
             continue;
         }
 
-        // Дата
-        const date = _tryParseDate(line);
-        if (date) {
-            if (currentExercise && current) {
-                current.exercises.push(currentExercise);
-                currentExercise = null;
-            }
-            if (current) {
-                workouts.push(current);
-            }
-            current = { date, duration: null, exercises: [] };
-            continue;
-        }
+        if (!current) current = { date: null, duration: null, exercises: [] };
 
         // Длительность
         if (/^длительность/i.test(line)) {
             const dur = _parseDuration(line);
-            if (current && dur) current.duration = dur;
+            if (dur) current.duration = dur;
             continue;
         }
 
         // Пропускаем заголовки
-        if (line.match(/^тренировк/i) || line.match(/^упражнени/i) || line.match(/^[-=]{3,}$/)) {
-            if (currentExercise && current) {
-                current.exercises.push(currentExercise);
-                currentExercise = null;
-            }
+        if (_SKIP_HEADERS.test(line)) {
+            flushExercise();
             continue;
         }
 
-        // Проверка: строка вида "Имя: 10кг*15, 40кг*12" (двоеточие + сеты)
-        const colonIdx = line.indexOf(':');
-        if (colonIdx > 0) {
-            const before = line.slice(0, colonIdx).trim();
-            const after = line.slice(colonIdx + 1).trim();
-            const afterSets = _tryParseSetLine(after);
-            if (afterSets && afterSets.length > 0) {
-                if (currentExercise && current) current.exercises.push(currentExercise);
-                if (!current) current = { date: null, duration: null, exercises: [] };
-                currentExercise = { name: before, sets: [...afterSets] };
-                current.exercises.push(currentExercise);
-                currentExercise = null;
-                continue;
-            }
+        // Заметки (суперсет на плечи..., гиперэкстензия, 3 подхода)
+        if (_isNoteLine(line)) {
+            flushExercise();
+            continue;
         }
 
-        // Проверяем, является ли строка строкой с подходами
-        const sets = _tryParseSetLine(line);
-        if (sets) {
-            // Это строка с подходами
-            if (!current) {
-                current = { date: null, duration: null, exercises: [] };
-            }
+        // Строка с подходами
+        const sets = _parseSetLine(line);
+        if (sets && sets.length > 0) {
             if (currentExercise) {
+                // Накапливаем сеты в текущем упражнении
                 currentExercise.sets = currentExercise.sets.concat(sets);
-                current.exercises.push(currentExercise);
-                currentExercise = null;
             } else {
-                // Подходы без имени упражнения — создаём с заглушкой
-                currentExercise = { name: 'Упражнение', sets: [...sets] };
-                current.exercises.push(currentExercise);
-                currentExercise = null;
+                // Подходы без имени упражнения — создаём временное
+                currentExercise = { name: '(без названия)', sets };
             }
-        } else {
-            // Это имя упражнения (строка без сетов)
-            if (currentExercise && current) {
-                current.exercises.push(currentExercise);
-            }
-            if (!current) {
-                current = { date: null, duration: null, exercises: [] };
-            }
-            currentExercise = {
-                name: line.replace(/:$/, '').trim(),
-                sets: []
-            };
+            // НЕ сбрасываем — ждём следующее имя или пустую строку
+            continue;
+        }
+
+        // Всё остальное — имя упражнения (или текст)
+        flushExercise();
+        const cleanName = _cleanExerciseName(line);
+        if (cleanName && !_isNoteLine(cleanName)) {
+            currentExercise = { name: cleanName, sets: [] };
         }
     }
 
-    // Финиш
-    if (currentExercise && current) {
-        current.exercises.push(currentExercise);
-    }
-    if (current) {
+    // Сбрасываем последнее
+    flushExercise();
+    if (current && (current.exercises.length > 0 || current.date || current.duration)) {
         workouts.push(current);
     }
 
-    // Если нет даты — используем сегодня
     for (const w of workouts) {
-        if (!w.date) {
-            w.date = new Date().toISOString().slice(0, 10);
-        }
+        if (!w.date) w.date = new Date().toISOString().slice(0, 10);
     }
 
     return workouts;
@@ -341,7 +365,7 @@ window.openImportTraining = function() {
 
     // Textarea
     html += '<textarea id="train-import-textarea" class="train-import-textarea" placeholder="Вставьте текст из GymKeeper..."></textarea>';
-    html += '<details style="margin:-8px 0 12px;font-size:12px;color:#94a3b8;"><summary style="cursor:pointer;">Пример формата</summary><pre style="background:#f8fafc;padding:10px;border-radius:8px;margin:6px 0 0;font-size:12px;line-height:1.5;white-space:pre-wrap;">Тренировка 15.03.2026\nДлительность: 1ч 15мин\n\nЖим штанги лёжа:\n10кг*15, 40кг*12, 50кг*8 (норм)\n\nТяга гантели 20кг:\n15кг*12, 20кг*10\n\nБеговая дорожка:\n25мин:3.8км\n\nПланка:\n30сек*0кг</pre></details>';
+    html += '<details style="margin:-8px 0 12px;font-size:12px;color:#94a3b8;"><summary style="cursor:pointer;">Пример формата (GymKeeper)</summary><pre style="background:#f8fafc;padding:10px;border-radius:8px;margin:6px 0 0;font-size:12px;line-height:1.5;white-space:pre-wrap;">23 июл. 2026, 59 мин\n\nБеговая дорожка\n25мин:3.8км, норм (6 наклон, скорость 5.5)\n\nЖим над головой сидя · гантели\n4кг*15, норм\n6кг*12, норм\n7кг*10, норм\n\nПодтягивания\n0кг*8(с противовесом 60 lbs)\n\nПланка\n30сек*0кг, норм</pre></details>';
 
     // Buttons
     html += '<div class="train-import-actions">';
