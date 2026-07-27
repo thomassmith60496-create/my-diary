@@ -42,26 +42,37 @@ window.renderFinanceDashboard = function() {
         </div>`;
         return;
     }
-    
-    const monthSelect = document.getElementById('fin-month-select');
+
+    let html = `
+        <div class="finance-filter-row">
+            <div class="finance-filter-group">
+                <label class="finance-filter-label">Месяц</label>
+                <select id="fin-month-select" onchange="renderFinanceDashboard()" class="finance-filter-select">`;
+
     const allMonthsSet = new Set();
     financeData.transactions.forEach(t => {
         const m = t.date.slice(0, 7);
         allMonthsSet.add(m);
     });
     const sortedMonths = Array.from(allMonthsSet).sort();
-    
-    // Save currently selected value from the DOM before rebuilding options
-    const previouslySelected = monthSelect.value || financeSelectedMonth || '';
-    
-    monthSelect.innerHTML = '<option value="all">📊 Все месяцы (накопительно)</option>' +
+
+    html += '<option value="all">📊 Все месяцы (накопительно)</option>' +
         sortedMonths.map(m => {
             const [y, mo] = m.split('-');
             const monthNames = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
             const label = `${monthNames[parseInt(mo) - 1]} ${y}`;
             return `<option value="${m}">${label}</option>`;
         }).join('');
-    
+
+    html += `</select>
+            </div>
+        </div>`;
+
+    container.innerHTML = html;
+
+    const monthSelect = document.getElementById('fin-month-select');
+    const previouslySelected = monthSelect.value || financeSelectedMonth || '';
+
     // Determine which month to select:
     // 1. "all" — always valid (Все месяцы)
     // 2. If a specific month was previously selected, restore it
@@ -79,13 +90,13 @@ window.renderFinanceDashboard = function() {
         monthSelect.value = sortedMonths[sortedMonths.length - 1];
     }
     financeSelectedMonth = monthSelect.value;
-    
+
     let filteredTransactions = [...financeData.transactions];
     if(financeSelectedMonth !== 'all') {
         filteredTransactions = filteredTransactions.filter(t => t.date.startsWith(financeSelectedMonth));
     }
     if(filteredTransactions.length === 0) {
-        container.innerHTML = `<div class="empty-state">
+        container.innerHTML += `<div class="empty-state">
             <div class="empty-state-icon">📭</div>
             <div class="empty-state-title">Нет операций за выбранный период</div>
             <div class="empty-state-text">Попробуйте выбрать другой месяц</div>
