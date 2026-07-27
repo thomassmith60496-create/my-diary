@@ -5,7 +5,7 @@
 
 window.importFinanceExcel = function(input) {
     const file = input.files[0];
-    if(!file) { alert('Файл не выбран'); return; }
+    if(!file) { customAlert('Файл не выбран', 'Ошибка'); return; }
     
     const reader = new FileReader();
     reader.onload = function(e) {
@@ -16,7 +16,7 @@ window.importFinanceExcel = function(input) {
             const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
             
             if(jsonData.length < 2) {
-                alert('Файл пуст или содержит только заголовки');
+                customAlert('Файл пуст или содержит только заголовки', 'Ошибка');
                 return;
             }
             
@@ -126,9 +126,9 @@ window.importFinanceExcel = function(input) {
             saveFinance();
             renderCurrentFinanceTab();
             updateFinanceStats();
-            alert(`✅ Импортировано ${imported} операций${errors ? `, пропущено с ошибками: ${errors}` : ''}`);
+            customAlert(`✅ Импортировано ${imported} операций${errors ? `, пропущено с ошибками: ${errors}` : ''}`, 'Успех');
         } catch(err) {
-            alert('❌ Ошибка при импорте Excel: ' + err.message);
+            customAlert('❌ Ошибка при импорте Excel: ' + err.message, 'Ошибка');
         }
     };
     reader.readAsArrayBuffer(file);

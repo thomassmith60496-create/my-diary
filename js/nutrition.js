@@ -122,19 +122,19 @@ window.downloadMenuTemplate = function() {
     a.download = 'menu-template.json';
     a.click();
     URL.revokeObjectURL(url);
-    alert('✅ Шаблон меню скачан!');
+    customAlert('✅ Шаблон меню скачан!', 'Успех');
 }
 
 window.importMenu = function() {
     const startDate = document.getElementById('f-start-date').value;
     const endDate = document.getElementById('f-end-date').value;
     const menuJson = document.getElementById('f-menu-json').value.trim();
-    if(!startDate || !endDate) { alert('Укажите даты'); return; }
+    if(!startDate || !endDate) { customAlert('Укажите даты', 'Ошибка'); return; }
     let menu;
     try {
         menu = JSON.parse(menuJson);
         if(!Array.isArray(menu)) throw new Error('Меню должно быть массивом');
-    } catch(e) { alert('❌ Ошибка в JSON: ' + e.message); return; }
+    } catch(e) { customAlert('❌ Ошибка в JSON: ' + e.message, 'Ошибка'); return; }
     
     const weekId = 'week-' + Date.now();
     nutritionData.weeks.push({
@@ -146,7 +146,7 @@ window.importMenu = function() {
     saveNutrition();
     closeAllModals();
     renderNutritionAll();
-    alert('✅ Меню импортировано!');
+    customAlert('✅ Меню импортировано!', 'Успех');
 }
 
 window.createEmptyWeek = function() {
@@ -214,11 +214,15 @@ window.switchWeek = function() {
 }
 
 window.deleteWeek = function() {
-    if(!nutritionData.currentWeekId || !confirm('Удалить эту неделю?')) return;
-    nutritionData.weeks = nutritionData.weeks.filter(w => w.id !== nutritionData.currentWeekId);
-    nutritionData.currentWeekId = nutritionData.weeks.length > 0 ? nutritionData.weeks[0].id : null;
-    saveNutrition();
-    renderNutritionAll();
+    customConfirm('Удалить эту неделю?', 'Подтверждение удаления')
+        .then(confirmed => {
+            if (!confirmed) return;
+            if(!nutritionData.currentWeekId) return;
+            nutritionData.weeks = nutritionData.weeks.filter(w => w.id !== nutritionData.currentWeekId);
+            nutritionData.currentWeekId = nutritionData.weeks.length > 0 ? nutritionData.weeks[0].id : null;
+            saveNutrition();
+            renderNutritionAll();
+        });
 }
 
 function renderNutritionAll() {

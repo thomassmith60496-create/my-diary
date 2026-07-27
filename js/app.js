@@ -196,7 +196,7 @@ function importAllData(input) {
         try {
             const parsed = JSON.parse(e.target.result);
             if(!parsed || typeof parsed !== 'object') {
-                alert('❌ Неверный формат файла');
+                customAlert('❌ Неверный формат файла', 'Ошибка');
                 return;
             }
             if(parsed.nutrition && parsed.nutrition.weeks && Array.isArray(parsed.nutrition.weeks)) {
@@ -236,9 +236,9 @@ function importAllData(input) {
             renderNutritionAll();
             renderFinanceDashboard();
             updateFinanceStats();
-            alert('✅ Данные импортированы!');
+            customAlert('✅ Данные импортированы!', 'Успех');
         } catch(err) { 
-            alert('❌ Ошибка чтения файла'); 
+            customAlert('❌ Ошибка чтения файла', 'Ошибка'); 
         }
     };
     reader.readAsText(file);
@@ -246,16 +246,18 @@ function importAllData(input) {
 }
 
 function resetAllData() {
-    if(confirm('Удалить ВСЕ данные (питание + финансы)? Это нельзя отменить.')) {
-        const targetUid = getTargetUid();
-        db.ref(`lera_diary_v1/${targetUid}`).remove();
-        db.ref(`lera_finance_v1/${targetUid}`).remove();
-        nutritionData = { weeks: [], currentWeekId: null };
-        financeData = { transactions: [], savings: [], planned: [], categories: [] };
-        renderNutritionAll();
-        renderCurrentFinanceTab();
-        updateFinanceStats();
-    }
+    customConfirm('Удалить ВСЕ данные (питание + финансы)? Это нельзя отменить.', 'Подтверждение удаления')
+        .then(confirmed => {
+            if (!confirmed) return;
+            const targetUid = getTargetUid();
+            db.ref(`lera_diary_v1/${targetUid}`).remove();
+            db.ref(`lera_finance_v1/${targetUid}`).remove();
+            nutritionData = { weeks: [], currentWeekId: null };
+            financeData = { transactions: [], savings: [], planned: [], categories: [] };
+            renderNutritionAll();
+            renderCurrentFinanceTab();
+            updateFinanceStats();
+        });
 }
 
 // === ИНИЦИАЛИЗАЦИЯ ===

@@ -71,7 +71,7 @@ window.addSubcategoryTag = function() {
     const val = input.value.trim();
     if(!val) return;
     if(!window._editingSubcategories) window._editingSubcategories = [];
-    if(window._editingSubcategories.includes(val)) { alert('Такая подкатегория уже есть'); return; }
+    if(window._editingSubcategories.includes(val)) { customAlert('Такая подкатегория уже есть', 'Ошибка'); return; }
     window._editingSubcategories.push(val);
     input.value = '';
     renderSubcategoryTags();

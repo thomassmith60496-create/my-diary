@@ -270,18 +270,20 @@ function toggleExerciseExpand(id) {
 // === СОЗДАНИЕ БАЗОВОГО УПРАЖНЕНИЯ ===
 
 function openCreateExerciseModal() {
-    const name = prompt('Введите название упражнения:');
-    if (!name || !name.trim()) return;
+    customPrompt('Введите название упражнения:', '', '', 'Создание упражнения')
+        .then(name => {
+            if (!name || !name.trim()) return;
 
-    const result = TrainingExerciseAPI.createBaseExercise(name);
-    if (!result) {
-        alert('❌ Упражнение с таким названием уже существует');
-        return;
-    }
+            const result = TrainingExerciseAPI.createBaseExercise(name);
+            if (!result) {
+                customAlert('❌ Упражнение с таким названием уже существует', 'Ошибка');
+                return;
+            }
 
-    // API сам сохраняет — не нужно вызывать saveTrainingDataToMemory
-    trainingUIState.expandedExercises.add(result.id);
-    renderTrainingExercises();
+            // API сам сохраняет — не нужно вызывать saveTrainingDataToMemory
+            trainingUIState.expandedExercises.add(result.id);
+            renderTrainingExercises();
+        });
 }
 
 // === ПЕРЕИМЕНОВАНИЕ ===
@@ -305,7 +307,7 @@ function saveRenameExercise(id) {
     const newName = input.value;
     const result = TrainingExerciseAPI.renameBaseExercise(id, newName);
     if (!result) {
-        alert('❌ Не удалось переименовать. Возможно, такое название уже существует.');
+        customAlert('❌ Не удалось переименовать. Возможно, такое название уже существует.', 'Ошибка');
         return;
     }
 
@@ -321,15 +323,18 @@ function cancelEditExercise() {
 // === УДАЛЕНИЕ ===
 
 function deleteExerciseConfirm(id) {
-    if (!confirm('Вы уверены, что хотите удалить это упражнение?')) return;
+    customConfirm('Вы уверены, что хотите удалить это упражнение?', 'Подтверждение удаления')
+        .then(confirmed => {
+            if (!confirmed) return;
 
-    const result = TrainingExerciseAPI.deleteBaseExercise(id);
-    if (!result) {
-        alert('❌ Не удалось удалить. Возможно, у упражнения есть варианты.');
-        return;
-    }
+            const result = TrainingExerciseAPI.deleteBaseExercise(id);
+            if (!result) {
+                customAlert('❌ Не удалось удалить. Возможно, у упражнения есть варианты.', 'Ошибка');
+                return;
+            }
 
-    renderTrainingExercises();
+            renderTrainingExercises();
+        });
 }
 
 // === СЛИЯНИЕ ===
@@ -345,32 +350,37 @@ function cancelMerge() {
 }
 
 function confirmMerge(sourceId, targetId) {
-    if (!confirm('Переместить все варианты из исходного упражнения в целевое? Исходное упражнение будет удалено.')) return;
+    customConfirm('Переместить все варианты из исходного упражнения в целевое? Исходное упражнение будет удалено.', 'Подтверждение слияния')
+        .then(confirmed => {
+            if (!confirmed) return;
 
-    const result = TrainingExerciseAPI.mergeBaseExercises(sourceId, targetId);
-    if (!result) {
-        alert('❌ Не удалось выполнить слияние');
-        return;
-    }
+            const result = TrainingExerciseAPI.mergeBaseExercises(sourceId, targetId);
+            if (!result) {
+                customAlert('❌ Не удалось выполнить слияние', 'Ошибка');
+                return;
+            }
 
-    trainingUIState.mergeSourceId = null;
-    renderTrainingExercises();
+            trainingUIState.mergeSourceId = null;
+            renderTrainingExercises();
+        });
 }
 
 // === СОЗДАНИЕ ВАРИАНТА ===
 
 function openCreateVariantModal(exerciseId) {
-    const name = prompt('Введите название варианта:');
-    if (!name || !name.trim()) return;
+    customPrompt('Введите название варианта:', '', '', 'Создание варианта')
+        .then(name => {
+            if (!name || !name.trim()) return;
 
-    const result = TrainingExerciseAPI.createVariant(exerciseId, { name: name });
-    if (!result) {
-        alert('❌ Не удалось создать вариант');
-        return;
-    }
+            const result = TrainingExerciseAPI.createVariant(exerciseId, { name: name });
+            if (!result) {
+                customAlert('❌ Не удалось создать вариант', 'Ошибка');
+                return;
+            }
 
-    trainingUIState.expandedExercises.add(exerciseId);
-    renderTrainingExercises();
+            trainingUIState.expandedExercises.add(exerciseId);
+            renderTrainingExercises();
+        });
 }
 
 // === РЕДАКТИРОВАНИЕ ВАРИАНТА ===
@@ -389,7 +399,7 @@ function saveVariantEdit(exerciseId, variantId) {
     const equipSelect = document.getElementById('train-edit-variant-equip');
 
     if (!nameInput || !nameInput.value.trim()) {
-        alert('❌ Название не может быть пустым');
+        customAlert('❌ Название не может быть пустым', 'Ошибка');
         return;
     }
 
@@ -406,7 +416,7 @@ function saveVariantEdit(exerciseId, variantId) {
 
     const result = TrainingExerciseAPI.updateVariant(exerciseId, variantId, data);
     if (!result) {
-        alert('❌ Не удалось сохранить изменения');
+        customAlert('❌ Не удалось сохранить изменения', 'Ошибка');
         return;
     }
 
@@ -424,15 +434,18 @@ function cancelVariantEdit() {
 // === УДАЛЕНИЕ ВАРИАНТА ===
 
 function deleteVariantConfirm(exerciseId, variantId) {
-    if (!confirm('Вы уверены, что хотите удалить этот вариант?')) return;
+    customConfirm('Вы уверены, что хотите удалить этот вариант?', 'Подтверждение удаления')
+        .then(confirmed => {
+            if (!confirmed) return;
 
-    const result = TrainingExerciseAPI.deleteVariant(exerciseId, variantId);
-    if (!result) {
-        alert('❌ Не удалось удалить вариант');
-        return;
-    }
+            const result = TrainingExerciseAPI.deleteVariant(exerciseId, variantId);
+            if (!result) {
+                customAlert('❌ Не удалось удалить вариант', 'Ошибка');
+                return;
+            }
 
-    renderTrainingExercises();
+            renderTrainingExercises();
+        });
 }
 
 // === ПЕРЕМЕЩЕНИЕ ВАРИАНТА ===
@@ -444,7 +457,7 @@ function openMoveVariantModal(fromExerciseId, variantId, variantName) {
         .sort((a, b) => a.name.localeCompare(b.name, 'ru'));
 
     if (options.length === 0) {
-        alert('❌ Нет других упражнений для перемещения');
+        customAlert('❌ Нет других упражнений для перемещения', 'Ошибка');
         return;
     }
 
@@ -454,22 +467,24 @@ function openMoveVariantModal(fromExerciseId, variantId, variantName) {
     });
     message += '\nВведите номер:';
 
-    const choice = prompt(message);
-    if (!choice) return;
+    customPrompt(message, '', '', 'Перемещение варианта')
+        .then(choice => {
+            if (!choice) return;
 
-    const idx = parseInt(choice) - 1;
-    if (isNaN(idx) || idx < 0 || idx >= options.length) {
-        alert('❌ Неверный номер');
-        return;
-    }
+            const idx = parseInt(choice) - 1;
+            if (isNaN(idx) || idx < 0 || idx >= options.length) {
+                customAlert('❌ Неверный номер', 'Ошибка');
+                return;
+            }
 
-    const result = TrainingExerciseAPI.moveVariant(variantId, fromExerciseId, options[idx].id);
-    if (!result) {
-        alert('❌ Не удалось переместить вариант');
-        return;
-    }
+            const result = TrainingExerciseAPI.moveVariant(variantId, fromExerciseId, options[idx].id);
+            if (!result) {
+                customAlert('❌ Не удалось переместить вариант', 'Ошибка');
+                return;
+            }
 
-    renderTrainingExercises();
+            renderTrainingExercises();
+        });
 }
 
 // ============================================
@@ -993,27 +1008,30 @@ function renderAddExerciseForm(workoutId) {
 // --- Создание тренировки ---
 
 function openCreateWorkoutModal() {
-    const date = prompt('Введите дату тренировки (ГГГГ-ММ-ДД):', new Date().toISOString().slice(0, 10));
-    if (!date || !date.trim()) return;
+    const today = new Date().toISOString().slice(0, 10);
+    customPrompt('Введите дату тренировки (ГГГГ-ММ-ДД):', '', today, 'Новая тренировка')
+        .then(date => {
+            if (!date || !date.trim()) return;
 
-    // Проверка формата даты
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date.trim())) {
-        alert('❌ Неверный формат даты. Используйте ГГГГ-ММ-ДД.');
-        return;
-    }
+            // Проверка формата даты
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(date.trim())) {
+                customAlert('❌ Неверный формат даты. Используйте ГГГГ-ММ-ДД.', 'Ошибка');
+                return;
+            }
 
-    const result = TrainingWorkoutAPI.createWorkout({
-        date: date.trim(),
-        comment: ''
-    });
-    if (!result) {
-        alert('❌ Не удалось создать тренировку');
-        return;
-    }
+            const result = TrainingWorkoutAPI.createWorkout({
+                date: date.trim(),
+                comment: ''
+            });
+            if (!result) {
+                customAlert('❌ Не удалось создать тренировку', 'Ошибка');
+                return;
+            }
 
-    // Открываем детальный просмотр новой тренировки
-    workoutsUIState.viewingWorkoutId = result.id;
-    renderTrainingWorkouts();
+            // Открываем детальный просмотр новой тренировки
+            workoutsUIState.viewingWorkoutId = result.id;
+            renderTrainingWorkouts();
+        });
 }
 
 // --- Редактирование тренировки (в списке) ---
@@ -1032,7 +1050,7 @@ function saveWorkoutEdit(id) {
     const dateInput = document.getElementById('train-edit-w-date');
     const commentInput = document.getElementById('train-edit-w-comment');
     if (!dateInput || !dateInput.value) {
-        alert('❌ Дата обязательна');
+        customAlert('❌ Дата обязательна', 'Ошибка');
         return;
     }
     const result = TrainingWorkoutAPI.updateWorkout(id, {
@@ -1040,7 +1058,7 @@ function saveWorkoutEdit(id) {
         comment: commentInput ? commentInput.value : ''
     });
     if (!result) {
-        alert('❌ Не удалось сохранить');
+        customAlert('❌ Не удалось сохранить', 'Ошибка');
         return;
     }
     workoutsUIState.editingWorkoutId = null;
@@ -1059,17 +1077,20 @@ function cancelWorkoutEdit() {
 // --- Удаление тренировки ---
 
 function deleteWorkoutConfirm(id) {
-    if (!confirm('Вы уверены, что хотите удалить эту тренировку?')) return;
-    const result = TrainingWorkoutAPI.deleteWorkout(id);
-    if (!result) {
-        alert('❌ Не удалось удалить тренировку');
-        return;
-    }
-    // Если мы были в детальном просмотре удалённой тренировки, выходим
-    if (workoutsUIState.viewingWorkoutId === id) {
-        workoutsUIState.viewingWorkoutId = null;
-    }
-    renderTrainingWorkouts();
+    customConfirm('Вы уверены, что хотите удалить эту тренировку?', 'Подтверждение удаления')
+        .then(confirmed => {
+            if (!confirmed) return;
+            const result = TrainingWorkoutAPI.deleteWorkout(id);
+            if (!result) {
+                customAlert('❌ Не удалось удалить тренировку', 'Ошибка');
+                return;
+            }
+            // Если мы были в детальном просмотре удалённой тренировки, выходим
+            if (workoutsUIState.viewingWorkoutId === id) {
+                workoutsUIState.viewingWorkoutId = null;
+            }
+            renderTrainingWorkouts();
+        });
 }
 
 // --- Добавление упражнения ---
@@ -1087,7 +1108,7 @@ function cancelAddExerciseToWorkout() {
 function addExerciseToWorkout(workoutId, variantId) {
     const result = TrainingWorkoutAPI.addExerciseToWorkout(workoutId, variantId);
     if (!result) {
-        alert('❌ Не удалось добавить упражнение. Возможно, оно уже добавлено.');
+        customAlert('❌ Не удалось добавить упражнение. Возможно, оно уже добавлено.', 'Ошибка');
         return;
     }
     workoutsUIState.addExerciseWorkoutId = null;
@@ -1099,13 +1120,16 @@ function addExerciseToWorkout(workoutId, variantId) {
 // --- Удаление упражнения ---
 
 function removeExerciseFromWorkout(workoutId, variantId) {
-    if (!confirm('Удалить это упражнение из тренировки?')) return;
-    const result = TrainingWorkoutAPI.removeExerciseFromWorkout(workoutId, variantId);
-    if (!result) {
-        alert('❌ Не удалось удалить упражнение');
-        return;
-    }
-    renderTrainingWorkouts();
+    customConfirm('Удалить это упражнение из тренировки?', 'Подтверждение удаления')
+        .then(confirmed => {
+            if (!confirmed) return;
+            const result = TrainingWorkoutAPI.removeExerciseFromWorkout(workoutId, variantId);
+            if (!result) {
+                customAlert('❌ Не удалось удалить упражнение', 'Ошибка');
+                return;
+            }
+            renderTrainingWorkouts();
+        });
 }
 
 // --- Добавление подхода ---
@@ -1132,7 +1156,7 @@ function addSetToExercise(workoutId, variantId) {
 
     const result = TrainingWorkoutAPI.addSet(workoutId, variantId, setData);
     if (!result) {
-        alert('❌ Не удалось добавить подход');
+        customAlert('❌ Не удалось добавить подход', 'Ошибка');
         return;
     }
 
@@ -1175,7 +1199,7 @@ function saveSetEdit(workoutId, variantId, setId) {
 
     const result = TrainingWorkoutAPI.updateSet(workoutId, variantId, setId, setData);
     if (!result) {
-        alert('❌ Не удалось сохранить подход');
+        customAlert('❌ Не удалось сохранить подход', 'Ошибка');
         return;
     }
 
@@ -1192,13 +1216,16 @@ function cancelSetEdit() {
 // --- Удаление / разминка подхода ---
 
 function deleteSetConfirm(workoutId, variantId, setId) {
-    if (!confirm('Удалить этот подход?')) return;
-    const result = TrainingWorkoutAPI.deleteSet(workoutId, variantId, setId);
-    if (!result) {
-        alert('❌ Не удалось удалить подход');
-        return;
-    }
-    renderTrainingWorkouts();
+    customConfirm('Удалить этот подход?', 'Подтверждение удаления')
+        .then(confirmed => {
+            if (!confirmed) return;
+            const result = TrainingWorkoutAPI.deleteSet(workoutId, variantId, setId);
+            if (!result) {
+                customAlert('❌ Не удалось удалить подход', 'Ошибка');
+                return;
+            }
+            renderTrainingWorkouts();
+        });
 }
 
 function toggleSetWarmup(workoutId, variantId, setId) {
@@ -1212,7 +1239,7 @@ function moveExercise(workoutId, fromIndex, toIndex) {
     if (toIndex < 0) return;
     const result = TrainingWorkoutAPI.moveExercise(workoutId, fromIndex, toIndex);
     if (!result) {
-        alert('❌ Не удалось переместить упражнение');
+        customAlert('❌ Не удалось переместить упражнение', 'Ошибка');
         return;
     }
     renderTrainingWorkouts();
@@ -1224,7 +1251,7 @@ function moveSet(workoutId, variantId, fromIndex, toIndex) {
     if (toIndex < 0) return;
     const result = TrainingWorkoutAPI.moveSet(workoutId, variantId, fromIndex, toIndex);
     if (!result) {
-        alert('❌ Не удалось переместить подход');
+        customAlert('❌ Не удалось переместить подход', 'Ошибка');
         return;
     }
     renderTrainingWorkouts();
@@ -1233,13 +1260,16 @@ function moveSet(workoutId, variantId, fromIndex, toIndex) {
 // --- Копирование упражнения ---
 
 function copyExercise(workoutId, variantId) {
-    if (!confirm('Копировать это упражнение со всеми подходами?')) return;
-    const result = TrainingWorkoutAPI.copyExercise(workoutId, variantId);
-    if (!result) {
-        alert('❌ Не удалось скопировать упражнение');
-        return;
-    }
-    renderTrainingWorkouts();
+    customConfirm('Копировать это упражнение со всеми подходами?', 'Подтверждение копирования')
+        .then(confirmed => {
+            if (!confirmed) return;
+            const result = TrainingWorkoutAPI.copyExercise(workoutId, variantId);
+            if (!result) {
+                customAlert('❌ Не удалось скопировать упражнение', 'Ошибка');
+                return;
+            }
+            renderTrainingWorkouts();
+        });
 }
 
 // --- Сворачивание / разворачивание упражнения ---
@@ -1258,7 +1288,7 @@ function toggleExerciseCollapse(variantId) {
 function copySet(workoutId, variantId, setId) {
     const result = TrainingWorkoutAPI.copySet(workoutId, variantId, setId);
     if (!result) {
-        alert('❌ Не удалось скопировать подход');
+        customAlert('❌ Не удалось скопировать подход', 'Ошибка');
         return;
     }
     renderTrainingWorkouts();
@@ -1271,7 +1301,7 @@ function addSetFromPrevious(workoutId, variantId) {
     if (!workout) return;
     const exercise = workout.exercises.find(e => e.variantId === variantId);
     if (!exercise || exercise.sets.length === 0) {
-        alert('Нет предыдущих подходов для копирования');
+        customAlert('Нет предыдущих подходов для копирования', 'Информация');
         return;
     }
     const lastSet = exercise.sets[exercise.sets.length - 1];
@@ -1285,7 +1315,7 @@ function addSetFromPrevious(workoutId, variantId) {
     };
     const result = TrainingWorkoutAPI.addSet(workoutId, variantId, setData);
     if (!result) {
-        alert('❌ Не удалось добавить подход');
+        customAlert('❌ Не удалось добавить подход', 'Ошибка');
         return;
     }
     renderTrainingWorkouts();

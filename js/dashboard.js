@@ -97,6 +97,7 @@ function renderNutritionCard(todayData, dateStr) {
             <div class="home-card-header">
                 <h2 class="home-card-title">📘 Сегодня</h2>
                 <div class="home-card-badge">Питание</div>
+            </div>
             <div class="home-card-body">
                 ${hasData ? `
                     <div class="nutrition-stats">
@@ -114,25 +115,25 @@ function renderNutritionCard(todayData, dateStr) {
                                     <span class="macro-value">${todayData.protein}г</span>
                                     <span class="macro-label">Белки</span>
                                 </div>
-                                <div class="macro-progress">
-                                    <div class="macro-progress-fill prot" style="width: ${protProgress}%"></div>
+                        </div>
+                        <div class="macro-item">
+                            <div class="macro-info">
+                                <span class="macro-value">${todayData.fat}г</span>
+                                <span class="macro-label">Жиры</span>
                             </div>
-                            <div class="macro-item">
-                                <div class="macro-info">
-                                    <span class="macro-value">${todayData.fat}г</span>
-                                    <span class="macro-label">Жиры</span>
-                                </div>
-                                <div class="macro-progress">
-                                    <div class="macro-progress-fill fat" style="width: ${Math.min(100, (todayData.fat / 55) * 100)}%"></div>
+                            <div class="macro-progress">
+                                <div class="macro-progress-fill fat" style="width: ${Math.min(100, (todayData.fat / 55) * 100)}%"></div>
                             </div>
-                            <div class="macro-item">
-                                <div class="macro-info">
-                                    <span class="macro-value">${todayData.carbs}г</span>
-                                    <span class="macro-label">Углеводы</span>
-                                </div>
-                                <div class="macro-progress">
-                                    <div class="macro-progress-fill carb" style="width: ${Math.min(100, (todayData.carbs / 100) * 100)}%"></div>
+                        </div>
+                        <div class="macro-item">
+                            <div class="macro-info">
+                                <span class="macro-value">${todayData.carbs}г</span>
+                                <span class="macro-label">Углеводы</span>
                             </div>
+                            <div class="macro-progress">
+                                <div class="macro-progress-fill carb" style="width: ${Math.min(100, (todayData.carbs / 100) * 100)}%"></div>
+                            </div>
+                        </div>
                         <div class="nutrition-meals">
                             <span class="meals-count">🍽️ ${todayData.mealsCount} приём${getPlural(todayData.mealsCount, ['ов', '', 'а'])} пищи</span>
                         </div>
@@ -217,6 +218,7 @@ function renderFinanceCard(todayData, dateStr) {
             <div class="home-card-header">
                 <h2 class="home-card-title">💰 Финансы</h2>
                 <div class="home-card-badge">${todayData.monthLabel}</div>
+            </div>
             <div class="home-card-body">
                 ${hasTransactions ? `
                     <div class="finance-today">

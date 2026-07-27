@@ -42,7 +42,7 @@
                 <button class="auth-btn" id="auth-btn" onclick="loginUser()">Войти</button>
                 <div class="auth-error" id="auth-error"></div>
                 <div class="auth-success" id="auth-success"></div>
-                <div class="auth-forgot"><a onclick="alert('Свяжитесь с администратором для сброса пароля')">Забыли пароль?</a></div>
+                <div class="auth-forgot"><a onclick="customAlert('Свяжитесь с администратором для сброса пароля', 'Информация')">Забыли пароль?</a></div>
             </div>
             <!-- Форма регистрации -->
             <div class="auth-form-content" id="auth-form-register">
@@ -127,8 +127,8 @@
             <div class="toolbar">
                 <button class="btn green primary" onclick="renderDashboard()">🔄 Обновить</button>
             </div>
-            <div style="display:flex;gap:16px;flex-wrap:wrap;">
-                <div class="dashboard-section" style="flex:1;min-width:350px;">
+            <div class="dashboard-grid-row">
+                <div class="dashboard-grid-item">
                     <h2 class="dashboard-title">⚖️ Динамика веса</h2>
                     <div class="dashboard-controls">
                         <div class="dashboard-select-wrap">
@@ -143,7 +143,7 @@
                     <div id="weight-chart-container"></div>
                     <div id="weight-stats-container"></div>
                 </div>
-                <div class="dashboard-section" style="flex:1;min-width:350px;">
+                <div class="dashboard-grid-item">
                     <h2 class="dashboard-title">🔥 КБЖУ по дням</h2>
                     <div class="dashboard-controls">
                         <div class="dashboard-select-wrap">
@@ -155,7 +155,7 @@
                             </select>
                         </div>
                         <div>
-                            <label style="display:block;font-size:12px;font-weight:700;color:#065f46;margin-bottom:4px;">Показывать</label>
+                            <label class="dashboard-label">Показывать</label>
                             <div class="metric-toggle">
                                 <button class="metric-btn active" data-metric="cal" onclick="setKbjuMetric('cal')">Калории</button>
                                 <button class="metric-btn" data-metric="prot" onclick="setKbjuMetric('prot')">Белки</button>
@@ -176,7 +176,7 @@
     </div>
 
     <div class="main-tab-content" id="main-tab-train">
-        <header style="background: linear-gradient(135deg, #9a3412 0%, #ea580c 100%); box-shadow: 0 10px 30px rgba(234, 88, 12, 0.25);">
+        <header class="train-header">
             <h1>🏋️ ТРЕНИРОВКИ</h1>
             <div class="subtitle">Управление базой упражнений</div>
         </header>
@@ -193,7 +193,7 @@
     </div>
 
     <div class="main-tab-content" id="main-tab-finance">
-        <header style="background: linear-gradient(135deg, #7e22ce 0%, #a855f7 100%); box-shadow: 0 10px 30px rgba(168, 85, 247, 0.25);">
+        <header class="finance-header">
            <h1>💰 ФИНАНСЫ</h1>
            <div class="subtitle">Учёт доходов, расходов и накоплений</div>
            <div class="macros">
@@ -218,8 +218,8 @@
                    <option value="all">📊 Все месяцы (накопительно)</option>
                </select>
            </div>
-           <div class="toolbar" style="margin-top:0;">
-               <button class="btn primary" style="background:#a855f7; border-color:#7e22ce; color:white;" onclick="openFinanceModal()">➕ Добавить операцию</button>
+           <div class="toolbar toolbar-no-margin">
+               <button class="btn primary btn-finance-primary" onclick="openFinanceModal()">➕ Добавить операцию</button>
                <button class="btn" onclick="document.getElementById('import-excel-file').click()">📂 Импорт из Excel</button>
                <button class="btn" onclick="renderFinanceDashboard()">🔄 Обновить</button>
     <input type="file" id="import-excel-file" accept=".xlsx,.xls,.csv" style="display:none;" onchange="importFinanceExcel(this)">
@@ -236,7 +236,7 @@
        <!-- Подвкладка: Операции -->
        <div class="sub-tab-content" id="fin-sub-transactions">
            <div class="toolbar">
-               <button class="btn primary" style="background:#a855f7; border-color:#7e22ce; color:white;" onclick="openFinanceModal()">➕ Добавить операцию</button>
+               <button class="btn primary btn-finance-primary" onclick="openFinanceModal()">➕ Добавить операцию</button>
                <button class="btn danger" onclick="deleteAllFinanceTransactions()">🗑 Очистить все</button>
            </div>
            <div id="finance-transactions-list">
@@ -251,7 +251,7 @@
        <!-- Подвкладка: Накопления -->
        <div class="sub-tab-content" id="fin-sub-savings">
            <div class="toolbar">
-               <button class="btn primary" style="background:#a855f7; border-color:#7e22ce; color:white;" onclick="openSavingsModal()">➕ Добавить накопление</button>
+               <button class="btn primary btn-finance-primary" onclick="openSavingsModal()">➕ Добавить накопление</button>
            </div>
            <div id="finance-savings-list">
                <div class="empty-state">
@@ -265,7 +265,7 @@
        <!-- Подвкладка: Планируемые -->
        <div class="sub-tab-content" id="fin-sub-planned">
            <div class="toolbar">
-               <button class="btn primary" style="background:#a855f7; border-color:#7e22ce; color:white;" onclick="openPlannedModal()">➕ Добавить планируемый расход</button>
+               <button class="btn primary btn-finance-primary" onclick="openPlannedModal()">➕ Добавить планируемый расход</button>
            </div>
            <div id="finance-planned-list">
                <div class="empty-state">
@@ -279,7 +279,7 @@
        <!-- Подвкладка: Категории -->
        <div class="sub-tab-content" id="fin-sub-categories">
            <div class="toolbar">
-               <button class="btn primary" style="background:#a855f7; border-color:#7e22ce; color:white;" onclick="openCategoryModal()">➕ Добавить категорию</button>
+               <button class="btn primary btn-finance-primary" onclick="openCategoryModal()">➕ Добавить категорию</button>
            </div>
            <div id="finance-categories-list">
                <div class="empty-state">
@@ -344,8 +344,8 @@
                 </div>
                 <div class="form-field finance">
                     <label>💰 Сумма</label>
-                    <input type="text" id="f-fin-amount" placeholder="1500  или =100+200+50" style="font-family:monospace;letter-spacing:0.5px;">
-                    <div style="font-size:10px;color:#a855f7;margin-top:2px;">Можно писать формулу: <code>=300+150+50</code> — калькулятор сам посчитает</div>
+                    <input type="text" id="f-fin-amount" placeholder="1500  или =100+200+50" class="finance-amount-input">
+                    <div class="finance-hint">Можно писать формулу: <code>=300+150+50</code> — калькулятор сам посчитает</div>
                 </div>
                 <div class="form-field finance">
                     <label>🏷 Категория</label>
@@ -367,7 +367,7 @@
         </div>
         <div class="modal-footer finance">
             <button class="btn" onclick="closeAllModals()">Отмена</button>
-            <button class="btn primary" style="background:#a855f7; border-color:#7e22ce; color:white;" onclick="saveFinanceTransaction()">💾 Сохранить</button>
+            <button class="btn primary btn-finance-primary" onclick="saveFinanceTransaction()">💾 Сохранить</button>
         </div>
     </div>
 </div>
@@ -406,7 +406,7 @@
         </div>
         <div class="modal-footer finance">
             <button class="btn" onclick="closeAllModals()">Отмена</button>
-            <button class="btn primary" style="background:#a855f7; border-color:#7e22ce; color:white;" onclick="saveSavingsEntry()">💾 Сохранить</button>
+            <button class="btn primary btn-finance-primary" onclick="saveSavingsEntry()">💾 Сохранить</button>
         </div>
     </div>
 </div>
@@ -451,7 +451,7 @@
         </div>
         <div class="modal-footer finance">
             <button class="btn" onclick="closeAllModals()">Отмена</button>
-            <button class="btn primary" style="background:#a855f7; border-color:#7e22ce; color:white;" onclick="savePlannedEntry()">💾 Сохранить</button>
+            <button class="btn primary btn-finance-primary" onclick="savePlannedEntry()">💾 Сохранить</button>
         </div>
     </div>
 </div>
@@ -489,13 +489,13 @@
                         <input type="text" id="f-cat-new-subcat" placeholder="Новая подкатегория">
                         <button onclick="addSubcategoryTag()">➕</button>
                     </div>
-                    <div style="font-size:11px;color:#7e22ce;margin-top:4px;">Нажмите ✕ на теге чтобы удалить. Лимит подкатегории не может превышать лимит категории.</div>
+                    <div class="finance-hint-small">Нажмите ✕ на теге чтобы удалить. Лимит подкатегории не может превышать лимит категории.</div>
                 </div>
             </div>
         </div>
         <div class="modal-footer finance">
             <button class="btn" onclick="closeAllModals()">Отмена</button>
-            <button class="btn primary" style="background:#a855f7; border-color:#7e22ce; color:white;" onclick="saveCategory()">💾 Сохранить</button>
+            <button class="btn primary btn-finance-primary" onclick="saveCategory()">💾 Сохранить</button>
         </div>
     </div>
 </div>
@@ -521,6 +521,7 @@
 <script src="js/training-storage.js"></script>
 <script src="js/training-data.js"></script>
 <script src="js/training-ui.js"></script>
+<script src="js/custom-modals.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

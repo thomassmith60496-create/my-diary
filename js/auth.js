@@ -172,7 +172,7 @@ window.registerUser = function() {
                 successEl.style.display = 'block';
                 btn.disabled = false;
                 btn.textContent = 'Зарегистрироваться';
-                document.getElementById('auth-overlay').style.display = 'none';
+                document.getElementById('auth-overlay').classList.add('hidden');
                 initUserSession(uid);
             });
         })
@@ -469,17 +469,20 @@ function createReaderUser(email) {
 }
 
 window.removeReader = function(readerUid) {
-    if (!confirm('Удалить читателя?')) return;
-    
-    usersRef.child(currentUserId).child('readers').child(readerUid).remove().then(function() {
-        usersRef.child(readerUid).update({
-            role: 'reader',
-            ownerUid: null
-        }).catch(console.error);
-        showSyncStatus('✅ Читатель удалён', 'success');
-        closeAccessModal();
-        openAccessModal();
-    });
+    customConfirm('Удалить читателя?', 'Подтверждение удаления')
+        .then(confirmed => {
+            if (!confirmed) return;
+            
+            usersRef.child(currentUserId).child('readers').child(readerUid).remove().then(function() {
+                usersRef.child(readerUid).update({
+                    role: 'reader',
+                    ownerUid: null
+                }).catch(console.error);
+                showSyncStatus('✅ Читатель удалён', 'success');
+                closeAccessModal();
+                openAccessModal();
+            });
+        });
 }
 
 window.toggleViewMode = function() {

@@ -57,6 +57,15 @@ header .macro-badge {
     background: rgba(255,255,255,0.15); padding: 4px 12px;
     border-radius: 20px; font-size: 12px; font-weight: 600;
 }
+
+/* Training header */
+.train-header {
+    background: linear-gradient(135deg, #9a3412 0%, #ea580c 100%);
+    color: white; padding: 20px 30px; border-radius: 12px; margin-bottom: 20px;
+    box-shadow: 0 10px 30px rgba(234, 88, 12, 0.25);
+}
+.train-header h1 { margin: 0 0 6px; font-size: 22px; letter-spacing: 2px; }
+.train-header .subtitle { font-size: 13px; opacity: 0.85; margin: 0; }
 .week-selector {
     background: white; border-radius: 12px; padding: 16px 20px;
     margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);
@@ -260,23 +269,113 @@ header .macro-badge {
     box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 999;
 }
 /* Home page */
-.home-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
-.home-card {
-    background: white; border-radius: 14px; padding: 20px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.06); cursor: pointer;
-    transition: all 0.2s; border: 2px solid transparent;
+.home-header {
+    background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+    color: white; padding: 20px 30px; border-radius: 12px; margin-bottom: 20px;
 }
-.home-card:hover { border-color: #2563eb; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.1); }
-.home-card-icon { font-size: 36px; margin-bottom: 8px; }
-.home-card-title { font-weight: 700; font-size: 16px; margin-bottom: 4px; }
-.home-card-desc { font-size: 13px; color: #64748b; }
-.quick-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
-.quick-action-item {
+.home-header h1 { margin: 0 0 6px; font-size: 22px; }
+.home-header .subtitle { font-size: 13px; opacity: 0.85; margin: 0; }
+
+.quick-actions { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 16px; margin-bottom: 20px; }
+.quick-action-btn {
     background: white; border-radius: 10px; padding: 14px;
     border: 2px solid #e2e8f0; cursor: pointer; text-align: center;
     font-weight: 600; font-size: 13px; transition: all 0.2s;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    font-family: inherit; color: #1e293b;
 }
-.quick-action-item:hover { border-color: #2563eb; background: #eff6ff; }
+.quick-action-btn:hover { border-color: #2563eb; background: #eff6ff; transform: translateY(-2px); }
+.quick-action-icon { font-size: 24px; }
+.quick-action-text { font-size: 12px; }
+
+.home-grid { display: grid; grid-template-columns: 1fr; gap: 16px; margin-top: 16px; }
+.home-card {
+    background: white; border-radius: 14px; padding: 0;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+    transition: all 0.2s; border: 2px solid transparent;
+    overflow: hidden;
+}
+.home-card:hover { border-color: #2563eb; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.1); }
+.home-card-header {
+    padding: 14px 18px; display: flex; align-items: center; justify-content: space-between;
+    background: #f8fafc; border-bottom: 1px solid #e2e8f0;
+}
+.home-card-title { font-weight: 700; font-size: 16px; margin: 0; }
+.home-card-badge {
+    background: #2563eb; color: white; padding: 4px 12px;
+    border-radius: 20px; font-size: 11px; font-weight: 600;
+}
+.home-card-body { padding: 16px 18px; }
+.home-card-icon { font-size: 36px; margin-bottom: 8px; }
+.home-card-desc { font-size: 13px; color: #64748b; }
+
+/* Nutrition card in home */
+.nutrition-stats { }
+.nutrition-main { margin-bottom: 12px; }
+.nutrition-calories { display: flex; align-items: baseline; gap: 6px; margin-bottom: 8px; }
+.nutrition-value { font-size: 32px; font-weight: 800; color: #dc2626; }
+.nutrition-label { font-size: 14px; color: #64748b; }
+.nutrition-progress-bar {
+    height: 8px; background: #e2e8f0; border-radius: 4px;
+    overflow: hidden; margin-bottom: 12px;
+}
+.nutrition-progress-fill {
+    height: 100%; background: linear-gradient(90deg, #2563eb 0%, #16a34a 100%);
+    border-radius: 4px; transition: width 0.3s;
+}
+.nutrition-macros { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+.macro-item { }
+.macro-info { display: flex; flex-direction: column; gap: 2px; margin-bottom: 4px; }
+.macro-value { font-size: 18px; font-weight: 700; color: #1e293b; }
+.macro-label { font-size: 11px; color: #64748b; font-weight: 600; }
+.macro-progress {
+    height: 6px; background: #e2e8f0; border-radius: 3px;
+    overflow: hidden;
+}
+.macro-progress-fill {
+    height: 100%; border-radius: 3px; transition: width 0.3s;
+}
+.macro-progress-fill.prot { background: #16a34a; }
+.macro-progress-fill.fat { background: #ea580c; }
+.macro-progress-fill.carb { background: #9333ea; }
+.nutrition-meals { padding-top: 10px; border-top: 1px solid #e2e8f0; }
+.meals-count { font-size: 13px; color: #64748b; font-weight: 600; }
+
+/* Finance card in home */
+.finance-today { margin-bottom: 12px; }
+.finance-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+.finance-item { padding: 10px; border-radius: 8px; }
+.finance-item.expense { background: #fee2e2; }
+.finance-item.income { background: #dcfce7; }
+.finance-label { display: block; font-size: 11px; color: #64748b; font-weight: 600; margin-bottom: 4px; }
+.finance-value { display: block; font-size: 18px; font-weight: 700; }
+.finance-month { padding: 10px; background: #f8fafc; border-radius: 8px; }
+.month-item { display: flex; flex-direction: column; gap: 4px; }
+.month-label { font-size: 12px; color: #64748b; }
+.month-value { font-size: 16px; font-weight: 700; color: #dc2626; }
+.month-date { font-size: 11px; color: #a1a1aa; }
+.savings-progress { margin-top: 10px; padding-top: 10px; border-top: 1px solid #e2e8f0; }
+.savings-label { font-size: 13px; font-weight: 600; color: #7e22ce; margin-bottom: 6px; }
+.savings-bar {
+    height: 8px; background: #e9d5ff; border-radius: 4px;
+    overflow: hidden;
+}
+.savings-bar-fill {
+    height: 100%; background: linear-gradient(90deg, #7e22ce 0%, #a855f7 100%);
+    border-radius: 4px; transition: width 0.3s;
+}
+
+/* Activity card */
+.activity-list { display: flex; flex-direction: column; gap: 10px; }
+.activity-item {
+    display: flex; gap: 12px; padding: 10px;
+    background: #f8fafc; border-radius: 8px;
+}
+.activity-icon { font-size: 24px; flex-shrink: 0; }
+.activity-content { flex: 1; }
+.activity-title { font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 2px; }
+.activity-details { font-size: 12px; color: #64748b; margin-bottom: 2px; }
+.activity-meta { font-size: 12px; color: #dc2626; font-weight: 600; }
 /* Empty state */
 .empty-state {
     text-align: center; padding: 60px 20px;
@@ -298,6 +397,47 @@ header .macro-badge {
 /* Finance styles */
 .finance-header { background: linear-gradient(135deg, #7e22ce 0%, #a855f7 100%); }
 .finance-module-header { background: linear-gradient(135deg, #7e22ce 0%, #a855f7 100%); color: white; padding: 12px 16px; border-radius: 10px; margin-bottom: 12px; }
+.btn-finance-primary {
+    background: #a855f7 !important;
+    border-color: #7e22ce !important;
+    color: white !important;
+}
+.btn-finance-primary:hover {
+    background: #9333ea !important;
+}
+.dashboard-grid-row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+.dashboard-grid-item {
+    flex: 1;
+    min-width: 350px;
+}
+.dashboard-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    color: #065f46;
+    margin-bottom: 4px;
+}
+.toolbar-no-margin {
+    margin-top: 0;
+}
+.finance-amount-input {
+    font-family: monospace;
+    letter-spacing: 0.5px;
+}
+.finance-hint {
+    font-size: 10px;
+    color: #a855f7;
+    margin-top: 2px;
+}
+.finance-hint-small {
+    font-size: 11px;
+    color: #7e22ce;
+    margin-top: 4px;
+}
 .finance-module-title { font-size: 16px; font-weight: 700; }
 .finance-month-selector { background: white; border-radius: 12px; padding: 12px 16px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .finance-month-selector label { font-weight: 700; font-size: 14px; color: #7e22ce; }
@@ -440,6 +580,39 @@ header .macro-badge {
 }
 .empty-state-mini-icon { font-size: 48px; margin-bottom: 10px; }
 .empty-state-mini-text { font-size: 14px; color: #64748b; font-weight: 600; }
+
+/* ===== CUSTOM MODAL ===== */
+.custom-modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+    backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center;
+    z-index: 3000; padding: 20px;
+}
+.custom-modal-overlay.visible { display: flex; }
+.custom-modal {
+    background: white; border-radius: 16px; max-width: 500px; width: 100%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3); overflow: hidden;
+}
+.custom-modal-header {
+    background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+    color: white; padding: 16px 20px;
+}
+.custom-modal-header h3 { margin: 0; font-size: 18px; }
+.custom-modal-body { padding: 20px; }
+.custom-modal-footer {
+    padding: 14px 20px; border-top: 1px solid #e2e8f0;
+    display: flex; gap: 8px; justify-content: flex-end;
+}
+.custom-modal-input {
+    width: 100%; padding: 10px 12px; border: 2px solid #e2e8f0;
+    border-radius: 8px; font-size: 14px; font-family: inherit;
+    margin-top: 8px;
+}
+.custom-modal-input:focus {
+    outline: none; border-color: #2563eb;
+}
+.custom-modal-message {
+    font-size: 14px; color: #1e293b; line-height: 1.6;
+}
 
 /* ===== ТРЕНИРОВКИ СТИЛИ ===== */
 
@@ -919,6 +1092,18 @@ header .macro-badge {
 .train-action-btn[title*="Копировать подход"]:hover {
     background: #ede9fe;
 }
+
+/* Additional finance render styles */
+.finance-balance-positive { color: #16a34a; }
+.finance-balance-negative { color: #dc2626; }
+.finance-amount-positive { color: #16a34a; }
+.finance-amount-negative { color: #dc2626; }
+.finance-category-color { color: #7e22ce; }
+.finance-date-color { color: #64748b; }
+.finance-subcat-empty { color: #94a3b8; font-size: 11px; }
+.finance-category-card-colored { border-left: 4px solid #7e22ce; }
+.finance-category-name-colored { color: #7e22ce; }
+.finance-subcat-tag { margin: 2px; }
 
 @media (max-width: 768px) {
     .home-grid { grid-template-columns: 1fr; }

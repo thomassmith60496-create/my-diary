@@ -77,8 +77,8 @@ window.saveFinanceTransaction = function() {
     const subcat = document.getElementById('f-fin-subcategory').value;
     const comment = document.getElementById('f-fin-comment').value.trim();
     
-    if(!date) { alert('Укажите дату'); return; }
-    if(!amount || amount <= 0) { alert('Укажите сумму'); return; }
+    if(!date) { customAlert('Укажите дату', 'Ошибка'); return; }
+    if(!amount || amount <= 0) { customAlert('Укажите сумму', 'Ошибка'); return; }
     
     // Check if we're editing an existing transaction
     if(window._editingTransactionId) {
@@ -95,7 +95,7 @@ window.saveFinanceTransaction = function() {
             closeAllModals();
             renderCurrentFinanceTab();
             updateFinanceStats();
-            alert('✅ Операция обновлена');
+            customAlert('✅ Операция обновлена', 'Успех');
             return;
         }
     }
@@ -117,7 +117,7 @@ window.saveFinanceTransaction = function() {
     closeAllModals();
     renderCurrentFinanceTab();
     updateFinanceStats();
-    alert('✅ Операция сохранена');
+    customAlert('✅ Операция сохранена', 'Успех');
 }
 
 window.saveSavingsEntry = function() {
@@ -125,11 +125,11 @@ window.saveSavingsEntry = function() {
     const amount = parseFloat(document.getElementById('f-sav-amount').value);
     let goal = document.getElementById('f-sav-goal').value;
     
-    if(!date) { alert('Укажите дату'); return; }
-    if(!amount || amount === 0) { alert('Укажите сумму'); return; }
+    if(!date) { customAlert('Укажите дату', 'Ошибка'); return; }
+    if(!amount || amount === 0) { customAlert('Укажите сумму', 'Ошибка'); return; }
     if(goal === 'other') {
         goal = document.getElementById('f-sav-goal-custom').value.trim();
-        if(!goal) { alert('Введите название цели'); return; }
+        if(!goal) { customAlert('Введите название цели', 'Ошибка'); return; }
     }
     
     const entry = {
@@ -145,7 +145,7 @@ window.saveSavingsEntry = function() {
     closeAllModals();
     renderCurrentFinanceTab();
     updateFinanceStats();
-    alert('✅ Накопление сохранено');
+    customAlert('✅ Накопление сохранено', 'Успех');
 }
 
 window.savePlannedEntry = function() {
@@ -155,9 +155,9 @@ window.savePlannedEntry = function() {
     const subcat = document.getElementById('f-plan-subcategory').value;
     const done = document.getElementById('f-plan-done').value === 'true';
     
-    if(!date) { alert('Укажите дату'); return; }
-    if(!amount || amount <= 0) { alert('Укажите сумму'); return; }
-    if(!catId) { alert('Укажите категорию'); return; }
+    if(!date) { customAlert('Укажите дату', 'Ошибка'); return; }
+    if(!amount || amount <= 0) { customAlert('Укажите сумму', 'Ошибка'); return; }
+    if(!catId) { customAlert('Укажите категорию', 'Ошибка'); return; }
     
     const entry = {
         id: 'plan-' + Date.now(),
@@ -173,7 +173,7 @@ window.savePlannedEntry = function() {
     saveFinance();
     closeAllModals();
     renderCurrentFinanceTab();
-    alert('✅ Планируемый расход сохранён');
+    customAlert('✅ Планируемый расход сохранён', 'Успех');
 }
 
 window.saveCategory = function() {
@@ -181,7 +181,7 @@ window.saveCategory = function() {
     const type = document.getElementById('f-cat-type').value;
     const limit = parseFloat(document.getElementById('f-cat-limit').value) || 0;
     
-    if(!name) { alert('Введите название категории'); return; }
+    if(!name) { customAlert('Введите название категории', 'Ошибка'); return; }
     
     const subcategories = window._editingSubcategories || [];
     const subcategoryLimits = window._editingSubcategoryLimits || {};
@@ -189,7 +189,7 @@ window.saveCategory = function() {
     if(limit > 0) {
         for(const [scName, scLimit] of Object.entries(subcategoryLimits)) {
             if(scLimit && parseFloat(scLimit) > limit) {
-                alert(`Лимит подкатегории "${scName}" (${parseFloat(scLimit)} ₽) превышает лимит категории (${limit} ₽)`);
+                customAlert(`Лимит подкатегории "${scName}" (${parseFloat(scLimit)} ₽) превышает лимит категории (${limit} ₽)`, 'Ошибка');
                 return;
             }
         }
@@ -201,7 +201,7 @@ window.saveCategory = function() {
             // When editing, check for duplicate name excluding current category
             const duplicate = financeData.categories.find(c => c.id !== window._editingCategoryId && c.name.toLowerCase() === name.toLowerCase());
             if(duplicate) {
-                alert('Такая категория уже существует');
+                customAlert('Такая категория уже существует', 'Ошибка');
                 return;
             }
             cat.name = name;
@@ -212,7 +212,7 @@ window.saveCategory = function() {
         }
     } else {
         if(financeData.categories.find(c => c.name.toLowerCase() === name.toLowerCase())) {
-            alert('Такая категория уже существует');
+            customAlert('Такая категория уже существует', 'Ошибка');
             return;
         }
         // Assign a color based on category index
@@ -233,25 +233,28 @@ window.saveCategory = function() {
     saveFinance();
     closeAllModals();
     renderCurrentFinanceTab();
-    alert('✅ Категория сохранена');
+    customAlert('✅ Категория сохранена', 'Успех');
 }
 
 window.deleteFinanceItem = function(type, id) {
-    if(!confirm('Удалить эту запись?')) return;
-    if(type === 'transaction') {
-        financeData.transactions = financeData.transactions.filter(t => t.id !== id);
-    } else if(type === 'savings') {
-        financeData.savings = financeData.savings.filter(s => s.id !== id);
-    } else if(type === 'planned') {
-        financeData.planned = financeData.planned.filter(p => p.id !== id);
-    } else if(type === 'category') {
-        financeData.transactions.forEach(t => { if(t.category === id) t.category = ''; });
-        financeData.planned.forEach(p => { if(p.category === id) p.category = ''; });
-        financeData.categories = financeData.categories.filter(c => c.id !== id);
-    }
-    saveFinance();
-    renderCurrentFinanceTab();
-    updateFinanceStats();
+    customConfirm('Удалить эту запись?', 'Подтверждение удаления')
+        .then(confirmed => {
+            if (!confirmed) return;
+            if(type === 'transaction') {
+                financeData.transactions = financeData.transactions.filter(t => t.id !== id);
+            } else if(type === 'savings') {
+                financeData.savings = financeData.savings.filter(s => s.id !== id);
+            } else if(type === 'planned') {
+                financeData.planned = financeData.planned.filter(p => p.id !== id);
+            } else if(type === 'category') {
+                financeData.transactions.forEach(t => { if(t.category === id) t.category = ''; });
+                financeData.planned.forEach(p => { if(p.category === id) p.category = ''; });
+                financeData.categories = financeData.categories.filter(c => c.id !== id);
+            }
+            saveFinance();
+            renderCurrentFinanceTab();
+            updateFinanceStats();
+        });
 }
 
 window.editFinanceTransaction = function(id) {
@@ -282,12 +285,18 @@ window.editFinanceTransaction = function(id) {
 }
 
 window.deleteAllFinanceTransactions = function() {
-    if(!confirm('Удалить ВСЕ операции? Это нельзя отменить.')) return;
-    if(!confirm('Вы уверены? Будет удалено ' + financeData.transactions.length + ' операций.')) return;
-    financeData.transactions = [];
-    saveFinance();
-    renderCurrentFinanceTab();
-    updateFinanceStats();
+    customConfirm('Удалить ВСЕ операции? Это нельзя отменить.', 'Подтверждение удаления')
+        .then(confirmed => {
+            if (!confirmed) return;
+            customConfirm('Вы уверены? Будет удалено ' + financeData.transactions.length + ' операций.', 'Последнее подтверждение')
+                .then(confirmed2 => {
+                    if (!confirmed2) return;
+                    financeData.transactions = [];
+                    saveFinance();
+                    renderCurrentFinanceTab();
+                    updateFinanceStats();
+                });
+        });
 }
 
 window.togglePlannedDone = function(id) {
