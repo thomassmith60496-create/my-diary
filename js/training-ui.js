@@ -1500,13 +1500,14 @@ window.renderTrainingProgress = function() {
 
         html += '<div class="train-progress-card" style="display:flex;align-items:center;gap:16px;text-align:left;padding:14px;">';
         html += donutSvg;
-        html += '<div style="font-size:15px;line-height:1.8;">';
-        var halfLen = Math.ceil(segments.length / 2);
-        html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 20px;">';
-        segments.forEach(function(seg, si) {
+        html += '<div style="font-size:14px;line-height:1.6;">';
+        html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:3px 16px;">';
+        segments.forEach(function(seg) {
             var pct = totalSets > 0 ? ((seg.value / totalSets) * 100).toFixed(1) : 0;
-            html += '<div style="display:flex;align-items:center;gap:8px;"><span style="width:14px;height:14px;background:' + seg.color + ';border-radius:50%;display:inline-block;flex-shrink:0;"></span><span style="font-size:15px;font-weight:600;color:#1e293b;">' + seg.name + '</span></div>';
-            html += '<div style="font-size:15px;color:#1e293b;text-align:right;font-weight:600;">' + seg.value + ' (' + pct + '%)</div>';
+            html += '<div style="display:flex;align-items:center;gap:5px;font-size:13px;">' +
+                '<span style="width:10px;height:10px;background:' + seg.color + ';border-radius:50%;display:inline-block;flex-shrink:0;"></span>' +
+                '<span style="font-weight:600;color:#1e293b;">' + seg.name + '</span></div>';
+            html += '<div style="text-align:right;font-size:13px;font-weight:600;color:#1e293b;">' + seg.value + ' (' + pct + '%)</div>';
         });
         html += '</div>';
         html += '</div>';
