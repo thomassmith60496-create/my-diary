@@ -6,11 +6,7 @@
 // ============================================
 "use strict";
 
-(function seedExercises() {
-    var exercises = TrainingExerciseAPI.getExercises();
-    if (exercises.length > 0) return;
-
-    var base = [
+var SEED_EXERCISES = [
         // ===== ГРУДЬ =====
         {
             name: 'Жим лежа',
@@ -280,16 +276,3 @@
             ]
         }
     ];
-
-    for (var i = 0; i < base.length; i++) {
-        var group = base[i];
-        var ex = TrainingExerciseAPI.createBaseExercise(group.name);
-        if (!ex) continue;
-        var variants = group.variants;
-        for (var j = 0; j < variants.length; j++) {
-            TrainingExerciseAPI.createVariant(ex.id, variants[j]);
-        }
-    }
-
-    console.log('[Seed] Создано ' + base.length + ' базовых упражнений');
-})();

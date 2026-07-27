@@ -71,6 +71,30 @@ function _normalizeName(name) {
     return name.trim().toLowerCase();
 }
 
+// === СИДИРОВАНИЕ БАЗЫ ===
+
+function _seedFromList(list) {
+    for (let i = 0; i < list.length; i++) {
+        const group = list[i];
+        if (_data.exercises.some(e => _normalizeName(e.name) === _normalizeName(group.name))) continue;
+        const exercise = { id: _generateId(), name: group.name.trim(), variants: [] };
+        for (let j = 0; j < group.variants.length; j++) {
+            const v = group.variants[j];
+            exercise.variants.push({
+                id: _generateId(),
+                name: v.name.trim(),
+                loadType: v.loadType || 'weight',
+                measurementType: v.measurementType || 'reps_weight',
+                equipment: v.equipment || '',
+                categories: v.categories || [],
+                aliases: v.aliases || []
+            });
+        }
+        _data.exercises.push(exercise);
+    }
+    TrainingExerciseAPI.save();
+}
+
 // === ЕДИНЫЙ API ===
 
 const TrainingExerciseAPI = {
@@ -94,6 +118,10 @@ const TrainingExerciseAPI = {
         } else {
             // Данные по умолчанию
             _data = { version: 2, exercises: [], workouts: [] };
+        }
+        // Seed: если база пуста — заполняем из training-seed.js
+        if (typeof SEED_EXERCISES !== 'undefined' && _data.exercises.length === 0) {
+            _seedFromList(SEED_EXERCISES);
         }
         return this;
     },
