@@ -279,8 +279,6 @@ window.renderDays = function() {
                     <span class="day-toggle">▼</span>
                     <span class="day-date">${day.day} • ${day.date}</span>
                     ${day.training?'<span class="day-tag training">💪 ТРЕНИРОВКА</span>':''}
-                    <span class="day-weight-badge" id="day-weight-badge-${week.id}-${di}"></span>
-                    <span class="day-kcal-badge" id="day-kcal-badge-${week.id}-${di}"></span>
                 </div>
                 <div class="day-content">
                     <div class="day-section">
