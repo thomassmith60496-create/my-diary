@@ -126,6 +126,7 @@ window.downloadMenuTemplate = function() {
 }
 
 window.importMenu = function() {
+    if (isReadOnlyActive()) { customAlert('❌ Импорт недоступен в режиме просмотра', 'Ошибка'); return; }
     const startDate = document.getElementById('f-start-date').value;
     const endDate = document.getElementById('f-end-date').value;
     const menuJson = document.getElementById('f-menu-json').value.trim();
@@ -150,6 +151,7 @@ window.importMenu = function() {
 }
 
 window.createEmptyWeek = function() {
+    if (isReadOnlyActive()) { customAlert('❌ Создание недели недоступно в режиме просмотра', 'Ошибка'); return; }
     const today = new Date();
     const startOfWeek = new Date(today);
     startOfWeek.setDate(today.getDate() - today.getDay() + 1);
@@ -214,6 +216,7 @@ window.switchWeek = function() {
 }
 
 window.deleteWeek = function() {
+    if (isReadOnlyActive()) { customAlert('❌ Удаление недоступно в режиме просмотра', 'Ошибка'); return; }
     customConfirm('Удалить эту неделю?', 'Подтверждение удаления')
         .then(confirmed => {
             if (!confirmed) return;

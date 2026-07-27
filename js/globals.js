@@ -49,4 +49,7 @@ let currentUserId = null;
 let isReadOnlyMode = false;
 let viewingUserId = null;
 const usersRef = firebase.database().ref('lera_diary_users');
+function isReadOnlyActive() {
+    return currentUserRole === 'reader' || isReadOnlyMode;
+}
 // ======================================

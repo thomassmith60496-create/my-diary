@@ -140,15 +140,12 @@ function showSyncStatus(message, type = 'success') {
     setTimeout(() => { statusEl.classList.remove('visible'); }, 3000);
 }
 
-function isReadOnlyActive() {
-    return currentUserRole === 'reader' || isReadOnlyMode;
-}
-
 function getTargetUid() {
     return viewingUserId || currentUserId;
 }
 
 function syncToCloud() {
+    if (isReadOnlyActive()) return;
     if(syncTimeout) clearTimeout(syncTimeout);
     const statusEl = document.getElementById('sync-status');
     if(statusEl && !statusEl.classList.contains('visible')) {
@@ -156,6 +153,7 @@ function syncToCloud() {
     }
     syncTimeout = setTimeout(() => {
         const targetUid = getTargetUid();
+        if (!targetUid) return;
         const data = {
             nutrition: nutritionData,
             financeData: financeData,
@@ -189,6 +187,7 @@ function exportAllData() {
 }
 
 function importAllData(input) {
+    if (isReadOnlyActive()) { customAlert('❌ Импорт недоступен в режиме просмотра', 'Ошибка'); return; }
     const file = input.files[0];
     if(!file) return;
     const reader = new FileReader();
@@ -246,6 +245,7 @@ function importAllData(input) {
 }
 
 function resetAllData() {
+    if (isReadOnlyActive()) { customAlert('❌ Очистка недоступна в режиме просмотра', 'Ошибка'); return; }
     customConfirm('Удалить ВСЕ данные (питание + финансы)? Это нельзя отменить.', 'Подтверждение удаления')
         .then(confirmed => {
             if (!confirmed) return;

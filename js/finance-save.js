@@ -27,24 +27,15 @@ window.migrateCategoryColors = function() {
 }
 
 window.saveFinance = function() {
-    // Guard: block writes in read-only mode
     const isReadOnly = currentUserRole === 'reader' || window.isReadOnlyMode;
     if (isReadOnly) {
         return;
     }
     
     const targetUid = getTargetUid();
-    const authUid = currentUser ? (currentUser.uid || currentUser.user_id) : null;
     
-    // If no targetUid, we can't write to a user-specific path - rules require $uid
     if (!targetUid) {
         showSyncStatus('❌ Ошибка: пользователь не определён', 'error');
-        return;
-    }
-    
-    // UID mismatch check: rules require auth.uid === $uid
-    if (targetUid !== authUid) {
-        showSyncStatus('❌ UID mismatch: целевой пользователь не совпадает с текущим', 'error');
         return;
     }
     
@@ -237,6 +228,7 @@ window.saveCategory = function() {
 }
 
 window.deleteFinanceItem = function(type, id) {
+    if (isReadOnlyActive()) { customAlert('❌ Удаление недоступно в режиме просмотра', 'Ошибка'); return; }
     customConfirm('Удалить эту запись?', 'Подтверждение удаления')
         .then(confirmed => {
             if (!confirmed) return;
@@ -285,6 +277,7 @@ window.editFinanceTransaction = function(id) {
 }
 
 window.deleteAllFinanceTransactions = function() {
+    if (isReadOnlyActive()) { customAlert('❌ Удаление недоступно в режиме просмотра', 'Ошибка'); return; }
     customConfirm('Удалить ВСЕ операции? Это нельзя отменить.', 'Подтверждение удаления')
         .then(confirmed => {
             if (!confirmed) return;
@@ -300,6 +293,7 @@ window.deleteAllFinanceTransactions = function() {
 }
 
 window.togglePlannedDone = function(id) {
+    if (isReadOnlyActive()) return;
     const entry = financeData.planned.find(p => p.id === id);
     if(entry) {
         entry.done = !entry.done;

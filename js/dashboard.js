@@ -90,7 +90,57 @@ window.openFinanceModalWithType = function(type) {
 window.renderNutritionCard = function(todayData, dateStr) {
     const hasData = todayData.mealsCount > 0;
     const calProgress = Math.min(100, (todayData.calories / 1300) * 100);
-    const protProgress = Math.min(100, (todayData.protein / 110) * 100);
+    
+    let bodyHtml;
+    if (hasData) {
+        bodyHtml = `
+            <div class="nutrition-stats">
+                <div class="nutrition-main">
+                    <div class="nutrition-calories">
+                        <span class="nutrition-value">${todayData.calories}</span>
+                        <span class="nutrition-label">/ 1300 ккал</span>
+                    </div>
+                    <div class="nutrition-progress-bar">
+                        <div class="nutrition-progress-fill" style="width: ${calProgress}%"></div>
+                    </div>
+                </div>
+                <div class="nutrition-macros">
+                    <div class="macro-item">
+                        <div class="macro-info">
+                            <span class="macro-value">${todayData.protein}г</span>
+                            <span class="macro-label">Белки</span>
+                        </div>
+                    </div>
+                    <div class="macro-item">
+                        <div class="macro-info">
+                            <span class="macro-value">${todayData.fat}г</span>
+                            <span class="macro-label">Жиры</span>
+                        </div>
+                        <div class="macro-progress">
+                            <div class="macro-progress-fill fat" style="width: ${Math.min(100, (todayData.fat / 55) * 100)}%"></div>
+                        </div>
+                    </div>
+                    <div class="macro-item">
+                        <div class="macro-info">
+                            <span class="macro-value">${todayData.carbs}г</span>
+                            <span class="macro-label">Углеводы</span>
+                        </div>
+                        <div class="macro-progress">
+                            <div class="macro-progress-fill carb" style="width: ${Math.min(100, (todayData.carbs / 100) * 100)}%"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="nutrition-meals">
+                    <span class="meals-count">🍽️ ${todayData.mealsCount} приём${getPlural(todayData.mealsCount, ['ов', '', 'а'])} пищи</span>
+                </div>
+            </div>`;
+    } else {
+        bodyHtml = `
+            <div class="empty-state-mini">
+                <div class="empty-state-mini-icon">📘</div>
+                <div class="empty-state-mini-text">Сегодня ещё нет приёмов пищи</div>
+            </div>`;
+    }
     
     return `
         <div class="home-card nutrition-card">
@@ -99,51 +149,9 @@ window.renderNutritionCard = function(todayData, dateStr) {
                 <div class="home-card-badge">Питание</div>
             </div>
             <div class="home-card-body">
-                ${hasData ? `
-                    <div class="nutrition-stats">
-                        <div class="nutrition-main">
-                            <div class="nutrition-calories">
-                                <span class="nutrition-value">${todayData.calories}</span>
-                                <span class="nutrition-label">/ 1300 ккал</span>
-                            </div>
-                            <div class="nutrition-progress-bar">
-                                <div class="nutrition-progress-fill" style="width: ${calProgress}%"></div>
-                        </div>
-                        <div class="nutrition-macros">
-                            <div class="macro-item">
-                                <div class="macro-info">
-                                    <span class="macro-value">${todayData.protein}г</span>
-                                    <span class="macro-label">Белки</span>
-                                </div>
-                        </div>
-                        <div class="macro-item">
-                            <div class="macro-info">
-                                <span class="macro-value">${todayData.fat}г</span>
-                                <span class="macro-label">Жиры</span>
-                            </div>
-                            <div class="macro-progress">
-                                <div class="macro-progress-fill fat" style="width: ${Math.min(100, (todayData.fat / 55) * 100)}%"></div>
-                            </div>
-                        </div>
-                        <div class="macro-item">
-                            <div class="macro-info">
-                                <span class="macro-value">${todayData.carbs}г</span>
-                                <span class="macro-label">Углеводы</span>
-                            </div>
-                            <div class="macro-progress">
-                                <div class="macro-progress-fill carb" style="width: ${Math.min(100, (todayData.carbs / 100) * 100)}%"></div>
-                            </div>
-                        </div>
-                        <div class="nutrition-meals">
-                            <span class="meals-count">🍽️ ${todayData.mealsCount} приём${getPlural(todayData.mealsCount, ['ов', '', 'а'])} пищи</span>
-                        </div>
-                ` : `
-                    <div class="empty-state-mini">
-                        <div class="empty-state-mini-icon">📘</div>
-                        <div class="empty-state-mini-text">Сегодня ещё нет приёмов пищи</div>
-                `}
+                ${bodyHtml}
             </div>
-    `;
+        </div>`;
 }
 
 window.getTodayNutrition = function(dateStr) {
@@ -213,6 +221,51 @@ window.normalizeDate = function(dateStr) {
 window.renderFinanceCard = function(todayData, dateStr) {
     const hasTransactions = todayData.hasTransactions;
     
+    let bodyHtml = '';
+    
+    if (hasTransactions) {
+        bodyHtml += `
+            <div class="finance-today">
+                <div class="finance-row">
+                    <div class="finance-item expense">
+                        <span class="finance-label">📉 Расходы</span>
+                        <span class="finance-value">${todayData.monthExpense.toLocaleString('ru-RU')} ₽</span>
+                    </div>
+                    <div class="finance-item income">
+                        <span class="finance-label">📈 Доходы</span>
+                        <span class="finance-value">${todayData.monthIncome.toLocaleString('ru-RU')} ₽</span>
+                    </div>
+                </div>
+            </div>`;
+    } else {
+        bodyHtml += `
+            <div class="empty-state-mini">
+                <div class="empty-state-mini-icon">💰</div>
+                <div class="empty-state-mini-text">Нет операций за этот месяц</div>
+            </div>`;
+    }
+    
+    if (todayData.nextPlanned) {
+        bodyHtml += `
+            <div class="finance-month">
+                <div class="month-item">
+                    <span class="month-label">📅 Ближайший платёж:</span>
+                    <span class="month-value">${todayData.nextPlanned.amount.toLocaleString('ru-RU')} ₽</span>
+                    <span class="month-date">${formatDateShortRussian(todayData.nextPlanned.date)}</span>
+                </div>
+            </div>`;
+    }
+    
+    if (todayData.savingsProgress > 0) {
+        bodyHtml += `
+            <div class="savings-progress">
+                <div class="savings-label">🏦 Накопления: ${todayData.savingsProgress.toLocaleString('ru-RU')} ₽</div>
+                <div class="savings-bar">
+                    <div class="savings-bar-fill" style="width: ${Math.min(100, todayData.savingsProgress / 100)}%"></div>
+                </div>
+            </div>`;
+    }
+    
     return `
         <div class="home-card finance-card">
             <div class="home-card-header">
@@ -220,40 +273,9 @@ window.renderFinanceCard = function(todayData, dateStr) {
                 <div class="home-card-badge">${todayData.monthLabel}</div>
             </div>
             <div class="home-card-body">
-                ${hasTransactions ? `
-                    <div class="finance-today">
-                        <div class="finance-row">
-                            <div class="finance-item expense">
-                                <span class="finance-label">📉 Расходы</span>
-                                <span class="finance-value">${todayData.monthExpense.toLocaleString('ru-RU')} ₽</span>
-                            </div>
-                            <div class="finance-item income">
-                                <span class="finance-label">📈 Доходы</span>
-                                <span class="finance-value">${todayData.monthIncome.toLocaleString('ru-RU')} ₽</span>
-                            </div>
-                    </div>
-                ` : `
-                    <div class="empty-state-mini">
-                        <div class="empty-state-mini-icon">💰</div>
-                        <div class="empty-state-mini-text">Нет операций за этот месяц</div>
-                `}
-                ${todayData.nextPlanned ? `
-                    <div class="finance-month">
-                        <div class="month-item">
-                            <span class="month-label">📅 Ближайший платёж:</span>
-                            <span class="month-value">${todayData.nextPlanned.amount.toLocaleString('ru-RU')} ₽</span>
-                            <span class="month-date">${formatDateShortRussian(todayData.nextPlanned.date)}</span>
-                        </div>
-                ` : ''}
-                ${todayData.savingsProgress > 0 ? `
-                    <div class="savings-progress">
-                        <div class="savings-label">🏦 Накопления: ${todayData.savingsProgress.toLocaleString('ru-RU')} ₽</div>
-                        <div class="savings-bar">
-                            <div class="savings-bar-fill" style="width: ${Math.min(100, todayData.savingsProgress / 100)}%"></div>
-                    </div>
-                ` : ''}
+                ${bodyHtml}
             </div>
-    `;
+        </div>`;
 }
 
 window.getTodayFinance = function(dateStr) {
@@ -292,27 +314,20 @@ window.getTodayFinance = function(dateStr) {
 // === ПОСЛЕДНЯЯ АКТИВНОСТЬ ===
 
 window.renderRecentActivity = function(activity) {
-    let html = `
-        <div class="home-card activity-card">
-            <div class="home-card-header">
-                <h2 class="home-card-title">📋 Последняя активность</h2>
-            </div>
-            <div class="home-card-body">
-    `;
-    
     const hasAnyActivity = activity.lastMeal || activity.lastFinance;
     
+    let bodyHtml;
     if(!hasAnyActivity) {
-        html += `
+        bodyHtml = `
             <div class="empty-state-mini">
                 <div class="empty-state-mini-icon">📋</div>
                 <div class="empty-state-mini-text">Пока нет активности</div>
-        `;
+            </div>`;
     } else {
-        html += `<div class="activity-list">`;
+        let itemsHtml = '<div class="activity-list">';
         
         if(activity.lastMeal) {
-            html += `
+            itemsHtml += `
                 <div class="activity-item">
                     <div class="activity-icon">📘</div>
                     <div class="activity-content">
@@ -320,27 +335,35 @@ window.renderRecentActivity = function(activity) {
                         <div class="activity-details">${activity.lastMeal.name} • ${formatDateShortRussian(activity.lastMeal.date)}</div>
                         ${activity.lastMeal.calories > 0 ? `<div class="activity-meta">🔥 ${activity.lastMeal.calories} ккал</div>` : ''}
                     </div>
-            `;
+                </div>`;
         }
         
         if(activity.lastFinance) {
             const isExpense = activity.lastFinance.type === 'expense';
-            html += `
+            itemsHtml += `
                 <div class="activity-item">
                     <div class="activity-icon">${isExpense ? '📉' : '📈'}</div>
                     <div class="activity-content">
                         <div class="activity-title">Последняя операция</div>
                         <div class="activity-details">${isExpense ? 'Расход' : 'Доход'} • ${formatDateShortRussian(activity.lastFinance.date)}</div>
                         <div class="activity-meta">${isExpense ? '−' : '+'}${Math.abs(activity.lastFinance.amount).toLocaleString('ru-RU')} ₽</div>
-                </div>
-            `;
+                    </div>
+                </div>`;
         }
         
-        html += `</div>`;
+        itemsHtml += '</div>';
+        bodyHtml = itemsHtml;
     }
     
-    html += `</div>`;
-    return html;
+    return `
+        <div class="home-card activity-card">
+            <div class="home-card-header">
+                <h2 class="home-card-title">📋 Последняя активность</h2>
+            </div>
+            <div class="home-card-body">
+                ${bodyHtml}
+            </div>
+        </div>`;
 }
 
 window.getRecentActivity = function() {
