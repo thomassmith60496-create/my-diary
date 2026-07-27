@@ -46,6 +46,7 @@ window.switchTrainingSubTab = function(tab, event) {
     
     if(tab === 'exercises') renderTrainingExercises();
     if(tab === 'workouts') renderTrainingWorkouts();
+    if(tab === 'progress') renderTrainingProgress();
 }
 
 window.switchFinanceSubTab = function(tab, event) {

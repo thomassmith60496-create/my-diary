@@ -19,6 +19,16 @@ let trainingUIState = {
     mergeSourceId: null
 };
 
+let progressUIState = {
+    selectedVariantId: null,
+    exercises: [],
+    startDate: '',
+    endDate: '',
+    chartType: 'line',
+    chartData: null,
+    historyEntries: []
+};
+
 // === ГЛАВНАЯ ФУНКЦИЯ РЕНДЕРИНГА ===
 
 window.renderTrainingExercises = function() {
