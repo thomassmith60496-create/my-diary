@@ -571,6 +571,113 @@ const TrainingWorkoutAPI = {
     // СТАТИСТИКА
     // -------------------------------------------------------
 
+    /** Получить историю выполнения варианта упражнения */
+    getVariantHistory: function(variantId) {
+        const variant = this.getVariantById(variantId);
+        if (!variant) return { variant: null, entries: [] };
+
+        const mt = variant.measurementType || 'reps_weight';
+        const workouts = this.getWorkouts();
+        const entries = [];
+
+        for (const w of workouts) {
+            const we = w.exercises.find(e => e.variantId === variantId);
+            if (!we || we.sets.length === 0) continue;
+
+            const entry = {
+                workoutId: w.id,
+                date: w.date,
+                comment: w.comment || '',
+                sets: we.sets.map(s => ({ ...s }))
+            };
+
+            const working = entry.sets.filter(s => !s.warmup);
+            switch (mt) {
+                case 'reps_weight':
+                    entry.bestWeight = working.length ? Math.max(...working.map(s => s.weight || 0)) : 0;
+                    entry.totalVolume = working.reduce((sum, s) => sum + (s.weight || 0) * (s.reps || 0), 0);
+                    entry.est1RM = working.length ? Math.max(...working.map(s => {
+                        const w = s.weight || 0;
+                        return (s.reps || 0) > 0 ? w * (1 + (s.reps || 0) / 30) : w;
+                    })) : 0;
+                    entry.bestSet = working.reduce((best, s) => {
+                        const bw = best.weight || 0, sw = s.weight || 0;
+                        if (sw > bw) return s;
+                        if (sw === bw && (s.reps || 0) > (best.reps || 0)) return s;
+                        return best;
+                    }, { weight: 0, reps: 0 });
+                    break;
+                case 'reps':
+                    entry.totalReps = working.reduce((sum, s) => sum + (s.reps || 0), 0);
+                    entry.maxReps = working.length ? Math.max(...working.map(s => s.reps || 0)) : 0;
+                    break;
+                case 'time':
+                    entry.totalTime = working.reduce((sum, s) => sum + (s.time || 0), 0);
+                    entry.bestTime = working.length ? Math.max(...working.map(s => s.time || 0)) : 0;
+                    break;
+                case 'distance':
+                    entry.totalDistance = working.reduce((sum, s) => sum + (s.distance || 0), 0);
+                    entry.bestDistance = working.length ? Math.max(...working.map(s => s.distance || 0)) : 0;
+                    break;
+                case 'weight_only':
+                    entry.bestWeight = working.length ? Math.max(...working.map(s => s.weight || 0)) : 0;
+                    break;
+            }
+            entries.push(entry);
+        }
+
+        entries.sort((a, b) => a.date.localeCompare(b.date));
+
+        const allWorking = entries.flatMap(e => e.sets.filter(s => !s.warmup));
+        const overall = { executionCount: entries.length, totalSets: allWorking.length };
+
+        switch (mt) {
+            case 'reps_weight':
+                overall.bestWeight = allWorking.length ? Math.max(...allWorking.map(s => s.weight || 0)) : 0;
+                overall.totalVolume = allWorking.reduce((sum, s) => sum + (s.weight || 0) * (s.reps || 0), 0);
+                overall.avgVolume = entries.length ? Math.round(overall.totalVolume / entries.length) : 0;
+                break;
+            case 'reps':
+                overall.maxReps = allWorking.length ? Math.max(...allWorking.map(s => s.reps || 0)) : 0;
+                overall.totalReps = allWorking.reduce((sum, s) => sum + (s.reps || 0), 0);
+                break;
+            case 'time':
+                overall.bestTime = allWorking.length ? Math.max(...allWorking.map(s => s.time || 0)) : 0;
+                overall.totalTime = allWorking.reduce((sum, s) => sum + (s.time || 0), 0);
+                break;
+            case 'distance':
+                overall.bestDistance = allWorking.length ? Math.max(...allWorking.map(s => s.distance || 0)) : 0;
+                overall.totalDistance = allWorking.reduce((sum, s) => sum + (s.distance || 0), 0);
+                break;
+            case 'weight_only':
+                overall.bestWeight = allWorking.length ? Math.max(...allWorking.map(s => s.weight || 0)) : 0;
+                break;
+        }
+
+        const last = entries.length ? entries[entries.length - 1] : null;
+        overall.lastDate = last ? last.date : null;
+        switch (mt) {
+            case 'reps_weight':
+                overall.lastResult = last ? last.bestWeight + ' кг \u00d7 ' + last.bestSet.reps : '\u2014';
+                overall.lastVolume = last ? last.totalVolume : 0;
+                break;
+            case 'reps':
+                overall.lastResult = last ? last.maxReps + ' повт.' : '\u2014';
+                break;
+            case 'time':
+                overall.lastResult = last ? last.bestTime + ' с' : '\u2014';
+                break;
+            case 'distance':
+                overall.lastResult = last ? last.bestDistance + ' м' : '\u2014';
+                break;
+            case 'weight_only':
+                overall.lastResult = last ? last.bestWeight + ' кг' : '\u2014';
+                break;
+        }
+
+        return { variant, entries, executionCount: entries.length, overall, measurementType: mt };
+    },
+
     /** Получить статистику тренировки: { exerciseCount, setCount, totalVolume } */
     getWorkoutStats: function(workoutId) {
         const workout = _data.workouts.find(w => w.id === workoutId);

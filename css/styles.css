@@ -1151,6 +1151,110 @@ header .macro-badge {
     background: #ede9fe;
 }
 
+/* ============================================ */
+/* 📊 АНАЛИТИКА ПРОГРЕССА УПРАЖНЕНИЙ           */
+/* ============================================ */
+
+.train-progress-overlay {
+    position: fixed; inset: 0; z-index: 10000;
+    background: rgba(15,23,42,0.6);
+    display: flex; align-items: flex-start; justify-content: center;
+    padding: 30px 16px; overflow-y: auto;
+}
+.train-progress-modal {
+    background: #fff; border-radius: 16px;
+    max-width: 720px; width: 100%;
+    box-shadow: 0 25px 50px -12px rgba(0,0,0,0.4);
+    padding: 24px; margin: auto;
+}
+.train-progress-header {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 20px; padding-bottom: 12px;
+    border-bottom: 2px solid #f1f5f9;
+}
+.train-progress-header h2 {
+    margin: 0; font-size: 18px; flex: 1;
+}
+.train-progress-close {
+    background: none; border: none; font-size: 22px;
+    cursor: pointer; color: #94a3b8; padding: 4px 8px;
+    border-radius: 6px; line-height: 1;
+}
+.train-progress-close:hover {
+    background: #f1f5f9; color: #1e293b;
+}
+
+/* Stats cards row */
+.train-progress-stats {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    margin-bottom: 20px;
+}
+.train-progress-stat {
+    background: #f8fafc; border: 1px solid #e2e8f0;
+    border-radius: 12px; padding: 12px 14px;
+    text-align: center; flex: 1; min-width: 100px;
+}
+.train-progress-stat-icon { font-size: 22px; margin-bottom: 4px; }
+.train-progress-stat-label {
+    font-size: 11px; color: #64748b; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.3px;
+}
+.train-progress-stat-value {
+    font-size: 22px; font-weight: 800; color: #1e293b;
+    margin: 4px 0;
+}
+.train-progress-stat-unit {
+    font-size: 11px; color: #94a3b8;
+}
+
+/* Chart */
+.train-progress-chart {
+    margin-bottom: 20px;
+}
+.train-progress-chart h3,
+.train-progress-history h3 {
+    font-size: 14px; margin: 0 0 10px; color: #1e293b;
+}
+.train-progress-svg {
+    border-radius: 12px; border: 1px solid #e2e8f0;
+    background: #fafafa;
+}
+
+/* History table */
+.train-progress-history {
+    margin-top: 8px;
+}
+.train-progress-entry {
+    background: #f8fafc; border: 1px solid #e2e8f0;
+    border-radius: 10px; padding: 12px 14px; margin-bottom: 8px;
+}
+.train-progress-entry-header {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
+}
+.train-progress-entry-date {
+    font-weight: 700; font-size: 13px; color: #1e293b;
+    white-space: nowrap;
+}
+.train-progress-entry-comment {
+    font-size: 12px; color: #64748b; font-style: italic;
+    flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.train-progress-entry-summary {
+    font-size: 12px; color: #ea580c; font-weight: 600;
+    margin-left: auto; white-space: nowrap;
+}
+.train-progress-entry-sets {
+    display: flex; flex-wrap: wrap; gap: 4px;
+}
+.train-progress-set {
+    background: #fff; border: 1px solid #e2e8f0;
+    border-radius: 6px; padding: 3px 8px;
+    font-size: 12px; color: #475569;
+}
+.train-progress-set.warmup {
+    background: #fffbeb; border-color: #fde68a; color: #92400e;
+}
+
 /* Additional finance render styles */
 .finance-balance-positive { color: #16a34a; }
 .finance-balance-negative { color: #dc2626; }

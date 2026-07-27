@@ -236,6 +236,7 @@ window.renderVariantRow = function(exerciseId, variant) {
         // Кнопки
         html += '<div class="train-variant-actions">';
         html += '<button class="train-action-btn" onclick="startVariantEdit(\'' + exerciseId + '\', \'' + variant.id + '\')" title="Редактировать">✏️</button>';
+        html += '<button class="train-action-btn" onclick="showVariantProgress(\'' + variant.id + '\')" title="Прогресс">📊</button>';
         html += '<button class="train-action-btn" onclick="deleteVariantConfirm(\'' + exerciseId + '\', \'' + variant.id + '\')" title="Удалить">🗑️</button>';
         html += '<button class="train-action-btn" onclick="openMoveVariantModal(\'' + exerciseId + '\', \'' + variant.id + '\', \'' + escapeHtml(variant.name) + '\')" title="Перенести">🚚</button>';
         html += '</div>';
@@ -1325,11 +1326,260 @@ window.addSetFromPrevious = function(workoutId, variantId) {
 
 window.formatDateForDisplay = function(dateStr) {
     if (!dateStr) return '';
-    // ГГГГ-ММ-ДД → ДД.ММ.ГГГГ
     const parts = dateStr.split('-');
     if (parts.length === 3) {
         return parts[2] + '.' + parts[1] + '.' + parts[0];
     }
     return dateStr;
+}
+
+// ============================================
+// 📊 АНАЛИТИКА ПРОГРЕССА УПРАЖНЕНИЙ
+// ============================================
+
+window.showVariantProgress = function(variantId) {
+    const history = TrainingWorkoutAPI.getVariantHistory(variantId);
+    if (!history.variant) {
+        customAlert('❌ Вариант упражнения не найден', 'Ошибка');
+        return;
+    }
+
+    const v = history.variant;
+    const mt = history.measurementType;
+    const mtLabel = MEASUREMENT_TYPES.find(m => m.id === mt);
+    const title = escapeHtml(v.baseExerciseName) + ' — ' + escapeHtml(v.name);
+
+    let html = '<div class="train-progress-overlay" onclick="if(event.target===this)closeVariantProgress()">';
+    html += '<div class="train-progress-modal">';
+
+    // Header
+    html += '<div class="train-progress-header">';
+    html += '<h2>📊 Прогресс: ' + title + '</h2>';
+    if (mtLabel) html += '<span class="train-tag" style="font-size:13px;padding:4px 10px;">' + mtLabel.label + '</span>';
+    html += '<button class="train-progress-close" onclick="closeVariantProgress()">✕</button>';
+    html += '</div>';
+
+    if (history.entries.length === 0) {
+        html += '<div class="empty-state"><div class="empty-state-text">Нет данных для анализа. Добавьте это упражнение в тренировки.</div></div>';
+    } else {
+        // Stats cards
+        html += '<div class="train-progress-stats">';
+        html += _progressStat('🏋️', 'Выполнено раз', history.overall.executionCount, 'тренировок');
+        html += _progressStat('📦', 'Всего подходов', history.overall.totalSets, 'подходов');
+
+        switch (mt) {
+            case 'reps_weight':
+                html += _progressStat('🏆', 'Лучший вес', history.overall.bestWeight, 'кг');
+                html += _progressStat('📊', 'Общий объём', history.overall.totalVolume, 'кг');
+                html += _progressStat('📈', 'Средний объём', history.overall.avgVolume, 'кг');
+                html += _progressStat('🔄', 'Последний', history.overall.lastResult, '');
+                break;
+            case 'reps':
+                html += _progressStat('🏆', 'Макс. повторений', history.overall.maxReps, 'раз');
+                html += _progressStat('📊', 'Всего повторений', history.overall.totalReps, 'раз');
+                html += _progressStat('🔄', 'Последний', history.overall.lastResult, '');
+                break;
+            case 'time':
+                html += _progressStat('🏆', 'Лучшее время', history.overall.bestTime, 'с');
+                html += _progressStat('📊', 'Общее время', history.overall.totalTime, 'с');
+                html += _progressStat('🔄', 'Последний', history.overall.lastResult, '');
+                break;
+            case 'distance':
+                html += _progressStat('🏆', 'Лучшая дист.', history.overall.bestDistance, 'м');
+                html += _progressStat('📊', 'Общая дист.', history.overall.totalDistance, 'м');
+                html += _progressStat('🔄', 'Последний', history.overall.lastResult, '');
+                break;
+            case 'weight_only':
+                html += _progressStat('🏆', 'Лучший вес', history.overall.bestWeight, 'кг');
+                html += _progressStat('🔄', 'Последний', history.overall.lastResult, '');
+                break;
+        }
+        html += '</div>';
+
+        // Chart
+        html += '<div class="train-progress-chart">';
+        html += '<h3>📈 График прогресса</h3>';
+        html += _renderProgressChart(history);
+        html += '</div>';
+
+        // History table
+        html += '<div class="train-progress-history">';
+        html += '<h3>📋 История выполнений</h3>';
+
+        // Reverse for display (newest first)
+        const displayEntries = [...history.entries].reverse();
+        displayEntries.forEach(entry => {
+            const dateLabel = window.formatDateForDisplay(entry.date);
+            html += '<div class="train-progress-entry">';
+            html += '<div class="train-progress-entry-header">';
+            html += '<span class="train-progress-entry-date">' + dateLabel + '</span>';
+            if (entry.comment) {
+                html += '<span class="train-progress-entry-comment">' + escapeHtml(entry.comment) + '</span>';
+            }
+            html += '<span class="train-progress-entry-summary">' + _entrySummary(entry, mt) + '</span>';
+            html += '</div>';
+            html += '<div class="train-progress-entry-sets">';
+            entry.sets.forEach((s, idx) => {
+                html += '<span class="train-progress-set' + (s.warmup ? ' warmup' : '') + '">';
+                html += '#' + (idx + 1) + ': ';
+                switch (mt) {
+                    case 'reps_weight':
+                        html += (s.weight || '—') + ' кг × ' + (s.reps || '—');
+                        break;
+                    case 'reps':
+                        html += (s.reps || '—') + ' раз';
+                        break;
+                    case 'time':
+                        html += (s.time || '—') + ' с';
+                        break;
+                    case 'distance':
+                        html += (s.distance || '—') + ' м';
+                        break;
+                    case 'weight_only':
+                        html += (s.weight || '—') + ' кг';
+                        break;
+                }
+                if (s.warmup) html += ' 🔥';
+                if (s.comment) html += ' (' + escapeHtml(s.comment) + ')';
+                html += '</span>';
+            });
+            html += '</div>';
+            html += '</div>';
+        });
+
+        html += '</div>'; // history
+    }
+
+    html += '</div>'; // modal
+    html += '</div>'; // overlay
+
+    // Append to body
+    const div = document.createElement('div');
+    div.id = 'train-progress-container';
+    div.innerHTML = html;
+    document.body.appendChild(div);
+};
+
+window.closeVariantProgress = function() {
+    const el = document.getElementById('train-progress-container');
+    if (el) el.remove();
+};
+
+// --- helpers ---
+
+function _progressStat(icon, label, value, unit) {
+    return '<div class="train-progress-stat"><div class="train-progress-stat-icon">' + icon + '</div><div class="train-progress-stat-label">' + label + '</div><div class="train-progress-stat-value">' + value + '</div><div class="train-progress-stat-unit">' + unit + '</div></div>';
+}
+
+function _entrySummary(entry, mt) {
+    switch (mt) {
+        case 'reps_weight':
+            return '🏆 ' + entry.bestWeight + ' кг | 📦 ' + entry.totalVolume + ' кг';
+        case 'reps':
+            return '🏆 ' + entry.maxReps + ' раз';
+        case 'time':
+            return '⏱ ' + entry.bestTime + ' с';
+        case 'distance':
+            return '📏 ' + entry.bestDistance + ' м';
+        case 'weight_only':
+            return '🏆 ' + entry.bestWeight + ' кг';
+    }
+    return '';
+}
+
+function _renderProgressChart(history) {
+    const mt = history.measurementType;
+    const entries = history.entries;
+    if (entries.length < 2) {
+        return '<div class="empty-state" style="margin:0;"><div class="empty-state-text">Нужно минимум 2 тренировки для построения графика</div></div>';
+    }
+
+    let dataPoints;
+    let yLabel;
+    switch (mt) {
+        case 'reps_weight':
+            dataPoints = entries.map(e => ({ date: e.date, value: e.bestWeight, label: e.bestWeight + ' кг' }));
+            yLabel = 'Вес, кг';
+            break;
+        case 'reps':
+            dataPoints = entries.map(e => ({ date: e.date, value: e.maxReps, label: e.maxReps + ' повт' }));
+            yLabel = 'Повторения';
+            break;
+        case 'time':
+            dataPoints = entries.map(e => ({ date: e.date, value: e.bestTime, label: e.bestTime + ' с' }));
+            yLabel = 'Время, с';
+            break;
+        case 'distance':
+            dataPoints = entries.map(e => ({ date: e.date, value: e.bestDistance, label: e.bestDistance + ' м' }));
+            yLabel = 'Дистанция, м';
+            break;
+        case 'weight_only':
+            dataPoints = entries.map(e => ({ date: e.date, value: e.bestWeight, label: e.bestWeight + ' кг' }));
+            yLabel = 'Вес, кг';
+            break;
+        default:
+            return '';
+    }
+
+    const W = 600, H = 250, P = 45;
+    const maxVal = Math.max(...dataPoints.map(p => p.value)) * 1.15 || 1;
+    const minVal = 0;
+    const range = maxVal - minVal;
+    const xStep = dataPoints.length > 1 ? (W - P * 2) / (dataPoints.length - 1) : 0;
+
+    const points = dataPoints.map((p, i) => {
+        const x = P + i * xStep;
+        const y = H - P - ((p.value - minVal) / range) * (H - P * 2);
+        return { x, y, ...p };
+    });
+
+    let svg = '<svg width="100%" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" class="train-progress-svg">';
+
+    // Grid lines
+    for (let i = 0; i <= 4; i++) {
+        const y = P + i * (H - P * 2) / 4;
+        const val = Math.round((maxVal - i * range / 4) * 10) / 10;
+        svg += '<line x1="' + P + '" y1="' + y + '" x2="' + (W - P) + '" y2="' + y + '" stroke="#e2e8f0" stroke-width="1"/>';
+        svg += '<text x="' + (P - 8) + '" y="' + (y + 4) + '" text-anchor="end" font-size="11" fill="#64748b">' + val + '</text>';
+    }
+
+    // X axis labels
+    const labelStep = Math.max(1, Math.floor(dataPoints.length / 6));
+    points.forEach((p, i) => {
+        if (i % labelStep === 0 || i === points.length - 1) {
+            const label = p.date.slice(5);
+            svg += '<text x="' + p.x + '" y="' + (H - 12) + '" text-anchor="middle" font-size="10" fill="#64748b">' + label + '</text>';
+        }
+    });
+
+    // Y axis label
+    svg += '<text x="12" y="' + (H / 2 + 4) + '" text-anchor="middle" font-size="11" fill="#94a3b8" transform="rotate(-90,12,' + (H / 2) + ')">' + yLabel + '</text>';
+
+    // Area fill
+    const areaPoints = points.map(p => p.x + ',' + p.y).join(' ');
+    svg += '<polygon points="' + P + ',' + (H - P) + ' ' + areaPoints + ' ' + points[points.length - 1].x + ',' + (H - P) + '" fill="url(#train-grad)" opacity="0.2"/>';
+
+    // Gradient def
+    svg += '<defs><linearGradient id="train-grad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ea580c"/><stop offset="100%" stop-color="#ea580c" stop-opacity="0"/></linearGradient></defs>';
+
+    // Line
+    svg += '<polyline points="' + areaPoints + '" fill="none" stroke="#ea580c" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>';
+
+    // Dots with tooltips
+    points.forEach(p => {
+        svg += '<circle cx="' + p.x + '" cy="' + p.y + '" r="5" fill="#ea580c" stroke="#fff" stroke-width="2.5" style="cursor:pointer;">';
+        svg += '<title>' + p.date + ': ' + p.label + '</title>';
+        svg += '</circle>';
+    });
+
+    // Value labels above dots
+    points.forEach((p, i) => {
+        if (i % labelStep === 0 || i === points.length - 1 || i === points.length - 2) {
+            svg += '<text x="' + p.x + '" y="' + (p.y - 10) + '" text-anchor="middle" font-size="11" fill="#1e293b" font-weight="600">' + p.label + '</text>';
+        }
+    });
+
+    svg += '</svg>';
+    return svg;
 }
 
