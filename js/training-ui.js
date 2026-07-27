@@ -1700,7 +1700,7 @@ window.renderTrainingProgress = function() {
                         chartSvg += '<circle cx="' + p.x + '" cy="' + p.y + '" r="4" fill="white" stroke="#6366f1" stroke-width="2"/>';
                     });
                     chartPoints.forEach(function(p) {
-                        chartSvg += '<text x="' + p.x + '" y="' + (p.y - 8) + '" text-anchor="middle" font-size="10" font-weight="700" fill="#1e293b">' + p.val + '</text>';
+                        chartSvg += '<text x="' + p.x + '" y="' + (p.y - 8) + '" text-anchor="middle" font-size="10" font-weight="700" fill="#1e293b">' + Math.round(p.val) + '</text>';
                     });
                     chartSvg += '</svg>';
 
