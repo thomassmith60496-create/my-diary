@@ -20,6 +20,8 @@ let trainingUIState = {
 };
 
 let progressUIState = {
+    period: 'all',
+    muscleGroup: 'all',
     selectedVariantId: null,
     exercises: [],
     startDate: '',
@@ -1346,256 +1348,6 @@ window.formatDateForDisplay = function(dateStr) {
 }
 
 // ============================================
-// 📊 АНАЛИТИКА ПРОГРЕССА УПРАЖНЕНИЙ
-// ============================================
-
-window.showVariantProgress = function(variantId) {
-    const history = TrainingWorkoutAPI.getVariantHistory(variantId);
-    if (!history.variant) {
-        customAlert('❌ Вариант упражнения не найден', 'Ошибка');
-        return;
-    }
-
-    const v = history.variant;
-    const mt = history.measurementType;
-    const mtLabel = MEASUREMENT_TYPES.find(m => m.id === mt);
-    const title = escapeHtml(v.baseExerciseName) + ' — ' + escapeHtml(v.name);
-
-    let html = '<div class="train-progress-overlay" onclick="if(event.target===this)closeVariantProgress()">';
-    html += '<div class="train-progress-modal">';
-
-    // Header
-    html += '<div class="train-progress-header">';
-    html += '<h2>📊 Прогресс: ' + title + '</h2>';
-    if (mtLabel) html += '<span class="train-tag" style="font-size:13px;padding:4px 10px;">' + mtLabel.label + '</span>';
-    html += '<button class="train-progress-close" onclick="closeVariantProgress()">✕</button>';
-    html += '</div>';
-
-    if (history.entries.length === 0) {
-        html += '<div class="empty-state"><div class="empty-state-text">Нет данных для анализа. Добавьте это упражнение в тренировки.</div></div>';
-    } else {
-        // Stats cards
-        html += '<div class="train-progress-stats">';
-        html += _progressStat('🏋️', 'Выполнено раз', history.overall.executionCount, 'тренировок');
-        html += _progressStat('📦', 'Всего подходов', history.overall.totalSets, 'подходов');
-
-        switch (mt) {
-            case 'reps_weight':
-                html += _progressStat('🏆', 'Лучший вес', history.overall.bestWeight, 'кг');
-                html += _progressStat('📊', 'Общий объём', history.overall.totalVolume, 'кг');
-                html += _progressStat('📈', 'Средний объём', history.overall.avgVolume, 'кг');
-                html += _progressStat('🔄', 'Последний', history.overall.lastResult, '');
-                break;
-            case 'reps':
-                html += _progressStat('🏆', 'Макс. повторений', history.overall.maxReps, 'раз');
-                html += _progressStat('📊', 'Всего повторений', history.overall.totalReps, 'раз');
-                html += _progressStat('🔄', 'Последний', history.overall.lastResult, '');
-                break;
-            case 'time':
-                html += _progressStat('🏆', 'Лучшее время', history.overall.bestTime, 'с');
-                html += _progressStat('📊', 'Общее время', history.overall.totalTime, 'с');
-                html += _progressStat('🔄', 'Последний', history.overall.lastResult, '');
-                break;
-            case 'distance':
-                html += _progressStat('🏆', 'Лучшая дист.', history.overall.bestDistance, 'м');
-                html += _progressStat('📊', 'Общая дист.', history.overall.totalDistance, 'м');
-                html += _progressStat('🔄', 'Последний', history.overall.lastResult, '');
-                break;
-            case 'weight_only':
-                html += _progressStat('🏆', 'Лучший вес', history.overall.bestWeight, 'кг');
-                html += _progressStat('🔄', 'Последний', history.overall.lastResult, '');
-                break;
-        }
-        html += '</div>';
-
-        // Chart
-        html += '<div class="train-progress-chart">';
-        html += '<h3>📈 График прогресса</h3>';
-        html += _renderProgressChart(history);
-        html += '</div>';
-
-        // History table
-        html += '<div class="train-progress-history">';
-        html += '<h3>📋 История выполнений</h3>';
-
-        // Reverse for display (newest first)
-        const displayEntries = [...history.entries].reverse();
-        displayEntries.forEach(entry => {
-            const dateLabel = window.formatDateForDisplay(entry.date);
-            html += '<div class="train-progress-entry">';
-            html += '<div class="train-progress-entry-header">';
-            html += '<span class="train-progress-entry-date">' + dateLabel + '</span>';
-            if (entry.comment) {
-                html += '<span class="train-progress-entry-comment">' + escapeHtml(entry.comment) + '</span>';
-            }
-            html += '<span class="train-progress-entry-summary">' + _entrySummary(entry, mt) + '</span>';
-            html += '</div>';
-            html += '<div class="train-progress-entry-sets">';
-            entry.sets.forEach((s, idx) => {
-                html += '<span class="train-progress-set' + (s.warmup ? ' warmup' : '') + '">';
-                html += '#' + (idx + 1) + ': ';
-                switch (mt) {
-                    case 'reps_weight':
-                        html += (s.weight || '—') + ' кг × ' + (s.reps || '—');
-                        break;
-                    case 'reps':
-                        html += (s.reps || '—') + ' раз';
-                        break;
-                    case 'time':
-                        html += (s.time || '—') + ' с';
-                        break;
-                    case 'distance':
-                        html += (s.distance || '—') + ' м';
-                        break;
-                    case 'weight_only':
-                        html += (s.weight || '—') + ' кг';
-                        break;
-                }
-                if (s.warmup) html += ' 🔥';
-                if (s.comment) html += ' (' + escapeHtml(s.comment) + ')';
-                html += '</span>';
-            });
-            html += '</div>';
-            html += '</div>';
-        });
-
-        html += '</div>'; // history
-    }
-
-    html += '</div>'; // modal
-    html += '</div>'; // overlay
-
-    // Append to body
-    const div = document.createElement('div');
-    div.id = 'train-progress-container';
-    div.innerHTML = html;
-    document.body.appendChild(div);
-};
-
-window.closeVariantProgress = function() {
-    const el = document.getElementById('train-progress-container');
-    if (el) el.remove();
-};
-
-// --- helpers ---
-
-function _progressStat(icon, label, value, unit) {
-    return '<div class="train-progress-stat"><div class="train-progress-stat-icon">' + icon + '</div><div class="train-progress-stat-label">' + label + '</div><div class="train-progress-stat-value">' + value + '</div><div class="train-progress-stat-unit">' + unit + '</div></div>';
-}
-
-function _entrySummary(entry, mt) {
-    switch (mt) {
-        case 'reps_weight':
-            return '🏆 ' + entry.bestWeight + ' кг | 📦 ' + entry.totalVolume + ' кг';
-        case 'reps':
-            return '🏆 ' + entry.maxReps + ' раз';
-        case 'time':
-            return '⏱ ' + entry.bestTime + ' с';
-        case 'distance':
-            return '📏 ' + entry.bestDistance + ' м';
-        case 'weight_only':
-            return '🏆 ' + entry.bestWeight + ' кг';
-    }
-    return '';
-}
-
-function _renderProgressChart(history) {
-    const mt = history.measurementType;
-    const entries = history.entries;
-    if (entries.length < 2) {
-        return '<div class="empty-state" style="margin:0;"><div class="empty-state-text">Нужно минимум 2 тренировки для построения графика</div></div>';
-    }
-
-    let dataPoints;
-    let yLabel;
-    switch (mt) {
-        case 'reps_weight':
-            dataPoints = entries.map(e => ({ date: e.date, value: e.bestWeight, label: e.bestWeight + ' кг' }));
-            yLabel = 'Вес, кг';
-            break;
-        case 'reps':
-            dataPoints = entries.map(e => ({ date: e.date, value: e.maxReps, label: e.maxReps + ' повт' }));
-            yLabel = 'Повторения';
-            break;
-        case 'time':
-            dataPoints = entries.map(e => ({ date: e.date, value: e.bestTime, label: e.bestTime + ' с' }));
-            yLabel = 'Время, с';
-            break;
-        case 'distance':
-            dataPoints = entries.map(e => ({ date: e.date, value: e.bestDistance, label: e.bestDistance + ' м' }));
-            yLabel = 'Дистанция, м';
-            break;
-        case 'weight_only':
-            dataPoints = entries.map(e => ({ date: e.date, value: e.bestWeight, label: e.bestWeight + ' кг' }));
-            yLabel = 'Вес, кг';
-            break;
-        default:
-            return '';
-    }
-
-    const W = 600, H = 250, P = 45;
-    const maxVal = Math.max(...dataPoints.map(p => p.value)) * 1.15 || 1;
-    const minVal = 0;
-    const range = maxVal - minVal;
-    const xStep = dataPoints.length > 1 ? (W - P * 2) / (dataPoints.length - 1) : 0;
-
-    const points = dataPoints.map((p, i) => {
-        const x = P + i * xStep;
-        const y = H - P - ((p.value - minVal) / range) * (H - P * 2);
-        return { x, y, ...p };
-    });
-
-    let svg = '<svg width="100%" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" class="train-progress-svg">';
-
-    // Grid lines
-    for (let i = 0; i <= 4; i++) {
-        const y = P + i * (H - P * 2) / 4;
-        const val = Math.round((maxVal - i * range / 4) * 10) / 10;
-        svg += '<line x1="' + P + '" y1="' + y + '" x2="' + (W - P) + '" y2="' + y + '" stroke="#e2e8f0" stroke-width="1"/>';
-        svg += '<text x="' + (P - 8) + '" y="' + (y + 4) + '" text-anchor="end" font-size="11" fill="#64748b">' + val + '</text>';
-    }
-
-    // X axis labels
-    const labelStep = Math.max(1, Math.floor(dataPoints.length / 6));
-    points.forEach((p, i) => {
-        if (i % labelStep === 0 || i === points.length - 1) {
-            const label = p.date.slice(5);
-            svg += '<text x="' + p.x + '" y="' + (H - 12) + '" text-anchor="middle" font-size="10" fill="#64748b">' + label + '</text>';
-        }
-    });
-
-    // Y axis label
-    svg += '<text x="12" y="' + (H / 2 + 4) + '" text-anchor="middle" font-size="11" fill="#94a3b8" transform="rotate(-90,12,' + (H / 2) + ')">' + yLabel + '</text>';
-
-    // Area fill
-    const areaPoints = points.map(p => p.x + ',' + p.y).join(' ');
-    svg += '<polygon points="' + P + ',' + (H - P) + ' ' + areaPoints + ' ' + points[points.length - 1].x + ',' + (H - P) + '" fill="url(#train-grad)" opacity="0.2"/>';
-
-    // Gradient def
-    svg += '<defs><linearGradient id="train-grad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ea580c"/><stop offset="100%" stop-color="#ea580c" stop-opacity="0"/></linearGradient></defs>';
-
-    // Line
-    svg += '<polyline points="' + areaPoints + '" fill="none" stroke="#ea580c" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>';
-
-    // Dots with tooltips
-    points.forEach(p => {
-        svg += '<circle cx="' + p.x + '" cy="' + p.y + '" r="5" fill="#ea580c" stroke="#fff" stroke-width="2.5" style="cursor:pointer;">';
-        svg += '<title>' + p.date + ': ' + p.label + '</title>';
-        svg += '</circle>';
-    });
-
-    // Value labels above dots
-    points.forEach((p, i) => {
-        if (i % labelStep === 0 || i === points.length - 1 || i === points.length - 2) {
-            svg += '<text x="' + p.x + '" y="' + (p.y - 10) + '" text-anchor="middle" font-size="11" fill="#1e293b" font-weight="600">' + p.label + '</text>';
-        }
-    });
-
-    svg += '</svg>';
-    return svg;
-}
-
-// ============================================
 // 📊 ТРЕНИРОВКИ — АНАЛИТИКА ПРОГРЕССА
 // ============================================
 
@@ -1606,17 +1358,48 @@ window.renderTrainingProgress = function() {
     const exercises = TrainingExerciseAPI.getExercises();
     const workouts = TrainingWorkoutAPI.getWorkouts();
 
+    const period = progressUIState.period || 'all';
+    const now = new Date();
+    let cutoffDate = null;
+    if (period === 'week') {
+        cutoffDate = new Date(now);
+        cutoffDate.setDate(cutoffDate.getDate() - 7);
+    } else if (period === 'month') {
+        cutoffDate = new Date(now);
+        cutoffDate.setMonth(cutoffDate.getMonth() - 1);
+    } else if (period === '3months') {
+        cutoffDate = new Date(now);
+        cutoffDate.setMonth(cutoffDate.getMonth() - 3);
+    }
+
+    let filteredWorkouts = workouts;
+    if (cutoffDate) {
+        const cutoffStr = cutoffDate.toISOString().slice(0, 10);
+        filteredWorkouts = workouts.filter(w => w.date >= cutoffStr);
+    }
+
     let html = '';
 
-    // === ЗАГОЛОВОК ===
-    html += '<div class="train-progress-header">';
-    html += '<h2 class="train-progress-title">📊 Прогресс тренировок</h2>';
+    html += '<div class="train-period-selector">';
+    html += '<span class="train-period-label">📅 Период:</span>';
+    html += '<button class="train-period-btn' + (period === 'all' ? ' active' : '') + '" onclick="setProgressPeriod(\'all\')">Все время</button>';
+    html += '<button class="train-period-btn' + (period === 'week' ? ' active' : '') + '" onclick="setProgressPeriod(\'week\')">Последняя неделя</button>';
+    html += '<button class="train-period-btn' + (period === 'month' ? ' active' : '') + '" onclick="setProgressPeriod(\'month\')">Последний месяц</button>';
+    html += '<button class="train-period-btn' + (period === '3months' ? ' active' : '') + '" onclick="setProgressPeriod(\'3months\')">Последние 3 месяца</button>';
     html += '</div>';
 
-    // === СТАТИСТИКА ===
-    const totalWorkouts = workouts.length;
-    const exerciseCount = new Set(workouts.flatMap(w => (w.exercises || []).map(e => e.variantId))).size;
-    const dateRange = totalWorkouts > 0 ? workouts[0].date + ' — ' + workouts[workouts.length - 1].date : '';
+    const totalWorkouts = filteredWorkouts.length;
+    const uniqueVariants = new Set(filteredWorkouts.flatMap(function(w) { return (w.exercises || []).map(function(e) { return e.variantId; }); }));
+    const uniqueExercises = new Set();
+    filteredWorkouts.forEach(function(w) {
+        (w.exercises || []).forEach(function(e) {
+            const v = TrainingExerciseAPI.getVariantById(e.variantId);
+            if (v && v.baseExerciseName) uniqueExercises.add(v.baseExerciseName);
+        });
+    });
+    const dateRange = totalWorkouts > 0
+        ? filteredWorkouts[filteredWorkouts.length - 1].date + ' — ' + filteredWorkouts[0].date
+        : '';
 
     html += '<div class="train-progress-summary">';
     html += '<div class="train-progress-card">';
@@ -1626,71 +1409,156 @@ window.renderTrainingProgress = function() {
     html += '</div>';
     html += '<div class="train-progress-card">';
     html += '<div class="train-progress-card-icon">💪</div>';
-    html += '<div class="train-progress-card-value">' + exerciseCount + '</div>';
+    html += '<div class="train-progress-card-value">' + uniqueVariants.size + '</div>';
     html += '<div class="train-progress-card-label">Упражнений</div>';
     html += '</div>';
     html += '<div class="train-progress-card">';
     html += '<div class="train-progress-card-icon">📅</div>';
-    html += '<div class="train-progress-card-value" style="font-size:11px;">' + (dateRange || '-') + '</div>';
+    html += '<div class="train-progress-card-value" style="font-size:11px;">' + (dateRange || '—') + '</div>';
     html += '<div class="train-progress-card-label">Период</div>';
     html += '</div>';
     html += '</div>';
 
-    // === СПИСОК УПРАЖНЕНИЙ ===
-    if (exercises.length === 0) {
-        html += '<div class="empty-state" style="margin-top:24px;">';
-        html += '<div class="empty-state-icon">🏋️</div>';
-        html += '<div class="empty-state-title">Нет данных для анализа</div>';
-        html += '<div class="empty-state-text">Выполните тренировку с упражнениями, чтобы видеть прогресс</div>';
-        html += '</div>';
-    } else {
-        // Собираем статистику по каждому варианту упражнения
-        const variantStats = [];
-        exercises.forEach(ex => {
-            ex.variants.forEach(v => {
-                const hist = TrainingWorkoutAPI.getVariantHistory(v.id);
-                if (!hist.variant || hist.entries.length === 0) return;
-                variantStats.push({ exercise: ex, variant: v, history: hist });
+    if (uniqueVariants.size > 0) {
+        var muscleStats = {};
+        MUSCLE_CATEGORIES.forEach(function(cat) { muscleStats[cat] = 0; });
+        var totalSets = 0;
+
+        filteredWorkouts.forEach(function(w) {
+            (w.exercises || []).forEach(function(ex) {
+                var v = TrainingExerciseAPI.getVariantById(ex.variantId);
+                if (!v) return;
+                var cat = MUSCLE_CATEGORIES.find(function(c) {
+                    return v.name.toLowerCase().indexOf(c.toLowerCase()) >= 0 ||
+                           v.baseExerciseName.toLowerCase().indexOf(c.toLowerCase()) >= 0;
+                });
+                var group = cat || 'Другое';
+                muscleStats[group] = (muscleStats[group] || 0) + ((ex.sets || []).length);
+                totalSets += (ex.sets || []).length;
             });
         });
 
-        // Сортируем: сначала упражнения с наибольшим объёмом
-        variantStats.sort((a, b) => {
-            const aVol = a.history.overall.totalVolume || 0;
-            const bVol = b.history.overall.totalVolume || 0;
-            return bVol - aVol;
+        var colorPalette = ['#7e22ce', '#2563eb', '#16a34a', '#ea580c', '#dc2626', '#0891b2', '#7c3aed', '#d97706', '#059669', '#4f46e5'];
+        var activeGroups = MUSCLE_CATEGORIES.filter(function(c) { return muscleStats[c] > 0; });
+        var otherMuscle = muscleStats['Другое'] || 0;
+
+        html += '<div class="train-progress-chart-section">';
+        html += '<h3 class="train-progress-section-title">🧩 Распределение по мышечным группам</h3>';
+
+        if (totalSets > 0) {
+            var svgSize = 180, cx = svgSize / 2, cy = svgSize / 2, r = 60, innerR = 38;
+            var cumulativeAngle = -Math.PI / 2;
+            var sectors = [];
+
+            activeGroups.forEach(function(cat, i) {
+                var value = muscleStats[cat];
+                var angle = (value / totalSets) * Math.PI * 2;
+                sectors.push({ name: cat, value: value, angle: angle, startAngle: cumulativeAngle, color: colorPalette[i % colorPalette.length] });
+                cumulativeAngle += angle;
+            });
+            if (otherMuscle > 0) {
+                sectors.push({ name: 'Другое', value: otherMuscle, angle: (otherMuscle / totalSets) * Math.PI * 2, startAngle: cumulativeAngle, color: '#94a3b8' });
+            }
+
+            var svg = '<svg width="' + svgSize + '" height="' + svgSize + '" viewBox="0 0 ' + svgSize + ' ' + svgSize + '" class="train-donut-chart">';
+            sectors.forEach(function(seg) {
+                var x1 = cx + r * Math.cos(seg.startAngle);
+                var y1 = cy + r * Math.sin(seg.startAngle);
+                var x2 = cx + r * Math.cos(seg.startAngle + seg.angle);
+                var y2 = cy + r * Math.sin(seg.startAngle + seg.angle);
+                var largeArc = seg.angle > Math.PI ? 1 : 0;
+                svg += '<path d="M' + cx + ',' + cy + ' L' + x1 + ',' + y1 + ' A' + r + ',' + r + ' 0 ' + largeArc + ' 1 ' + x2 + ',' + y2 + ' Z" fill="' + seg.color + '" style="cursor:pointer;" title="' + seg.name + ': ' + seg.value + '"/>';
+            });
+            svg += '<circle cx="' + cx + '" cy="' + cy + '" r="' + innerR + '" fill="white"/>';
+            svg += '<text x="' + cx + '" y="' + (cy - 4) + '" text-anchor="middle" font-size="20" font-weight="700" fill="#1e293b">' + totalSets + '</text>';
+            svg += '<text x="' + cx + '" y="' + (cy + 14) + '" text-anchor="middle" font-size="10" fill="#64748b">подходов</text>';
+            svg += '</svg>';
+
+            html += '<div class="train-chart-row">';
+            html += '<div class="train-donut-wrap">' + svg + '</div>';
+            html += '<div class="train-legend">';
+            sectors.forEach(function(seg) {
+                html += '<div class="train-legend-item">';
+                html += '<span class="train-legend-dot" style="background:' + seg.color + '"></span>';
+                html += '<span class="train-legend-name">' + seg.name + '</span>';
+                html += '<span class="train-legend-val">' + seg.value + '</span>';
+                html += '</div>';
+            });
+            html += '</div>';
+            html += '</div>';
+        } else {
+            html += '<div class="empty-state" style="margin:16px 0;"><div class="empty-state-text">Нет данных за выбранный период</div></div>';
+        }
+        html += '</div>';
+    }
+
+    // Селектор мышечной группы
+    var selectedMuscle = progressUIState.muscleGroup || 'all';
+    html += '<div class="train-muscle-filter">';
+    html += '<span class="train-period-label">Группа мышц:</span>';
+    html += '<select class="finance-filter-select" onchange="progressUIState.muscleGroup=this.value; renderTrainingProgress();" style="min-width:200px;">';
+    html += '<option value="all"' + (selectedMuscle === 'all' ? ' selected' : '') + '>Все группы</option>';
+    MUSCLE_CATEGORIES.forEach(function(cat) {
+        html += '<option value="' + cat + '"' + (selectedMuscle === cat ? ' selected' : '') + '>' + cat + '</option>';
+    });
+    html += '</select>';
+    html += '</div>';
+
+    // Список упражнений
+    var filteredExercises = selectedMuscle === 'all'
+        ? exercises
+        : exercises.filter(function(ex) {
+            return ex.variants.some(function(v) {
+                var search = (v.name + ' ' + v.baseExerciseName).toLowerCase();
+                return search.indexOf(selectedMuscle.toLowerCase()) >= 0;
+            });
         });
 
+    if (filteredExercises.length === 0) {
+        html += '<div class="empty-state" style="margin-top:24px;">';
+        html += '<div class="empty-state-icon">🏋️</div>';
+        html += '<div class="empty-state-title">Нет упражнений</div>';
+        html += '<div class="empty-state-text">Нет упражнений в этой группе за выбранный период</div>';
+        html += '</div>';
+    } else {
         html += '<div class="train-progress-list">';
-        variantStats.forEach(item => {
-            const ex = item.exercise;
-            const v = item.variant;
-            const hist = item.history;
-            const mt = hist.measurementType;
-            const mtLabel = getMeasurementTypeLabel(mt);
-            const last = hist.entries[hist.entries.length - 1];
-            const lastVal = getLastValue(last, mt);
-            const bestVal = getBestValue(hist.overall, mt);
-            const trend = getTrend(lastVal, bestVal, mt);
+        filteredExercises.forEach(function(ex) {
+            var hasData = false;
+            ex.variants.forEach(function(v) {
+                if (TrainingWorkoutAPI.getVariantHistory(v.id).entries.length > 0) hasData = true;
+            });
+            if (!hasData) return;
 
-            html += '<div class="train-progress-exercise-card" onclick="showVariantProgress(\'' + v.id + '\')">';
-            html += '<div class="train-progress-exercise-main">';
-            html += '<span class="train-progress-exercise-name">' + escapeHtml(ex.name) + '</span>';
-            html += '<span class="train-progress-exercise-variant">' + escapeHtml(v.name) + '</span>';
-            html += '<span class="train-progress-exercise-mt">' + mtLabel + '</span>';
+            var safeName = ex.name.replace(/[^a-zA-Z0-9а-яА-Я]/g, '_');
+            html += '<div class="train-exercise-block">';
+            html += '<div class="train-exercise-block-header" onclick="toggleExerciseBlock(\'' + safeName + '\')">';
+            html += '<span class="train-exercise-block-name">' + escapeHtml(ex.name) + '</span>';
+            html += '<span class="train-exercise-block-toggle" id="tog-' + safeName + '">▶</span>';
             html += '</div>';
-            html += '<div class="train-progress-exercise-results">';
-            html += '<div class="train-progress-result">';
-            html += '<span class="train-progress-result-label">Последний</span>';
-            html += '<span class="train-progress-result-value">' + lastVal + '</span>';
-            html += '</div>';
-            html += '<div class="train-progress-result">';
-            html += '<span class="train-progress-result-label">Лучший</span>';
-            html += '<span class="train-progress-result-value train-progress-best">' + bestVal + '</span>';
-            html += '</div>';
-            if (trend) {
-                html += '<span class="train-progress-trend">' + trend + '</span>';
-            }
+            html += '<div class="train-exercise-block-body" id="blk-' + safeName + '" style="display:none;">';
+
+            ex.variants.forEach(function(v) {
+                var hist = TrainingWorkoutAPI.getVariantHistory(v.id);
+                if (hist.entries.length === 0) return;
+
+                var mt = hist.measurementType;
+                var mtLabel = getMeasurementTypeLabel(mt);
+                var last = hist.entries[hist.entries.length - 1];
+                var lastVal = getVariantSetValue(last, mt);
+                var bestVal = getVariantBestValue(hist.overall, mt);
+
+                html += '<div class="train-variant-row-progress">';
+                html += '<div class="train-variant-info" onclick="showVariantProgress(\'' + v.id + '\')" style="cursor:pointer;">';
+                html += '<span class="train-variant-name">' + escapeHtml(v.name) + '</span>';
+                html += '<span class="train-variant-mt">' + mtLabel + '</span>';
+                html += '</div>';
+                html += '<div class="train-variant-results">';
+                html += '<span class="train-variant-result"><span class="train-variant-result-label">Последний</span> ' + lastVal + '</span>';
+                html += '<span class="train-variant-result"><span class="train-variant-result-label">Лучший</span> <b>' + bestVal + '</b></span>';
+                html += '</div>';
+                html += '</div>';
+            });
+
             html += '</div>';
             html += '</div>';
         });
@@ -1700,12 +1568,26 @@ window.renderTrainingProgress = function() {
     container.innerHTML = html;
 }
 
+function toggleExerciseBlock(safeName) {
+    var body = document.getElementById('blk-' + safeName);
+    var toggle = document.getElementById('tog-' + safeName);
+    if (!body) return;
+    var isHidden = body.style.display === 'none';
+    body.style.display = isHidden ? 'block' : 'none';
+    if (toggle) toggle.textContent = isHidden ? '▼' : '▶';
+}
+
+window.setProgressPeriod = function(period) {
+    progressUIState.period = period;
+    renderTrainingProgress();
+}
+
 function getMeasurementTypeLabel(mt) {
-    const map = { reps_weight: 'Повт. × Вес', reps: 'Повторения', time: 'Время', distance: 'Дистанция', weight_only: 'Вес' };
+    var map = { reps_weight: 'Повт.хВес', reps: 'Повторения', time: 'Время', distance: 'Дистанция', weight_only: 'Вес' };
     return map[mt] || mt;
 }
 
-function getLastValue(entry, mt) {
+function getVariantSetValue(entry, mt) {
     if (!entry) return '-';
     switch (mt) {
         case 'reps_weight': return (entry.bestWeight || 0) + ' кг';
@@ -1717,7 +1599,7 @@ function getLastValue(entry, mt) {
     }
 }
 
-function getBestValue(overall, mt) {
+function getVariantBestValue(overall, mt) {
     if (!overall) return '-';
     switch (mt) {
         case 'reps_weight': return (overall.bestWeight || 0) + ' кг';
@@ -1728,13 +1610,3 @@ function getBestValue(overall, mt) {
         default: return '-';
     }
 }
-
-function getTrend(lastVal, bestVal, mt) {
-    if (mt !== 'reps_weight' && mt !== 'reps' && mt !== 'time' && mt !== 'distance' && mt !== 'weight_only') return '';
-    const lastNum = parseFloat(lastVal) || 0;
-    const bestNum = parseFloat(bestVal) || 0;
-    if (lastNum === 0 || bestNum === 0) return '';
-    if (lastNum >= bestNum * 0.95) return '🔥';
-    return '';
-}
-
