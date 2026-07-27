@@ -43,11 +43,7 @@ window.renderFinanceDashboard = function() {
         return;
     }
 
-    let html = `
-        <div class="finance-filter-row">
-            <div class="finance-filter-group">
-                <label class="finance-filter-label">Месяц</label>
-                <select id="fin-month-select" onchange="renderFinanceDashboard()" class="finance-filter-select">`;
+    container.innerHTML = '';
 
     const allMonthsSet = new Set();
     financeData.transactions.forEach(t => {
@@ -56,21 +52,7 @@ window.renderFinanceDashboard = function() {
     });
     const sortedMonths = Array.from(allMonthsSet).sort();
 
-    html += '<option value="all">📊 Все месяцы (накопительно)</option>' +
-        sortedMonths.map(m => {
-            const [y, mo] = m.split('-');
-            const monthNames = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
-            const label = `${monthNames[parseInt(mo) - 1]} ${y}`;
-            return `<option value="${m}">${label}</option>`;
-        }).join('');
-
-    html += `</select>
-            </div>
-        </div>`;
-
-    container.innerHTML = html;
-
-    const monthSelect = document.getElementById('fin-month-select');
+    const staticSelect = document.getElementById('fin-month-select');
 
     // Обновляем опции статичного селектора месяцев в тулбаре
     let monthOptions = '<option value="all">📊 Все месяцы (накопительно)</option>' +
@@ -80,24 +62,23 @@ window.renderFinanceDashboard = function() {
             const label = monthNames[parseInt(mo) - 1] + ' ' + y;
             return '<option value="' + m + '">' + label + '</option>';
         }).join('');
-    monthSelect.innerHTML = monthOptions;
+    staticSelect.innerHTML = monthOptions;
 
-    const previouslySelected = monthSelect.value || financeSelectedMonth || '';
+    const previouslySelected = staticSelect.value || financeSelectedMonth || '';
 
     // Определяем какой месяц выбрать
     const today = new Date();
     const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
     if (previouslySelected === 'all') {
-        monthSelect.value = 'all';
+        staticSelect.value = 'all';
     } else if (previouslySelected && previouslySelected !== '' && allMonthsSet.has(previouslySelected)) {
-        monthSelect.value = previouslySelected;
+        staticSelect.value = previouslySelected;
     } else if(allMonthsSet.has(currentMonth)) {
-        monthSelect.value = currentMonth;
+        staticSelect.value = currentMonth;
     } else if(sortedMonths.length > 0) {
-        monthSelect.value = sortedMonths[sortedMonths.length - 1];
+        staticSelect.value = sortedMonths[sortedMonths.length - 1];
     }
-    financeSelectedMonth = monthSelect.value;
-    financeSelectedMonth = monthSelect.value;
+    financeSelectedMonth = staticSelect.value;
 
     let filteredTransactions = [...financeData.transactions];
     if(financeSelectedMonth !== 'all') {
