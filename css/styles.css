@@ -774,6 +774,9 @@ header .macro-badge {
 /* Список вариантов */
 .train-variants-list {
     padding: 8px 16px 12px 32px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 16px;
 }
 .train-no-variants {
     font-size: 13px; color: #9a3412; font-style: italic;
@@ -782,7 +785,8 @@ header .macro-badge {
 
 /* Строка варианта */
 .train-variant-row {
-    padding: 8px 0; border-bottom: 1px solid #fff7ed;
+    padding: 8px 10px; border-bottom: 1px solid #fff7ed;
+    background: #fffbeb; border-radius: 8px; margin: 2px 0;
 }
 .train-variant-row:last-child { border-bottom: none; }
 
@@ -963,18 +967,18 @@ header .macro-badge {
 
 /* Блок упражнения в детальном просмотре */
 .train-detail-exercise-block {
-    background: #fef3c7; border-radius: 10px; padding: 12px;
-    margin-bottom: 10px;
+    background: #fef3c7; border-radius: 10px; padding: 14px;
+    margin-bottom: 12px;
 }
 
 .train-detail-exercise-header {
     display: flex; align-items: center; gap: 8px;
-    margin-bottom: 8px; font-weight: 600; font-size: 14px;
+    margin-bottom: 10px; font-weight: 700; font-size: 15px;
     color: #78350f;
 }
 
 .train-detail-exercise-name {
-    flex: 1;
+    flex: 1; font-size: 15px;
 }
 
 .train-detail-no-sets {
@@ -1010,14 +1014,14 @@ header .macro-badge {
 .train-set-col {
     display: flex; align-items: center;
 }
-.train-set-col.num { width: 24px; justify-content: center; font-weight: 700; color: #a8a29e; }
-.train-set-col.warmup { width: 36px; justify-content: center; }
-.train-set-col.weight { width: 64px; }
-.train-set-col.reps { width: 56px; }
-.train-set-col.time { width: 64px; }
-.train-set-col.dist { width: 64px; }
-.train-set-col.comment { flex: 1; font-size: 11px; color: #78716c; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.train-set-col.actions { width: 80px; display: flex; gap: 2px; justify-content: flex-end; }
+.train-set-col.num { width: 24px; justify-content: center; font-weight: 700; color: #a8a29e; font-size: 13px; }
+.train-set-col.warmup { width: 36px; justify-content: center; font-size: 13px; }
+.train-set-col.weight { width: 72px; font-size: 13px; }
+.train-set-col.reps { width: 60px; font-size: 13px; }
+.train-set-col.time { width: 68px; font-size: 13px; }
+.train-set-col.dist { width: 68px; font-size: 13px; }
+.train-set-col.comment { flex: 1; font-size: 13px; color: #78716c; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.train-set-col.actions { width: 90px; display: flex; gap: 2px; justify-content: flex-end; }
 
 /* Форма редактирования подхода */
 .train-set-edit-form {
@@ -1870,11 +1874,11 @@ header .macro-badge {
 .train-progress-section-title { font-size: 15px; font-weight: 700; color: #1e293b; margin: 0 0 12px 0; }
 .train-chart-row { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; }
 .train-donut-wrap { flex-shrink: 0; }
-.train-legend { display: flex; flex-direction: column; gap: 6px; }
-.train-legend-item { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.train-legend { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; }
+.train-legend-item { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; }
 .train-legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
-.train-legend-name { color: #1e293b; font-weight: 600; }
-.train-legend-val { color: #64748b; font-size: 12px; margin-left: auto; }
+.train-legend-name { color: #1e293b; font-weight: 600; font-size: 14px; }
+.train-legend-val { color: #64748b; font-size: 14px; margin-left: auto; font-weight: 700; }
 .train-muscle-filter { display: flex; gap: 10px; align-items: center; margin-bottom: 16px; }
 .train-progress-list { display: flex; flex-direction: column; gap: 10px; }
 .train-exercise-block { background: white; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,0.04); overflow: hidden; }
@@ -1902,12 +1906,47 @@ header .macro-badge {
 .train-variant-result b { color: #059669; }
 .train-variant-card { background: #fafbfc; border-radius: 10px; border: 1px solid #e2e8f0; margin-bottom: 10px; overflow: hidden; transition: box-shadow 0.2s; }
 .train-variant-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-.train-variant-card-header { display: flex; justify-content: space-between; align-items: flex-start; padding: 10px 14px; background: white; border-bottom: 1px solid #f1f5f9; flex-wrap: wrap; gap: 8px; }
+.train-variant-card-header { display: flex; justify-content: space-between; align-items: flex-start; padding: 12px 16px; background: white; border-bottom: 1px solid #f1f5f9; flex-wrap: wrap; gap: 8px; }
 .train-variant-card-title { display: flex; align-items: center; gap: 8px; }
 .train-variant-name { font-size: 13px; font-weight: 700; color: #1e3a8a; }
-.train-variant-mt-badge { font-size: 10px; padding: 2px 8px; background: #eef2ff; color: #6366f1; border-radius: 20px; font-weight: 600; letter-spacing: 0.3px; }
+.train-variant-mt-badge { font-size: 11px; padding: 3px 10px; background: #eef2ff; color: #6366f1; border-radius: 20px; font-weight: 600; letter-spacing: 0.3px; }
 .train-variant-card-stats { display: flex; gap: 16px; flex-wrap: wrap; }
 .train-variant-stat { display: flex; flex-direction: column; gap: 1px; text-align: center; min-width: 50px; }
 .train-variant-stat-label { font-size: 9px; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
 .train-variant-stat-value { font-size: 13px; font-weight: 600; color: #1e293b; }
-.train-variant-card-chart { padding: 10px 14px 6px 14px; background: white; border-top: 1px solid #f1f5f9; }
+.train-variant-card-chart { padding: 12px 16px 8px 16px; background: white; border-top: 1px solid #f1f5f9; }
+
+/* History table */
+.train-history-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+}
+.train-history-table thead th {
+    background: #fef3c7;
+    color: #92400e;
+    padding: 10px 12px;
+    font-size: 13px;
+    font-weight: 700;
+    text-align: left;
+    border-bottom: 2px solid #fde047;
+}
+.train-history-table tbody td {
+    padding: 8px 12px;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 13px;
+    vertical-align: top;
+}
+.train-history-table tbody tr:hover {
+    background: #fffbeb;
+}
+.train-history-table tbody tr:nth-child(even) {
+    background: #fefce8;
+}
+.train-history-table tbody tr:nth-child(even):hover {
+    background: #fef3c7;
+}

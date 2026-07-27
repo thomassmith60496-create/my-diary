@@ -1342,7 +1342,7 @@ window.formatDateForDisplay = function(dateStr) {
     if (!dateStr) return '';
     const parts = dateStr.split('-');
     if (parts.length === 3) {
-        return parts[2] + '.' + parts[1] + '.' + parts[0];
+        return parts[2] + '.' + parts[1] + '.' + parts[0].slice(2);
     }
     return dateStr;
 }
@@ -1447,7 +1447,7 @@ window.renderTrainingProgress = function() {
     html += '</div>';
 
     if (uniqueVariants.size > 0 && totalSets > 0) {
-        var svgSize = 160, cx = svgSize / 2, cy = svgSize / 2, r = 60, innerR = 38;
+        var svgSize = 200, cx = svgSize / 2, cy = svgSize / 2, r = 75, innerR = 44;
         var segments = [];
         var cumulativeAngle = -Math.PI / 2;
 
@@ -1471,16 +1471,21 @@ window.renderTrainingProgress = function() {
             donutSvg += '<path d="M' + cx + ',' + cy + ' L' + x1 + ',' + y1 + ' A' + r + ',' + r + ' 0 ' + largeArc + ' 1 ' + x2 + ',' + y2 + ' Z" fill="' + seg.color + '" style="cursor:pointer;" title="' + seg.name + ': ' + seg.value + '"/>';
         });
         donutSvg += '<circle cx="' + cx + '" cy="' + cy + '" r="' + innerR + '" fill="white"/>';
-        donutSvg += '<text x="' + cx + '" y="' + (cy - 4) + '" text-anchor="middle" font-size="22" font-weight="700" fill="#1e293b">' + totalSets + '</text>';
-        donutSvg += '<text x="' + cx + '" y="' + (cy + 14) + '" text-anchor="middle" font-size="10" fill="#64748b">подходов</text>';
+        donutSvg += '<text x="' + cx + '" y="' + (cy - 6) + '" text-anchor="middle" font-size="26" font-weight="700" fill="#1e293b">' + totalSets + '</text>';
+        donutSvg += '<text x="' + cx + '" y="' + (cy + 16) + '" text-anchor="middle" font-size="12" fill="#64748b">подходов</text>';
         donutSvg += '</svg>';
 
-        html += '<div class="train-progress-card" style="display:flex;align-items:center;gap:12px;text-align:left;padding:12px;">';
+        html += '<div class="train-progress-card" style="display:flex;align-items:center;gap:16px;text-align:left;padding:14px;">';
         html += donutSvg;
-        html += '<div style="font-size:12px;">';
-        segments.forEach(function(seg) {
-            html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;"><span style="width:10px;height:10px;background:' + seg.color + ';border-radius:50%;display:inline-block;flex-shrink:0;"></span><span>' + seg.name + ': ' + seg.value + '</span></div>';
+        html += '<div style="font-size:14px;line-height:1.6;">';
+        var halfLen = Math.ceil(segments.length / 2);
+        html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;">';
+        segments.forEach(function(seg, si) {
+            var pct = totalSets > 0 ? ((seg.value / totalSets) * 100).toFixed(1) : 0;
+            html += '<div style="display:flex;align-items:center;gap:6px;"><span style="width:12px;height:12px;background:' + seg.color + ';border-radius:50%;display:inline-block;flex-shrink:0;"></span><span style="font-size:14px;font-weight:600;color:#1e293b;">' + seg.name + '</span></div>';
+            html += '<div style="font-size:14px;color:#1e293b;text-align:right;">' + seg.value + ' (' + pct + '%)</div>';
         });
+        html += '</div>';
         html += '</div>';
         html += '</div>';
     }
@@ -1575,8 +1580,8 @@ window.renderTrainingProgress = function() {
                     }
                 }
 
-                var chartWidth = 420, chartHeight = 130;
-                var padLeft = 45, padRight = 10, padTop = 8, padBottom = 24;
+                var chartWidth = 420, chartHeight = 150;
+                var padLeft = 50, padRight = 10, padTop = 10, padBottom = 30;
                 var plotW = chartWidth - padLeft - padRight;
                 var plotH = chartHeight - padTop - padBottom;
 
@@ -1606,58 +1611,82 @@ window.renderTrainingProgress = function() {
                     return { x: x, y: y, val: val, date: e.date };
                 });
 
-                var linePath = chartPoints.map(function(p) { return p.x + ',' + p.y; }).join(' L');
-                var areaPath = 'M ' + padLeft + ',' + (padTop + plotH) + ' L ' + chartPoints.map(function(p) { return p.x + ',' + p.y; }).join(' L') + ' L ' + (padLeft + (chartPoints.length - 1) * xStep) + ',' + (padTop + plotH) + ' Z';
+                if (entries.length < 2) {
+                    html += '<div class="train-variant-card">';
+                    html += '<div class="train-variant-card-header">';
+                    html += '<div class="train-variant-card-title">';
+                    html += '<span class="train-variant-name">' + escapeHtml(v.name) + '</span>';
+                    html += '<span class="train-variant-mt-badge">' + mtLabel + '</span>';
+                    html += '</div>';
+                    html += '<div class="train-variant-card-stats">';
+                    html += '<div class="train-variant-stat"><span class="train-variant-stat-label">Старт</span><span class="train-variant-stat-value">' + startVal + '</span></div>';
+                    html += '<div class="train-variant-stat"><span class="train-variant-stat-label">Текущий</span><span class="train-variant-stat-value" style="font-weight:700;color:#1e293b;">' + currentVal + '</span></div>';
+                    html += '<div class="train-variant-stat"><span class="train-variant-stat-label">Прогресс</span><span class="train-variant-stat-value" style="color:' + progressColor + ';">' + (progressText || '—') + '</span></div>';
+                    html += '<div class="train-variant-stat"><span class="train-variant-stat-label">Рекорд</span><span class="train-variant-stat-value" style="color:#7e22ce;">' + bestOverall + '</span></div>';
+                    html += '</div>';
+                    html += '</div>';
+                    html += '<div class="train-variant-card-chart" style="padding:20px;text-align:center;color:#94a3b8;font-size:13px;">Для построения графика необходимо минимум 2 выполнения упражнения (сейчас: ' + entries.length + ')</div>';
+                    html += '</div>';
+                } else {
+                    var linePath = chartPoints.map(function(p) { return p.x + ',' + p.y; }).join(' L');
+                    var areaPath = 'M ' + padLeft + ',' + (padTop + plotH) + ' L ' + chartPoints.map(function(p) { return p.x + ',' + p.y; }).join(' L') + ' L ' + (padLeft + (chartPoints.length - 1) * xStep) + ',' + (padTop + plotH) + ' Z';
 
-                var yTicks = 4;
-                var yAxisLabels = '';
-                for (var t = 0; t <= yTicks; t++) {
-                    var yVal = minVal + (yRange * t / yTicks);
-                    var yPos = padTop + plotH - (yRange * t / yTicks) * plotH;
-                    var yLabel = mt === 'time' ? Math.round(yVal) + 'с' : mt === 'distance' ? Math.round(yVal) + 'м' : Math.round(yVal) + '';
-                    yAxisLabels += '<text x="' + (padLeft - 4) + '" y="' + (yPos + 3) + '" text-anchor="end" font-size="8" fill="#94a3b8">' + yLabel + '</text>';
-                }
-
-                var dateStep = Math.max(1, Math.floor(entries.length / 5));
-                var xAxisLabels = '';
-                chartPoints.forEach(function(p, i) {
-                    if (i % dateStep === 0 || i === entries.length - 1) {
-                        var dateLabel = p.date.slice(5);
-                        xAxisLabels += '<text x="' + p.x + '" y="' + (chartHeight - 4) + '" text-anchor="middle" font-size="7" fill="#94a3b8">' + dateLabel + '</text>';
+                    var yTicks = 4;
+                    var yAxisLabels = '';
+                    for (var t = 0; t <= yTicks; t++) {
+                        var yVal = minVal + (yRange * t / yTicks);
+                        var yPos = padTop + plotH - (yRange * t / yTicks) * plotH;
+                        var yLabel = mt === 'time' ? Math.round(yVal) + 'с' : mt === 'distance' ? Math.round(yVal) + 'м' : Math.round(yVal) + '';
+                        yAxisLabels += '<text x="' + (padLeft - 4) + '" y="' + (yPos + 3) + '" text-anchor="end" font-size="11" fill="#94a3b8">' + yLabel + '</text>';
                     }
-                });
+                    yAxisLabels += '<text x="' + (padLeft - 4) + '" y="' + (padTop + plotH + 16) + '" text-anchor="end" font-size="10" fill="#64748b" font-weight="700">мин</text>';
+                    yAxisLabels += '<text x="' + (padLeft - 4) + '" y="' + (padTop - 6) + '" text-anchor="end" font-size="10" fill="#64748b" font-weight="700">макс</text>';
 
-                var chartSvg = '<svg width="100%" height="' + chartHeight + '" viewBox="0 0 ' + chartWidth + ' ' + chartHeight + '" style="overflow:visible;">';
-                chartSvg += '<defs><linearGradient id="grad-' + safeName + '-' + v.id + '" x1="0" y1="0" x2="0" y2="1">';
-                chartSvg += '<stop offset="0%" stop-color="#6366f1" stop-opacity="0.3"/>';
-                chartSvg += '<stop offset="100%" stop-color="#6366f1" stop-opacity="0.02"/>';
-                chartSvg += '</linearGradient></defs>';
-                chartSvg += '<line x1="' + padLeft + '" y1="' + (padTop + plotH) + '" x2="' + (padLeft + plotW) + '" y2="' + (padTop + plotH) + '" stroke="#e2e8f0" stroke-width="1"/>';
-                chartSvg += '<line x1="' + padLeft + '" y1="' + padTop + '" x2="' + padLeft + '" y2="' + (padTop + plotH) + '" stroke="#e2e8f0" stroke-width="1"/>';
-                chartSvg += yAxisLabels;
-                chartSvg += xAxisLabels;
-                chartSvg += '<path d="' + areaPath + '" fill="url(#grad-' + safeName + '-' + v.id + ')"/>';
-                chartSvg += '<path d="M ' + linePath + '" fill="none" stroke="#6366f1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>';
-                chartPoints.forEach(function(p) {
-                    chartSvg += '<circle cx="' + p.x + '" cy="' + p.y + '" r="3.5" fill="white" stroke="#6366f1" stroke-width="2"/>';
-                });
-                chartSvg += '</svg>';
+                    var dateStep = Math.max(1, Math.floor(entries.length / 5));
+                    var xAxisLabels = '';
+                    chartPoints.forEach(function(p, i) {
+                        if (i % dateStep === 0 || i === entries.length - 1) {
+                            var dateParts = p.date.split('-');
+                            var dateLabel = dateParts.length === 3 ? dateParts[2] + '.' + dateParts[1] : p.date.slice(5);
+                            xAxisLabels += '<text x="' + p.x + '" y="' + (chartHeight - 4) + '" text-anchor="middle" font-size="11" fill="#94a3b8">' + dateLabel + '</text>';
+                        }
+                    });
 
-                html += '<div class="train-variant-card">';
-                html += '<div class="train-variant-card-header">';
-                html += '<div class="train-variant-card-title">';
-                html += '<span class="train-variant-name">' + escapeHtml(v.name) + '</span>';
-                html += '<span class="train-variant-mt-badge">' + mtLabel + '</span>';
-                html += '</div>';
-                html += '<div class="train-variant-card-stats">';
-                html += '<div class="train-variant-stat"><span class="train-variant-stat-label">Старт</span><span class="train-variant-stat-value">' + startVal + '</span></div>';
-                html += '<div class="train-variant-stat"><span class="train-variant-stat-label">Текущий</span><span class="train-variant-stat-value" style="font-weight:700;color:#1e293b;">' + currentVal + '</span></div>';
-                html += '<div class="train-variant-stat"><span class="train-variant-stat-label">Прогресс</span><span class="train-variant-stat-value" style="color:' + progressColor + ';">' + (progressText || '—') + '</span></div>';
-                html += '<div class="train-variant-stat"><span class="train-variant-stat-label">Рекорд</span><span class="train-variant-stat-value" style="color:#7e22ce;">' + bestOverall + '</span></div>';
-                html += '</div>';
-                html += '</div>';
-                html += '<div class="train-variant-card-chart">' + chartSvg + '</div>';
-                html += '</div>';
+                    var chartSvg = '<svg width="100%" height="' + chartHeight + '" viewBox="0 0 ' + chartWidth + ' ' + chartHeight + '" style="overflow:visible;">';
+                    chartSvg += '<defs><linearGradient id="grad-' + safeName + '-' + v.id + '" x1="0" y1="0" x2="0" y2="1">';
+                    chartSvg += '<stop offset="0%" stop-color="#6366f1" stop-opacity="0.3"/>';
+                    chartSvg += '<stop offset="100%" stop-color="#6366f1" stop-opacity="0.02"/>';
+                    chartSvg += '</linearGradient></defs>';
+                    chartSvg += '<line x1="' + padLeft + '" y1="' + (padTop + plotH) + '" x2="' + (padLeft + plotW) + '" y2="' + (padTop + plotH) + '" stroke="#e2e8f0" stroke-width="1"/>';
+                    chartSvg += '<line x1="' + padLeft + '" y1="' + padTop + '" x2="' + padLeft + '" y2="' + (padTop + plotH) + '" stroke="#e2e8f0" stroke-width="1"/>';
+                    chartSvg += yAxisLabels;
+                    chartSvg += xAxisLabels;
+                    chartSvg += '<path d="' + areaPath + '" fill="url(#grad-' + safeName + '-' + v.id + ')"/>';
+                    chartSvg += '<path d="M ' + linePath + '" fill="none" stroke="#6366f1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>';
+                    chartPoints.forEach(function(p) {
+                        chartSvg += '<circle cx="' + p.x + '" cy="' + p.y + '" r="4" fill="white" stroke="#6366f1" stroke-width="2"/>';
+                    });
+                    chartPoints.forEach(function(p) {
+                        chartSvg += '<text x="' + p.x + '" y="' + (p.y - 8) + '" text-anchor="middle" font-size="10" font-weight="700" fill="#1e293b">' + p.val + '</text>';
+                    });
+                    chartSvg += '</svg>';
+
+                    html += '<div class="train-variant-card">';
+                    html += '<div class="train-variant-card-header">';
+                    html += '<div class="train-variant-card-title">';
+                    html += '<span class="train-variant-name">' + escapeHtml(v.name) + '</span>';
+                    html += '<span class="train-variant-mt-badge">' + mtLabel + '</span>';
+                    html += '</div>';
+                    html += '<div class="train-variant-card-stats">';
+                    html += '<div class="train-variant-stat"><span class="train-variant-stat-label">Старт</span><span class="train-variant-stat-value">' + startVal + '</span></div>';
+                    html += '<div class="train-variant-stat"><span class="train-variant-stat-label">Текущий</span><span class="train-variant-stat-value" style="font-weight:700;color:#1e293b;">' + currentVal + '</span></div>';
+                    html += '<div class="train-variant-stat"><span class="train-variant-stat-label">Прогресс</span><span class="train-variant-stat-value" style="color:' + progressColor + ';">' + (progressText || '—') + '</span></div>';
+                    html += '<div class="train-variant-stat"><span class="train-variant-stat-label">Рекорд</span><span class="train-variant-stat-value" style="color:#7e22ce;">' + bestOverall + '</span></div>';
+                    html += '</div>';
+                    html += '</div>';
+                    html += '<div class="train-variant-card-chart">' + chartSvg + '</div>';
+                    html += '</div>';
+                }
             });
 
             html += '</div>';
@@ -1711,10 +1740,134 @@ function renderVariantSparklineCustom(entries, mt, width, height) {
         return x + ',' + y;
     });
 
-    const linePath = points.join(' L');
+const linePath = points.join(' L');
     const d = 'M ' + linePath;
 
     return '<svg width="' + width + '" height="' + height + '" viewBox="0 0 ' + width + ' ' + height + '"><path d="' + d + '" fill="none" stroke="#6366f1" stroke-width="1.5"/></svg>';
+}
+
+window.showVariantProgress = function(variantId) {
+    const variant = TrainingWorkoutAPI.getVariantById(variantId);
+    if (!variant) return;
+
+    const hist = TrainingWorkoutAPI.getVariantHistory(variantId);
+    const name = variant.baseExerciseName + ' — ' + variant.name;
+    const mt = variant.measurementType || 'reps_weight';
+    const mtLabel = getMeasurementTypeLabel(mt);
+    const entries = hist.entries || [];
+    const overall = hist.overall || {};
+
+    let html = '';
+    html += '<div style="margin-bottom:16px;">';
+    html += '<h3 style="margin:0 0 8px;font-size:16px;color:#1e293b;">' + escapeHtml(name) + '</h3>';
+    html += '<span style="font-size:13px;color:#64748b;">Тип: ' + mtLabel + '</span>';
+    html += '</div>';
+
+    html += '<div class="train-progress-summary" style="margin-bottom:16px;">';
+    html += '<div class="train-progress-card">';
+    html += '<div class="train-progress-card-value">' + (overall.executionCount || 0) + '</div>';
+    html += '<div class="train-progress-card-label">Тренировок</div>';
+    html += '</div>';
+    html += '<div class="train-progress-card">';
+    html += '<div class="train-progress-card-value">' + (overall.totalSets || 0) + '</div>';
+    html += '<div class="train-progress-card-label">Подходов</div>';
+    html += '</div>';
+    html += '</div>';
+
+    const lastDateStr = overall.lastDate ? formatDateForDisplay(overall.lastDate) : '—';
+    html += '<div style="font-size:13px;color:#64748b;margin-bottom:12px;">';
+    html += 'Последняя запись: ' + lastDateStr + ' • ' + (overall.lastResult || '—');
+    html += '</div>';
+
+    html += '<div style="margin-bottom:12px;">';
+    html += '<button class="btn" onclick="toggleHistoryTable()" style="font-size:13px;">📋 История записей</button>';
+    html += '</div>';
+
+    html += '<div id="variant-history-table" style="display:none;overflow-x:auto;">';
+    html += '<table class="train-history-table">';
+    html += '<thead><tr><th>Дата</th><th>Тренировка</th><th>Подходов</th><th>Комментарий</th><th>Подробнее</th></tr></thead>';
+    html += '<tbody>';
+
+    if (entries.length === 0) {
+        html += '<tr><td colspan="5" style="text-align:center;padding:16px;color:#94a3b8;">Нет записей</td></tr>';
+    } else {
+        entries.forEach(function(entry) {
+            const dateStr = formatDateForDisplay(entry.date);
+            const workoutComment = entry.comment || '';
+            const setCount = (entry.sets || []).length;
+            const workingSets = (entry.sets || []).filter(function(s) { return !s.warmup; });
+
+            let detailText = '';
+            switch (mt) {
+                case 'reps_weight':
+                    detailText = 'Вес: ' + (entry.bestWeight || 0) + ' кг, Объём: ' + (entry.totalVolume || 0).toLocaleString('ru-RU') + ' кг';
+                    break;
+                case 'reps':
+                    detailText = 'Макс: ' + (entry.maxReps || 0) + ' повт, Всего: ' + (entry.totalReps || 0) + ' повт';
+                    break;
+                case 'time':
+                    detailText = 'Лучшее: ' + (entry.bestTime || 0) + ' с, Общее: ' + (entry.totalTime || 0) + ' с';
+                    break;
+                case 'distance':
+                    detailText = 'Лучшее: ' + (entry.bestDistance || 0) + ' м, Общее: ' + (entry.totalDistance || 0) + ' м';
+                    break;
+                case 'weight_only':
+                    detailText = 'Лучший вес: ' + (entry.bestWeight || 0) + ' кг';
+                    break;
+            }
+
+            html += '<tr>';
+            html += '<td>' + dateStr + '</td>';
+            html += '<td>' + escapeHtml(workoutComment || 'Тренировка') + '</td>';
+            html += '<td>' + setCount + '</td>';
+            html += '<td>' + escapeHtml(workoutComment) + '</td>';
+            html += '<td style="font-size:12px;color:#64748b;">' + detailText + '</td>';
+            html += '</tr>';
+
+            entry.sets.forEach(function(s, si) {
+                const warmupLabel = s.warmup ? ' (разм)' : '';
+                let setDetail = '';
+                switch (mt) {
+                    case 'reps_weight':
+                        setDetail = (s.weight || 0) + ' кг × ' + (s.reps || 0) + warmupLabel;
+                        break;
+                    case 'reps':
+                        setDetail = (s.reps || 0) + ' повт' + warmupLabel;
+                        break;
+                    case 'time':
+                        setDetail = (s.time || 0) + ' с' + warmupLabel;
+                        break;
+                    case 'distance':
+                        setDetail = (s.distance || 0) + ' м' + warmupLabel;
+                        break;
+                    case 'weight_only':
+                        setDetail = (s.weight || 0) + ' кг' + warmupLabel;
+                        break;
+                }
+                if (s.comment) setDetail += ' — ' + escapeHtml(s.comment);
+                html += '<tr style="background:#f8fafc;">';
+                html += '<td></td><td></td><td></td>';
+                html += '<td colspan="2" style="font-size:12px;color:#64748b;">Подход #' + (si + 1) + ': ' + setDetail + '</td>';
+                html += '</tr>';
+            });
+        });
+    }
+
+    html += '</tbody></table></div>';
+
+    showCustomModal({
+        title: '📊 Прогресс: ' + variant.name,
+        message: html,
+        type: 'info',
+        confirmText: 'Закрыть',
+        cancelText: ''
+    });
+}
+
+window.toggleHistoryTable = function() {
+    const el = document.getElementById('variant-history-table');
+    if (!el) return;
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
 
 function toggleExerciseBlock(safeName) {

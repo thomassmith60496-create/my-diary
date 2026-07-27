@@ -63,9 +63,9 @@ window.renderSVGLineChart = function(data, field, unit, color, gradientId, optio
     var pointsHtml = points.map(function(p, i) {
         var isFirst = i === 0, isLast = i === data.length - 1;
         var pointColor = isLast ? color : (isFirst ? '#2563eb' : color);
-        // Format date as DD.MM.YYYY
+        // Format date as DD.MM.YY
         var dateParts = p.date.split('-');
-        var shortDate = dateParts.length === 3 ? dateParts[2] + '.' + dateParts[1] + '.' + dateParts[0] : p.date;
+        var shortDate = dateParts.length === 3 ? dateParts[2] + '.' + dateParts[1] + '.' + dateParts[0].slice(2) : p.date;
         return '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + (isFirst || isLast ? 6 : 4) + '" fill="' + pointColor + '" stroke="white" stroke-width="2"/>' +
                '<text x="' + p.x + '" y="' + (p.y - 10) + '" text-anchor="middle" font-size="11" font-weight="700" fill="' + titleColor + '">' + p.value + '</text>' +
                '<text x="' + p.x + '" y="' + (padding.top + chartH + 18) + '" text-anchor="middle" font-size="10" fill="' + textColor + '" font-weight="600">' + shortDate + '</text>';
