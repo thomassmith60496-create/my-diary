@@ -160,21 +160,40 @@ function syncToCloud() {
             lastUpdated: Date.now()
         };
         
-        db.ref(`lera_diary_v1/${targetUid}`).set(data)
-            .then(() => {
-                showSyncStatus('✅ Сохранено!', 'success');
-            }).catch((error) => {
-                showSyncStatus('❌ Ошибка сохранения', 'error');
-            });
+        db.ref(`lera_diary_v1/${targetUid}`).set(data);
+        
+        // Также сохраняем тренировки отдельным ключом
+        try {
+            if (typeof TrainingExerciseAPI !== 'undefined') {
+                var td = TrainingExerciseAPI.getRawData();
+                if (td) {
+                    db.ref('lera_training_v1/' + targetUid).set({
+                        version: td.version,
+                        exercises: td.exercises,
+                        workouts: td.workouts,
+                        lastUpdated: Date.now()
+                    });
+                }
+            }
+        } catch(e) {}
+        
+        showSyncStatus('✅ Сохранено!', 'success');
     }, 5000);
 }
 
 // === ЭКСПОРТ/ИМПОРТ ===
 
 function exportAllData() {
+    var trainingExport = null;
+    try {
+        if (typeof TrainingExerciseAPI !== 'undefined') {
+            trainingExport = TrainingExerciseAPI.getRawData();
+        }
+    } catch(e) {}
     const data = { 
         nutrition: nutritionData, 
         financeData: financeData,
+        trainingData: trainingExport,
         exportedAt: new Date().toISOString() 
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -231,6 +250,35 @@ function importAllData(input) {
                     });
                 }
             }
+            // Импорт тренировок
+            if (parsed.trainingData && typeof TrainingExerciseAPI !== 'undefined' && TrainingExerciseAPI.loadFromFirebase) {
+                var existing = TrainingExerciseAPI.getExercises();
+                if (existing.length === 0) {
+                    TrainingExerciseAPI.loadFromFirebase(parsed.trainingData);
+                } else {
+                    // Объединяем: добавляем недостающие тренировки
+                    var td = TrainingExerciseAPI.getRawData();
+                    if (parsed.trainingData.exercises) {
+                        var exIds = new Set(td.exercises.map(function(e) { return e.id; }));
+                        parsed.trainingData.exercises.forEach(function(ex) {
+                            if (ex && ex.id && !exIds.has(ex.id)) {
+                                td.exercises.push(ex);
+                                exIds.add(ex.id);
+                            }
+                        });
+                    }
+                    if (parsed.trainingData.workouts) {
+                        var wIds = new Set(td.workouts.map(function(w) { return w.id; }));
+                        parsed.trainingData.workouts.forEach(function(w) {
+                            if (w && w.id && !wIds.has(w.id)) {
+                                td.workouts.push(w);
+                                wIds.add(w.id);
+                            }
+                        });
+                    }
+                    TrainingExerciseAPI.save();
+                }
+            }
             syncToCloud();
             renderNutritionAll();
             renderFinanceDashboard();
@@ -246,14 +294,19 @@ function importAllData(input) {
 
 function resetAllData() {
     if (isReadOnlyActive()) { customAlert('❌ Очистка недоступна в режиме просмотра', 'Ошибка'); return; }
-    customConfirm('Удалить ВСЕ данные (питание + финансы)? Это нельзя отменить.', 'Подтверждение удаления')
+    customConfirm('Удалить ВСЕ данные (питание + финансы + тренировки)? Это нельзя отменить.', 'Подтверждение удаления')
         .then(confirmed => {
             if (!confirmed) return;
             const targetUid = getTargetUid();
             db.ref(`lera_diary_v1/${targetUid}`).remove();
             db.ref(`lera_finance_v1/${targetUid}`).remove();
+            db.ref(`lera_training_v1/${targetUid}`).remove();
             nutritionData = { weeks: [], currentWeekId: null };
             financeData = { transactions: [], savings: [], planned: [], categories: [] };
+            // Сброс тренировок
+            if (typeof TrainingExerciseAPI !== 'undefined' && TrainingExerciseAPI.loadFromFirebase) {
+                TrainingExerciseAPI.loadFromFirebase({ version: 2, exercises: [], workouts: [] });
+            }
             renderNutritionAll();
             renderCurrentFinanceTab();
             updateFinanceStats();

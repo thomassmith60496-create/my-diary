@@ -312,15 +312,19 @@ window.switchDataContext = function(uid) {
 window.loadDataForUser = function(uid) {
     var diaryPath = 'lera_diary_v1/' + uid;
     var financePath = 'lera_finance_v1/' + uid;
+    var trainingPath = 'lera_training_v1/' + uid;
     
     var diaryLoad = db.ref(diaryPath).once('value');
     var financeLoad = db.ref(financePath).once('value');
+    var trainingLoad = db.ref(trainingPath).once('value');
     
-    Promise.all([diaryLoad, financeLoad]).then(function(results) {
+    Promise.all([diaryLoad, financeLoad, trainingLoad]).then(function(results) {
         var diarySnap = results[0];
         var financeSnap = results[1];
+        var trainingSnap = results[2];
         var diaryData = diarySnap.val();
         var financeDataSnap = financeSnap.val();
+        var trainingDataSnap = trainingSnap.val();
         
         if (diaryData) {
             if (diaryData.nutrition) nutritionData = diaryData.nutrition;
@@ -338,6 +342,17 @@ window.loadDataForUser = function(uid) {
             if (financeDataSnap.savings) financeData.savings = financeDataSnap.savings;
             if (financeDataSnap.planned) financeData.planned = financeDataSnap.planned;
             if (financeDataSnap.categories) financeData.categories = financeDataSnap.categories;
+        }
+        
+        // Загружаем тренировки из Firebase
+        if (trainingDataSnap) {
+            var tv = trainingDataSnap.version || 1;
+            var te = trainingDataSnap.exercises || [];
+            var tw = trainingDataSnap.workouts || [];
+            // Сохраняем в localStorage через API
+            if (typeof TrainingExerciseAPI !== 'undefined' && TrainingExerciseAPI.loadFromFirebase) {
+                TrainingExerciseAPI.loadFromFirebase({ version: tv, exercises: te, workouts: tw });
+            }
         }
         
         isInitialLoad = false;

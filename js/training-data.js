@@ -129,6 +129,20 @@ const TrainingExerciseAPI = {
     /** Сохранить данные в хранилище */
     save: function() {
         ExerciseStorage.save(_data);
+        // Firebase sync (ленивая проверка — db/uid доступны позже)
+        try {
+            if (typeof db !== 'undefined' && typeof getTargetUid === 'function') {
+                var uid = getTargetUid();
+                if (uid) {
+                    db.ref('lera_training_v1/' + uid).set({
+                        version: _data.version,
+                        exercises: _data.exercises,
+                        workouts: _data.workouts,
+                        lastUpdated: Date.now()
+                    }).catch(function() {});
+                }
+            }
+        } catch(e) {}
         return this;
     },
 
@@ -136,6 +150,23 @@ const TrainingExerciseAPI = {
     reload: function() {
         this.load();
         return this;
+    },
+
+    /** Вернуть сырые данные для Firebase-синка */
+    getRawData: function() {
+        return _data;
+    },
+
+    /** Загрузить данные из Firebase (вызывается из auth.js) */
+    loadFromFirebase: function(data) {
+        if (!data) return;
+        data.version = data.version || 1;
+        if (data.version < 2) {
+            data.workouts = data.workouts || [];
+            data.version = 2;
+        }
+        _data = data;
+        ExerciseStorage.save(_data);
     },
 
     // -------------------------------------------------------
