@@ -16,6 +16,9 @@ window.switchMainTab = function(tab) {
         renderNutritionAll();
         setTimeout(() => scrollToToday(), 100);
     }
+    if(tab === 'train') {
+        renderTrainingExercises();
+    }
     setTimeout(() => applyReadOnlyState(), 50);
 }
    
@@ -26,6 +29,17 @@ window.switchSubTab = function(tab, event) {
     document.getElementById(`sub-tab-${tab}`).classList.add('active');
     if(tab === 'dashboard') renderDashboard();
     setTimeout(() => applyReadOnlyState(), 50);
+}
+
+window.switchTrainingSubTab = function(tab, event) {
+    const trainContent = document.getElementById('main-tab-train');
+    trainContent.querySelectorAll('.train-sub-tab-btn').forEach(b => b.classList.remove('active'));
+    trainContent.querySelectorAll('.train-sub-tab-content').forEach(c => c.classList.remove('active'));
+    
+    event.target.classList.add('active');
+    document.getElementById(`train-sub-${tab}`).classList.add('active');
+    
+    if(tab === 'exercises') renderTrainingExercises();
 }
 
 window.switchFinanceSubTab = function(tab, event) {

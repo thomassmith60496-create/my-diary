@@ -176,14 +176,15 @@
     </div>
 
     <div class="main-tab-content" id="main-tab-train">
-        <header class="train-header">
+        <header style="background: linear-gradient(135deg, #9a3412 0%, #ea580c 100%); box-shadow: 0 10px 30px rgba(234, 88, 12, 0.25);">
             <h1>🏋️ ТРЕНИРОВКИ</h1>
-            <div class="subtitle">Новая система тренировок находится в разработке</div>
+            <div class="subtitle">Управление базой упражнений</div>
         </header>
-        <div class="empty-state">
-            <div class="empty-state-icon">🏗️</div>
-            <div class="empty-state-title">В разработке</div>
-            <div class="empty-state-text">Новая система тренировок находится в разработке</div>
+        <div class="train-sub-tabs">
+            <button class="train-sub-tab-btn active" onclick="switchTrainingSubTab('exercises', event)">🏋️ Упражнения</button>
+        </div>
+        <div class="train-sub-tab-content active" id="train-sub-exercises">
+            <div id="training-exercises-content"></div>
         </div>
     </div>
 
@@ -513,6 +514,8 @@
 <script src="js/finance-save.js"></script>
 <script src="js/finance-render.js"></script>
 <script src="js/finance-import.js"></script>
+<script src="js/training-data.js"></script>
+<script src="js/training-ui.js"></script>
 <script src="js/dashboard.js"></script>
 <script src="js/app.js"></script>
 </body>
