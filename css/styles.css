@@ -180,6 +180,7 @@ header .macro-badge {
     backdrop-filter: blur(6px); display: flex;
     align-items: center; justify-content: center; z-index: 2000;
 }
+.auth-overlay.hidden { display: none; }
 .auth-box {
     background: white; border-radius: 20px; padding: 30px;
     max-width: 400px; width: 100%; box-shadow: 0 25px 80px rgba(0,0,0,0.3);
