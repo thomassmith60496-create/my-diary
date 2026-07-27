@@ -1596,7 +1596,7 @@ function _renderProgressChart(history) {
 }
 
 // ============================================
-// ?? ?????? ??????? ???? ???????
+// 📊 ТРЕНИРОВКИ — АНАЛИТИКА ПРОГРЕССА
 // ============================================
 
 window.renderTrainingProgress = function() {
@@ -1608,49 +1608,91 @@ window.renderTrainingProgress = function() {
 
     let html = '';
 
-    // Summary stats
+    // === ЗАГОЛОВОК ===
+    html += '<div class="train-progress-header">';
+    html += '<h2 class="train-progress-title">📊 Прогресс тренировок</h2>';
+    html += '</div>';
+
+    // === СТАТИСТИКА ===
+    const totalWorkouts = workouts.length;
+    const exerciseCount = new Set(workouts.flatMap(w => (w.exercises || []).map(e => e.variantId))).size;
+    const dateRange = totalWorkouts > 0 ? workouts[0].date + ' — ' + workouts[workouts.length - 1].date : '';
+
     html += '<div class="train-progress-summary">';
-    html += '<div class="train-progress-stat-card">';
-    html += '<div class="train-progress-stat-value">' + workouts.length + '</div>';
-    html += '<div class="train-progress-stat-label">?????????</div>';
+    html += '<div class="train-progress-card">';
+    html += '<div class="train-progress-card-icon">🏋️</div>';
+    html += '<div class="train-progress-card-value">' + totalWorkouts + '</div>';
+    html += '<div class="train-progress-card-label">Тренировок</div>';
     html += '</div>';
-    html += '<div class="train-progress-stat-card">';
-    html += '<div class="train-progress-stat-value">' + exercises.length + '</div>';
-    html += '<div class="train-progress-stat-label">?????????</div>';
+    html += '<div class="train-progress-card">';
+    html += '<div class="train-progress-card-icon">💪</div>';
+    html += '<div class="train-progress-card-value">' + exerciseCount + '</div>';
+    html += '<div class="train-progress-card-label">Упражнений</div>';
     html += '</div>';
-    html += '<div class="train-progress-stat-card">';
-    html += '<div class="train-progress-stat-value">' + (workouts.length > 0 ? workouts[workouts.length - 1].date : '-') + '</div>';
-    html += '<div class="train-progress-stat-label">??????????</div>';
+    html += '<div class="train-progress-card">';
+    html += '<div class="train-progress-card-icon">📅</div>';
+    html += '<div class="train-progress-card-value" style="font-size:11px;">' + (dateRange || '-') + '</div>';
+    html += '<div class="train-progress-card-label">Период</div>';
     html += '</div>';
     html += '</div>';
 
-    // Exercise progress list
+    // === СПИСОК УПРАЖНЕНИЙ ===
     if (exercises.length === 0) {
-        html += '<div class="empty-state">';
-        html += '<div class="empty-state-icon">????</div>';
-        html += '<div class="empty-state-title">???????????? ?????????</div>';
-        html += '<div class="empty-state-text">??????????????????? ??????????</div>';
+        html += '<div class="empty-state" style="margin-top:24px;">';
+        html += '<div class="empty-state-icon">🏋️</div>';
+        html += '<div class="empty-state-title">Нет данных для анализа</div>';
+        html += '<div class="empty-state-text">Выполните тренировку с упражнениями, чтобы видеть прогресс</div>';
         html += '</div>';
     } else {
-        html += '<div class="train-progress-list">';
+        // Собираем статистику по каждому варианту упражнения
+        const variantStats = [];
         exercises.forEach(ex => {
             ex.variants.forEach(v => {
-                const history = TrainingWorkoutAPI.getVariantHistory(v.id);
-                if (!history.variant || history.entries.length === 0) return;
-
-                const lastEntry = history.entries[history.entries.length - 1];
-                const mt = history.measurementType;
-                const lastResult = _formatProgressValue(lastEntry, mt);
-                const bestResult = _formatProgressValue(history.overall, mt, true);
-
-                html += '<div class="train-progress-exercise-item" onclick="showVariantProgress(\'' + v.id + '\')">';
-                html += '<div class="train-progress-exercise-name">' + escapeHtml(ex.name) + ' — ' + escapeHtml(v.name) + '</div>';
-                html += '<div class="train-progress-exercise-meta">';
-                html += '<span>????: ' + lastResult + '</span>';
-                html += '<span>????: ' + bestResult + '</span>';
-                html += '</div>';
-                html += '</div>';
+                const hist = TrainingWorkoutAPI.getVariantHistory(v.id);
+                if (!hist.variant || hist.entries.length === 0) return;
+                variantStats.push({ exercise: ex, variant: v, history: hist });
             });
+        });
+
+        // Сортируем: сначала упражнения с наибольшим объёмом
+        variantStats.sort((a, b) => {
+            const aVol = a.history.overall.totalVolume || 0;
+            const bVol = b.history.overall.totalVolume || 0;
+            return bVol - aVol;
+        });
+
+        html += '<div class="train-progress-list">';
+        variantStats.forEach(item => {
+            const ex = item.exercise;
+            const v = item.variant;
+            const hist = item.history;
+            const mt = hist.measurementType;
+            const mtLabel = getMeasurementTypeLabel(mt);
+            const last = hist.entries[hist.entries.length - 1];
+            const lastVal = getLastValue(last, mt);
+            const bestVal = getBestValue(hist.overall, mt);
+            const trend = getTrend(lastVal, bestVal, mt);
+
+            html += '<div class="train-progress-exercise-card" onclick="showVariantProgress(\'' + v.id + '\')">';
+            html += '<div class="train-progress-exercise-main">';
+            html += '<span class="train-progress-exercise-name">' + escapeHtml(ex.name) + '</span>';
+            html += '<span class="train-progress-exercise-variant">' + escapeHtml(v.name) + '</span>';
+            html += '<span class="train-progress-exercise-mt">' + mtLabel + '</span>';
+            html += '</div>';
+            html += '<div class="train-progress-exercise-results">';
+            html += '<div class="train-progress-result">';
+            html += '<span class="train-progress-result-label">Последний</span>';
+            html += '<span class="train-progress-result-value">' + lastVal + '</span>';
+            html += '</div>';
+            html += '<div class="train-progress-result">';
+            html += '<span class="train-progress-result-label">Лучший</span>';
+            html += '<span class="train-progress-result-value train-progress-best">' + bestVal + '</span>';
+            html += '</div>';
+            if (trend) {
+                html += '<span class="train-progress-trend">' + trend + '</span>';
+            }
+            html += '</div>';
+            html += '</div>';
         });
         html += '</div>';
     }
@@ -1658,25 +1700,41 @@ window.renderTrainingProgress = function() {
     container.innerHTML = html;
 }
 
-function _formatProgressValue(entry, mt, isBest) {
+function getMeasurementTypeLabel(mt) {
+    const map = { reps_weight: 'Повт. × Вес', reps: 'Повторения', time: 'Время', distance: 'Дистанция', weight_only: 'Вес' };
+    return map[mt] || mt;
+}
+
+function getLastValue(entry, mt) {
     if (!entry) return '-';
     switch (mt) {
-        case 'reps_weight':
-            return isBest ? (entry.bestWeight || 0) + ' kg' : (entry.bestWeight || 0) + ' kg';
-        case 'reps':
-            return isBest ? (entry.maxReps || 0) + ' ??' : (entry.maxReps || 0) + ' ??';
-        case 'time':
-            return isBest ? (entry.bestTime || 0) + ' c' : (entry.bestTime || 0) + ' c';
-        case 'distance':
-            return isBest ? (entry.bestDistance || 0) + ' m' : (entry.bestDistance || 0) + ' m';
-        case 'weight_only':
-            return (entry.bestWeight || 0) + ' kg';
-        default:
-            return '-';
+        case 'reps_weight': return (entry.bestWeight || 0) + ' кг';
+        case 'reps': return (entry.maxReps || 0) + ' повт';
+        case 'time': return (entry.bestTime || 0) + ' с';
+        case 'distance': return (entry.bestDistance || 0) + ' м';
+        case 'weight_only': return (entry.bestWeight || 0) + ' кг';
+        default: return '-';
     }
 }
 
-function _progressStat(icon, label, value, unit) {
-    return '<div class="train-progress-stat"><div class="train-progress-stat-icon">' + icon + '</div><div class="train-progress-stat-label">' + label + '</div><div class="train-progress-stat-value">' + value + '</div><div class="train-progress-stat-unit">' + unit + '</div></div>';
+function getBestValue(overall, mt) {
+    if (!overall) return '-';
+    switch (mt) {
+        case 'reps_weight': return (overall.bestWeight || 0) + ' кг';
+        case 'reps': return (overall.maxReps || 0) + ' повт';
+        case 'time': return (overall.bestTime || 0) + ' с';
+        case 'distance': return (overall.bestDistance || 0) + ' м';
+        case 'weight_only': return (overall.bestWeight || 0) + ' кг';
+        default: return '-';
+    }
+}
+
+function getTrend(lastVal, bestVal, mt) {
+    if (mt !== 'reps_weight' && mt !== 'reps' && mt !== 'time' && mt !== 'distance' && mt !== 'weight_only') return '';
+    const lastNum = parseFloat(lastVal) || 0;
+    const bestNum = parseFloat(bestVal) || 0;
+    if (lastNum === 0 || bestNum === 0) return '';
+    if (lastNum >= bestNum * 0.95) return '🔥';
+    return '';
 }
 
