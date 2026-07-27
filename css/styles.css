@@ -1897,3 +1897,14 @@ header .macro-badge {
 .train-variant-result-label { font-size: 10px; color: #94a3b8; font-weight: 600; text-transform: uppercase; }
 .train-variant-result-value { font-size: 13px; font-weight: 600; color: #1e293b; }
 .train-variant-result b { color: #059669; }
+.train-variant-card { background: #fafbfc; border-radius: 10px; border: 1px solid #e2e8f0; margin-bottom: 10px; overflow: hidden; transition: box-shadow 0.2s; }
+.train-variant-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+.train-variant-card-header { display: flex; justify-content: space-between; align-items: flex-start; padding: 10px 14px; background: white; border-bottom: 1px solid #f1f5f9; flex-wrap: wrap; gap: 8px; }
+.train-variant-card-title { display: flex; align-items: center; gap: 8px; }
+.train-variant-name { font-size: 13px; font-weight: 700; color: #1e3a8a; }
+.train-variant-mt-badge { font-size: 10px; padding: 2px 8px; background: #eef2ff; color: #6366f1; border-radius: 20px; font-weight: 600; letter-spacing: 0.3px; }
+.train-variant-card-stats { display: flex; gap: 16px; flex-wrap: wrap; }
+.train-variant-stat { display: flex; flex-direction: column; gap: 1px; text-align: center; min-width: 50px; }
+.train-variant-stat-label { font-size: 9px; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+.train-variant-stat-value { font-size: 13px; font-weight: 600; color: #1e293b; }
+.train-variant-card-chart { padding: 10px 14px 6px 14px; background: white; border-top: 1px solid #f1f5f9; }

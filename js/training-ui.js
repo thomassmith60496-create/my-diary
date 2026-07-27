@@ -1499,7 +1499,7 @@ window.renderTrainingProgress = function() {
     html += '</select>';
     html += '</div>';
 
-    // Список упражнений
+    // Список упражнений (все данные, без фильтра по периоду)
     var filteredExercises = selectedMuscle === 'all'
         ? exercises
         : exercises.filter(function(ex) {
@@ -1512,21 +1512,15 @@ window.renderTrainingProgress = function() {
         html += '<div class="empty-state" style="margin-top:24px;">';
         html += '<div class="empty-state-icon">🏋️</div>';
         html += '<div class="empty-state-title">Нет упражнений</div>';
-        html += '<div class="empty-state-text">Нет упражнений в этой группе за выбранный период</div>';
+        html += '<div class="empty-state-text">Нет упражнений в этой группе</div>';
         html += '</div>';
     } else {
         html += '<div class="train-progress-list">';
         filteredExercises.forEach(function(ex) {
             var hasData = false;
             ex.variants.forEach(function(v) {
-                var hist = TrainingWorkoutAPI.getVariantHistory(v.id);
-                // Фильтруем entry по периоду
-                var filteredEntries = hist.entries;
-                if (cutoffDate) {
-                    var cutoffStr = cutoffDate.toISOString().slice(0, 10);
-                    filteredEntries = hist.entries.filter(function(e) { return e.date >= cutoffStr; });
-                }
-                if (filteredEntries.length > 0) hasData = true;
+                var h = TrainingWorkoutAPI.getVariantHistory(v.id);
+                if (h && h.entries && h.entries.length > 0) hasData = true;
             });
             if (!hasData) return;
 
@@ -1538,40 +1532,103 @@ window.renderTrainingProgress = function() {
             html += '</div>';
             html += '<div class="train-exercise-block-body" id="blk-' + safeName + '" style="display:none;">';
 
-            // Рендерим каждый вариант
             ex.variants.forEach(function(v) {
                 var hist = TrainingWorkoutAPI.getVariantHistory(v.id);
-                // Фильтруем entry по выбранному периоду для отображения
-                var filteredEntries = hist.entries;
-                if (cutoffDate) {
-                    var cutoffStr2 = cutoffDate.toISOString().slice(0, 10);
-                    filteredEntries = hist.entries.filter(function(e) { return e.date >= cutoffStr2; });
-                }
-                if (filteredEntries.length === 0) return;
+                var entries = hist ? hist.entries : [];
+                if (!entries || entries.length === 0) return;
 
                 var mt = hist.measurementType;
                 var mtLabel = getMeasurementTypeLabel(mt);
-                var last = filteredEntries[filteredEntries.length - 1];
-                var lastVal = getVariantSetValue(last, mt);
-                var bestVal = getVariantBestValue(hist.overall, mt);
+                var overall = hist.overall || {};
 
-                var sparkline = '';
-                if (filteredEntries.length > 1) {
-                    sparkline = '<div class="train-variant-sparkline">' + 
-                                renderVariantSparklineCustom(filteredEntries, mt, 80, 20) + 
-                                '</div>';
+                var first = entries[0];
+                var last = entries[entries.length - 1];
+                var startVal = getVariantSetValue(first, mt);
+                var currentVal = getVariantSetValue(last, mt);
+                var bestOverall = getVariantBestValue(overall, mt);
+
+                var progressText = '';
+                var progressColor = '#64748b';
+                if (mt === 'reps_weight' || mt === 'weight_only') {
+                    if (first.bestWeight && first.bestWeight > 0) {
+                        var pct = ((last.bestWeight || 0) / first.bestWeight - 1) * 100;
+                        progressText = (pct >= 0 ? '+' : '') + pct.toFixed(1) + '%';
+                        progressColor = pct >= 0 ? '#16a34a' : '#dc2626';
+                    }
+                } else if (mt === 'reps') {
+                    if (first.maxReps && first.maxReps > 0) {
+                        var pct2 = ((last.maxReps || 0) / first.maxReps - 1) * 100;
+                        progressText = (pct2 >= 0 ? '+' : '') + pct2.toFixed(1) + '%';
+                        progressColor = pct2 >= 0 ? '#16a34a' : '#dc2626';
+                    }
+                } else if (mt === 'time') {
+                    if (first.bestTime && first.bestTime > 0) {
+                        var pct3 = ((last.bestTime || 0) / first.bestTime - 1) * 100;
+                        progressText = (pct3 <= 0 ? '+' : '') + pct3.toFixed(1) + '%';
+                        progressColor = pct3 <= 0 ? '#16a34a' : '#dc2626';
+                    }
+                } else if (mt === 'distance') {
+                    if (first.bestDistance && first.bestDistance > 0) {
+                        var pct4 = ((last.bestDistance || 0) / first.bestDistance - 1) * 100;
+                        progressText = (pct4 >= 0 ? '+' : '') + pct4.toFixed(1) + '%';
+                        progressColor = pct4 >= 0 ? '#16a34a' : '#dc2626';
+                    }
                 }
 
-                html += '<div class="train-variant-row-progress">';
-                html += '<div class="train-variant-info">';
+                var chartWidth = 400, chartHeight = 100;
+                var allValues = entries.map(function(e) {
+                    if (mt === 'reps_weight') return e.bestWeight || 0;
+                    if (mt === 'reps') return e.maxReps || 0;
+                    if (mt === 'time') return e.bestTime || 0;
+                    if (mt === 'distance') return e.bestDistance || 0;
+                    if (mt === 'weight_only') return e.bestWeight || 0;
+                    return 0;
+                }).filter(function(v) { return v > 0; });
+
+                var maxVal = allValues.length > 0 ? Math.max.apply(null, allValues) : 1;
+
+                var xStep = chartWidth / Math.max(entries.length - 1, 1);
+                var chartPoints = entries.map(function(e, i) {
+                    var val = 0;
+                    if (mt === 'reps_weight') val = e.bestWeight || 0;
+                    else if (mt === 'reps') val = e.maxReps || 0;
+                    else if (mt === 'time') val = e.bestTime || 0;
+                    else if (mt === 'distance') val = e.bestDistance || 0;
+                    else if (mt === 'weight_only') val = e.bestWeight || 0;
+                    var x = i * xStep;
+                    var y = chartHeight - 10 - (val / maxVal) * (chartHeight - 20);
+                    return { x: x, y: y, val: val };
+                });
+
+                var linePath = chartPoints.map(function(p) { return p.x + ',' + p.y; }).join(' L');
+                var areaPath = 'M 0,' + chartHeight + ' L ' + chartPoints.map(function(p) { return p.x + ',' + p.y; }).join(' L') + ' L ' + chartWidth + ',' + chartHeight + ' Z';
+
+                var chartSvg = '<svg width="100%" height="' + chartHeight + '" viewBox="0 0 ' + chartWidth + ' ' + chartHeight + '" style="overflow:visible;">';
+                chartSvg += '<defs><linearGradient id="grad-' + safeName + '-' + v.id + '" x1="0" y1="0" x2="0" y2="1">';
+                chartSvg += '<stop offset="0%" stop-color="#6366f1" stop-opacity="0.3"/>';
+                chartSvg += '<stop offset="100%" stop-color="#6366f1" stop-opacity="0.02"/>';
+                chartSvg += '</linearGradient></defs>';
+                chartSvg += '<path d="' + areaPath + '" fill="url(#grad-' + safeName + '-' + v.id + ')"/>';
+                chartSvg += '<path d="M ' + linePath + '" fill="none" stroke="#6366f1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>';
+                chartPoints.forEach(function(p) {
+                    chartSvg += '<circle cx="' + p.x + '" cy="' + p.y + '" r="3" fill="white" stroke="#6366f1" stroke-width="2"/>';
+                });
+                chartSvg += '</svg>';
+
+                html += '<div class="train-variant-card">';
+                html += '<div class="train-variant-card-header">';
+                html += '<div class="train-variant-card-title">';
                 html += '<span class="train-variant-name">' + escapeHtml(v.name) + '</span>';
-                html += '<span class="train-variant-mt">' + mtLabel + '</span>';
+                html += '<span class="train-variant-mt-badge">' + mtLabel + '</span>';
                 html += '</div>';
-                html += '<div class="train-variant-results">';
-                html += '<span class="train-variant-result"><span class="train-variant-result-label">Последний</span> ' + lastVal + '</span>';
-                html += '<span class="train-variant-result"><span class="train-variant-result-label">Лучший</span> <b>' + bestVal + '</b></span>';
+                html += '<div class="train-variant-card-stats">';
+                html += '<div class="train-variant-stat"><span class="train-variant-stat-label">Старт</span><span class="train-variant-stat-value">' + startVal + '</span></div>';
+                html += '<div class="train-variant-stat"><span class="train-variant-stat-label">Текущий</span><span class="train-variant-stat-value" style="font-weight:700;color:#1e293b;">' + currentVal + '</span></div>';
+                html += '<div class="train-variant-stat"><span class="train-variant-stat-label">Прогресс</span><span class="train-variant-stat-value" style="color:' + progressColor + ';">' + (progressText || '—') + '</span></div>';
+                html += '<div class="train-variant-stat"><span class="train-variant-stat-label">Рекорд</span><span class="train-variant-stat-value" style="color:#7e22ce;">' + bestOverall + '</span></div>';
                 html += '</div>';
-                html += sparkline;
+                html += '</div>';
+                html += '<div class="train-variant-card-chart">' + chartSvg + '</div>';
                 html += '</div>';
             });
 
