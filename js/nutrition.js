@@ -272,44 +272,42 @@ window.renderDays = function() {
         const mealsHtml = day.meals.map((m, mi) => renderMeal(m, di, mi, week.id)).join('');
         return `
             <div class="day-card" id="day-${di}">
-                <div class="day-header ${day.training?'training':''}">
-                    <div class="day-title">${day.day} <span style="opacity:0.7;font-weight:400;font-size:16px;">• ${day.date}</span></div>
-                    <div class="day-header-actions">
-                        ${day.training?'<div class="day-tag training">💪 ТРЕНИРОВКА</div>':''}
-                        <button class="day-toggle-btn" onclick="toggleDay(${di})" title="Свернуть/развернуть">▼</button>
-                    </div>
+                <div class="day-title" onclick="toggleDay(${di})">
+                    <span class="day-toggle">▼</span>
+                    <span class="day-date">${day.day} • ${day.date}</span>
+                    ${day.training?'<span class="day-tag training">💪 ТРЕНИРОВКА</span>':''}
+                    <span class="day-weight-badge" id="day-weight-badge-${week.id}-${di}"></span>
+                    <span class="day-kcal-badge" id="day-kcal-badge-${week.id}-${di}"></span>
                 </div>
-                <div class="day-body">
-                    <div class="morning-block">
-                        <div class="morning-title">🌅 Утренние показатели</div>
-                        <div class="morning-field">
+                <div class="day-content">
+                    <div class="day-section">
+                        <div class="day-section-title">🌅 Утренние показатели</div>
+                        <div class="day-field">
                             <label>⚖️ Вес утром, кг:</label>
                             <input type="number" step="0.1" data-week="${week.id}" data-key="weight-${di}" data-day="${di}" data-field="weight" oninput="debouncedSaveNutrition()" placeholder="65.4" value="${getWeekData(week.id, `weight-${di}`) !== '' ? getWeekData(week.id, `weight-${di}`) : ''}">
                         </div>
                     </div>
                     ${mealsHtml}
-                    <div class="day-summary">
-                        <div class="summary-title">📊 Итоги дня</div>
-                        <div class="summary-row"><div class="summary-totals">
+                    <div class="day-section">
+                        <div class="day-section-title">📊 Итоги дня</div>
+                        <div class="day-totals">
                             <div class="total-pill cal">🔥 <span id="sum-cal-${week.id}-${di}">0</span> ккал</div>
                             <div class="total-pill prot">Б: <span id="sum-prot-${week.id}-${di}">0</span> г</div>
                             <div class="total-pill fat">Ж: <span id="sum-fat-${week.id}-${di}">0</span> г</div>
                             <div class="total-pill carb">У: <span id="sum-carb-${week.id}-${di}">0</span> г</div>
-                        </div></div>
-                        <div class="summary-grid">
-                            <div class="summary-field">
-                                <label>😊 Самочувствие</label>
-                                <select class="mood-select" data-week="${week.id}" data-key="mood-${di}" onchange="debouncedSaveNutrition()">
-                                    <option value="">— выбрать —</option>
-                                    <option value="5" ${getWeekData(week.id, `mood-${di}`)==='5'?'selected':''}>⭐ Отлично</option>
-                                    <option value="4" ${getWeekData(week.id, `mood-${di}`)==='4'?'selected':''}>🙂 Хорошо</option>
-                                    <option value="3" ${getWeekData(week.id, `mood-${di}`)==='3'?'selected':''}>😐 Нормально</option>
-                                    <option value="2" ${getWeekData(week.id, `mood-${di}`)==='2'?'selected':''}>😕 Так себе</option>
-                                    <option value="1" ${getWeekData(week.id, `mood-${di}`)==='1'?'selected':''}>😫 Плохо</option>
-                                </select>
-                            </div>
                         </div>
-                        <div class="summary-field" style="margin-top:10px;">
+                        <div class="day-field">
+                            <label>😊 Самочувствие</label>
+                            <select class="mood-select" data-week="${week.id}" data-key="mood-${di}" onchange="debouncedSaveNutrition()">
+                                <option value="">— выбрать —</option>
+                                <option value="5" ${getWeekData(week.id, `mood-${di}`)==='5'?'selected':''}>⭐ Отлично</option>
+                                <option value="4" ${getWeekData(week.id, `mood-${di}`)==='4'?'selected':''}>🙂 Хорошо</option>
+                                <option value="3" ${getWeekData(week.id, `mood-${di}`)==='3'?'selected':''}>😐 Нормально</option>
+                                <option value="2" ${getWeekData(week.id, `mood-${di}`)==='2'?'selected':''}>😕 Так себе</option>
+                                <option value="1" ${getWeekData(week.id, `mood-${di}`)==='1'?'selected':''}>😫 Плохо</option>
+                            </select>
+                        </div>
+                        <div class="day-field">
                             <label>📝 Заметки дня</label>
                             <textarea class="notes-input" data-week="${week.id}" data-key="notes-${di}" oninput="debouncedSaveNutrition()" placeholder="Как прошёл день?">${getWeekData(week.id, `notes-${di}`) || ''}</textarea>
                         </div>
