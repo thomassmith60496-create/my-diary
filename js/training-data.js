@@ -71,30 +71,6 @@ function _normalizeName(name) {
     return name.trim().toLowerCase();
 }
 
-// === СИДИРОВАНИЕ БАЗЫ ===
-
-function _seedFromList(list) {
-    for (let i = 0; i < list.length; i++) {
-        const group = list[i];
-        if (_data.exercises.some(e => _normalizeName(e.name) === _normalizeName(group.name))) continue;
-        const exercise = { id: _generateId(), name: group.name.trim(), variants: [] };
-        for (let j = 0; j < group.variants.length; j++) {
-            const v = group.variants[j];
-            exercise.variants.push({
-                id: _generateId(),
-                name: v.name.trim(),
-                loadType: v.loadType || 'weight',
-                measurementType: v.measurementType || 'reps_weight',
-                equipment: v.equipment || '',
-                categories: v.categories || [],
-                aliases: v.aliases || []
-            });
-        }
-        _data.exercises.push(exercise);
-    }
-    TrainingExerciseAPI.save();
-}
-
 // === ЕДИНЫЙ API ===
 
 const TrainingExerciseAPI = {
@@ -121,7 +97,25 @@ const TrainingExerciseAPI = {
         }
         // Seed: если база пуста — заполняем из training-seed.js
         if (typeof SEED_EXERCISES !== 'undefined' && _data.exercises.length === 0) {
-            _seedFromList(SEED_EXERCISES);
+            for (var si = 0; si < SEED_EXERCISES.length; si++) {
+                var sg = SEED_EXERCISES[si];
+                if (_data.exercises.some(function(e) { return _normalizeName(e.name) === _normalizeName(sg.name); })) continue;
+                var ex = { id: _generateId(), name: sg.name.trim(), variants: [] };
+                for (var sj = 0; sj < sg.variants.length; sj++) {
+                    var sv = sg.variants[sj];
+                    ex.variants.push({
+                        id: _generateId(),
+                        name: sv.name.trim(),
+                        loadType: sv.loadType || 'weight',
+                        measurementType: sv.measurementType || 'reps_weight',
+                        equipment: sv.equipment || '',
+                        categories: sv.categories || [],
+                        aliases: sv.aliases || []
+                    });
+                }
+                _data.exercises.push(ex);
+            }
+            ExerciseStorage.save(_data);
         }
         return this;
     },
@@ -166,6 +160,26 @@ const TrainingExerciseAPI = {
             data.version = 2;
         }
         _data = data;
+        // Если из Firebase пришли пустые упражнения — сидируем
+        if (_data.exercises.length === 0 && typeof SEED_EXERCISES !== 'undefined') {
+            for (var fi = 0; fi < SEED_EXERCISES.length; fi++) {
+                var fg = SEED_EXERCISES[fi];
+                var fe = { id: _generateId(), name: fg.name.trim(), variants: [] };
+                for (var fj = 0; fj < fg.variants.length; fj++) {
+                    var fv = fg.variants[fj];
+                    fe.variants.push({
+                        id: _generateId(),
+                        name: fv.name.trim(),
+                        loadType: fv.loadType || 'weight',
+                        measurementType: fv.measurementType || 'reps_weight',
+                        equipment: fv.equipment || '',
+                        categories: fv.categories || [],
+                        aliases: fv.aliases || []
+                    });
+                }
+                _data.exercises.push(fe);
+            }
+        }
         ExerciseStorage.save(_data);
     },
 
@@ -764,3 +778,31 @@ const TrainingWorkoutAPI = {
 
 // === АВТОМАТИЧЕСКАЯ ЗАГРУЗКА ПРИ СТАРТЕ ===
 TrainingExerciseAPI.load();
+
+// Ручной вызов seed (если нужно пересоздать)
+window.seedExercisesNow = function() {
+    var exs = TrainingExerciseAPI.getExercises();
+    if (exs.length > 0 && !confirm('База не пуста (' + exs.length + ' упр.). Пересоздать?')) return;
+    _data = { version: 2, exercises: [], workouts: [] };
+    if (typeof SEED_EXERCISES !== 'undefined') {
+        for (var wi = 0; wi < SEED_EXERCISES.length; wi++) {
+            var wg = SEED_EXERCISES[wi];
+            var we = { id: _generateId(), name: wg.name.trim(), variants: [] };
+            for (var wj = 0; wj < wg.variants.length; wj++) {
+                var wv = wg.variants[wj];
+                we.variants.push({
+                    id: _generateId(),
+                    name: wv.name.trim(),
+                    loadType: wv.loadType || 'weight',
+                    measurementType: wv.measurementType || 'reps_weight',
+                    equipment: wv.equipment || '',
+                    categories: wv.categories || [],
+                    aliases: wv.aliases || []
+                });
+            }
+            _data.exercises.push(we);
+        }
+    }
+    ExerciseStorage.save(_data);
+    renderTrainingExercises();
+};

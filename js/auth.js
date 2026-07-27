@@ -344,14 +344,16 @@ window.loadDataForUser = function(uid) {
             if (financeDataSnap.categories) financeData.categories = financeDataSnap.categories;
         }
         
-        // Загружаем тренировки из Firebase
-        if (trainingDataSnap) {
-            var tv = trainingDataSnap.version || 1;
-            var te = trainingDataSnap.exercises || [];
-            var tw = trainingDataSnap.workouts || [];
-            // Сохраняем в localStorage через API
-            if (typeof TrainingExerciseAPI !== 'undefined' && TrainingExerciseAPI.loadFromFirebase) {
+        // Загружаем тренировки из Firebase (или сидируем если пусто)
+        if (typeof TrainingExerciseAPI !== 'undefined') {
+            if (trainingDataSnap) {
+                var tv = trainingDataSnap.version || 1;
+                var te = trainingDataSnap.exercises || [];
+                var tw = trainingDataSnap.workouts || [];
                 TrainingExerciseAPI.loadFromFirebase({ version: tv, exercises: te, workouts: tw });
+            } else {
+                // Нет данных в Firebase — load из localStorage (там может быть сид)
+                TrainingExerciseAPI.load();
             }
         }
         
