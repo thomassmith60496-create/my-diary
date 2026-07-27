@@ -1595,3 +1595,88 @@ function _renderProgressChart(history) {
     return svg;
 }
 
+// ============================================
+// ?? ?????? ??????? ???? ???????
+// ============================================
+
+window.renderTrainingProgress = function() {
+    const container = document.getElementById('training-progress-content');
+    if (!container) return;
+
+    const exercises = TrainingExerciseAPI.getExercises();
+    const workouts = TrainingWorkoutAPI.getWorkouts();
+
+    let html = '';
+
+    // Summary stats
+    html += '<div class="train-progress-summary">';
+    html += '<div class="train-progress-stat-card">';
+    html += '<div class="train-progress-stat-value">' + workouts.length + '</div>';
+    html += '<div class="train-progress-stat-label">?????????</div>';
+    html += '</div>';
+    html += '<div class="train-progress-stat-card">';
+    html += '<div class="train-progress-stat-value">' + exercises.length + '</div>';
+    html += '<div class="train-progress-stat-label">?????????</div>';
+    html += '</div>';
+    html += '<div class="train-progress-stat-card">';
+    html += '<div class="train-progress-stat-value">' + (workouts.length > 0 ? workouts[workouts.length - 1].date : '-') + '</div>';
+    html += '<div class="train-progress-stat-label">??????????</div>';
+    html += '</div>';
+    html += '</div>';
+
+    // Exercise progress list
+    if (exercises.length === 0) {
+        html += '<div class="empty-state">';
+        html += '<div class="empty-state-icon">????</div>';
+        html += '<div class="empty-state-title">???????????? ?????????</div>';
+        html += '<div class="empty-state-text">??????????????????? ??????????</div>';
+        html += '</div>';
+    } else {
+        html += '<div class="train-progress-list">';
+        exercises.forEach(ex => {
+            ex.variants.forEach(v => {
+                const history = TrainingWorkoutAPI.getVariantHistory(v.id);
+                if (!history.variant || history.entries.length === 0) return;
+
+                const lastEntry = history.entries[history.entries.length - 1];
+                const mt = history.measurementType;
+                const lastResult = _formatProgressValue(lastEntry, mt);
+                const bestResult = _formatProgressValue(history.overall, mt, true);
+
+                html += '<div class="train-progress-exercise-item" onclick="showVariantProgress(\'' + v.id + '\')">';
+                html += '<div class="train-progress-exercise-name">' + escapeHtml(ex.name) + ' — ' + escapeHtml(v.name) + '</div>';
+                html += '<div class="train-progress-exercise-meta">';
+                html += '<span>????: ' + lastResult + '</span>';
+                html += '<span>????: ' + bestResult + '</span>';
+                html += '</div>';
+                html += '</div>';
+            });
+        });
+        html += '</div>';
+    }
+
+    container.innerHTML = html;
+}
+
+function _formatProgressValue(entry, mt, isBest) {
+    if (!entry) return '-';
+    switch (mt) {
+        case 'reps_weight':
+            return isBest ? (entry.bestWeight || 0) + ' kg' : (entry.bestWeight || 0) + ' kg';
+        case 'reps':
+            return isBest ? (entry.maxReps || 0) + ' ??' : (entry.maxReps || 0) + ' ??';
+        case 'time':
+            return isBest ? (entry.bestTime || 0) + ' c' : (entry.bestTime || 0) + ' c';
+        case 'distance':
+            return isBest ? (entry.bestDistance || 0) + ' m' : (entry.bestDistance || 0) + ' m';
+        case 'weight_only':
+            return (entry.bestWeight || 0) + ' kg';
+        default:
+            return '-';
+    }
+}
+
+function _progressStat(icon, label, value, unit) {
+    return '<div class="train-progress-stat"><div class="train-progress-stat-icon">' + icon + '</div><div class="train-progress-stat-label">' + label + '</div><div class="train-progress-stat-value">' + value + '</div><div class="train-progress-stat-unit">' + unit + '</div></div>';
+}
+

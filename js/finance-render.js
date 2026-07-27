@@ -126,7 +126,7 @@ window.renderFinanceDashboard = function() {
     const catNames = Object.keys(catTotals).sort((a, b) => catTotals[b] - catTotals[a]);
     const totalExpense = Object.values(catTotals).reduce((s, v) => s + v, 0);
     
-    let html = '';
+    html = '';
     
     // Charts container: both charts side by side
     const hasMonths = months.length > 0;
