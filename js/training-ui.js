@@ -1361,7 +1361,7 @@ window.renderTrainingProgress = function() {
     var variantMap = {};
     exercises.forEach(function(ex) {
         ex.variants.forEach(function(v) {
-            variantMap[v.id] = { name: v.name, baseExerciseName: ex.name };
+            variantMap[v.id] = { name: v.name, baseExerciseName: ex.name, categories: v.categories }; 
         });
     });
 
@@ -1431,23 +1431,23 @@ window.renderTrainingProgress = function() {
         MUSCLE_CATEGORIES.forEach(function(cat) { muscleStats[cat] = 0; });
         var totalSets = 0;
 
-        filteredWorkouts.forEach(function(w) {
-            (w.exercises || []).forEach(function(ex) {
-                var v = variantMap[ex.variantId] || null;
-                if (!v) return;
-                var cat = MUSCLE_CATEGORIES.find(function(c) {
-                    return v.name.toLowerCase().indexOf(c.toLowerCase()) >= 0 ||
-                           v.baseExerciseName.toLowerCase().indexOf(c.toLowerCase()) >= 0;
+            filteredWorkouts.forEach(function(w) {
+                (w.exercises || []).forEach(function(ex) {
+                    var v = variantMap[ex.variantId] || null;
+                    if (!v) return;
+                    var cat = null;
+                    if (v.categories) {
+                        cat = MUSCLE_CATEGORIES.find(function(c) { return v.categories.indexOf(c) >= 0; });
+                    }
+                    var group = cat || 'Другое';
+                    muscleStats[group] = (muscleStats[group] || 0) + ((ex.sets || []).length);
+                    totalSets += (ex.sets || []).length;
                 });
-                var group = cat || 'Другое';
-                muscleStats[group] = (muscleStats[group] || 0) + ((ex.sets || []).length);
-                totalSets += (ex.sets || []).length;
             });
-        });
 
-        var colorPalette = ['#7e22ce', '#2563eb', '#16a34a', '#ea580c', '#dc2626', '#0891b2', '#7c3aed', '#d97706', '#059669', '#4f46e5'];
-        var activeGroups = MUSCLE_CATEGORIES.filter(function(c) { return muscleStats[c] > 0; });
-        var otherMuscle = muscleStats['Другое'] || 0;
+            var colorPalette = ['#7e22ce', '#2563eb', '#16a34a', '#ea580c', '#dc2626', '#0891b2', '#7c3aed', '#d97706', '#059669', '#4f46e5'];
+            var activeGroups = MUSCLE_CATEGORIES.filter(function(c) { return muscleStats[c] > 0; });
+            var otherMuscle = muscleStats['Другое'] || 0;
 
         html += '<div class="train-progress-chart-section">';
         html += '<h3 class="train-progress-section-title">🧩 Распределение по мышечным группам</h3>';
@@ -1515,9 +1515,8 @@ window.renderTrainingProgress = function() {
     var filteredExercises = selectedMuscle === 'all'
         ? exercises
         : exercises.filter(function(ex) {
-            return ex.variants.some(function(v) {
-                var search = (v.name + ' ' + v.baseExerciseName).toLowerCase();
-                return search.indexOf(selectedMuscle.toLowerCase()) >= 0;
+            return ex.variants && ex.variants.some(function(v) {
+                return v.categories && v.categories.indexOf(selectedMuscle) >= 0;
             });
         });
 
@@ -1544,18 +1543,21 @@ window.renderTrainingProgress = function() {
             html += '</div>';
             html += '<div class="train-exercise-block-body" id="blk-' + safeName + '" style="display:none;">';
 
-            ex.variants.forEach(function(v) {
-                var hist = TrainingWorkoutAPI.getVariantHistory(v.id);
-                if (hist.entries.length === 0) return;
-
                 var mt = hist.measurementType;
                 var mtLabel = getMeasurementTypeLabel(mt);
                 var last = hist.entries[hist.entries.length - 1];
                 var lastVal = getVariantSetValue(last, mt);
                 var bestVal = getVariantBestValue(hist.overall, mt);
 
+                var sparkline = '';
+                if (hist.entries.length > 1) {
+                    sparkline = '<div class="train-variant-sparkline">' + 
+                                renderVariantSparkline(hist, mt, 80, 20) + 
+                                '</div>';
+                }
+
                 html += '<div class="train-variant-row-progress">';
-                html += '<div class="train-variant-info" onclick="showVariantProgress(\'' + v.id + '\')" style="cursor:pointer;">';
+                html += '<div class="train-variant-info">';
                 html += '<span class="train-variant-name">' + escapeHtml(v.name) + '</span>';
                 html += '<span class="train-variant-mt">' + mtLabel + '</span>';
                 html += '</div>';
@@ -1563,8 +1565,8 @@ window.renderTrainingProgress = function() {
                 html += '<span class="train-variant-result"><span class="train-variant-result-label">Последний</span> ' + lastVal + '</span>';
                 html += '<span class="train-variant-result"><span class="train-variant-result-label">Лучший</span> <b>' + bestVal + '</b></span>';
                 html += '</div>';
+                html += sparkline;
                 html += '</div>';
-            });
 
             html += '</div>';
             html += '</div>';
@@ -1606,14 +1608,35 @@ function getVariantSetValue(entry, mt) {
     }
 }
 
-function getVariantBestValue(overall, mt) {
-    if (!overall) return '-';
-    switch (mt) {
-        case 'reps_weight': return (overall.bestWeight || 0) + ' кг';
-        case 'reps': return (overall.maxReps || 0) + ' повт';
-        case 'time': return (overall.bestTime || 0) + ' с';
-        case 'distance': return (overall.bestDistance || 0) + ' м';
-        case 'weight_only': return (overall.bestWeight || 0) + ' кг';
-        default: return '-';
-    }
+function renderVariantSparkline(hist, mt, width, height) {
+    if (!hist || hist.entries.length === 0) return '';
+
+    const entries = hist.entries.filter((_, i) => i % 2 === 0).slice(-8);
+    if (entries.length === 0) return '';
+
+    const maxValues = {
+        'reps_weight': hist.overall.bestWeight || 0,
+        'reps': hist.overall.maxReps || 0,
+        'time': hist.overall.bestTime || 0,
+        'distance': hist.overall.bestDistance || 0,
+        'weight_only': hist.overall.bestWeight || 0
+    };
+    const max = maxValues[mt] || 1;
+    const points = entries.map((entry, i) => {
+        let value = 0;
+        if (mt === 'reps_weight') value = entry.bestWeight || 0;
+        else if (mt === 'reps') value = entry.maxReps || 0;
+        else if (mt === 'time') value = entry.bestTime || 0;
+        else if (mt === 'distance') value = entry.bestDistance || 0;
+        else if (mt === 'weight_only') value = entry.bestWeight || 0;
+        
+        const x = (i / (entries.length - 1)) * width;
+        const y = height - 5 - (value / max) * (height - 10);
+        return `${x},${y}`;
+    });
+
+    const linePath = points.join(' L');
+    const d = 'M ' + linePath;
+
+    return '<svg width="' + width + '" height="' + height + '" viewBox="0 0 ' + width + ' ' + height + '"><path d="' + d + '" fill="none" stroke="#6366f1" stroke-width="1.5"/></svg>';
 }
