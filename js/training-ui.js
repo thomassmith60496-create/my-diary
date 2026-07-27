@@ -539,6 +539,7 @@ window.renderTrainingWorkouts = function() {
     html += '<div class="train-actions-row">';
     html += '<button class="btn primary" onclick="openCreateWorkoutModal()">➕ Новая тренировка</button>';
     html += '<button class="btn" onclick="openImportTraining()" style="margin-left:8px;">📥 Импорт из GymKeeper</button>';
+    html += '<button class="btn danger" onclick="deleteAllWorkoutsConfirm()" style="margin-left:8px;">🗑 Удалить все тренировки</button>';
     html += '</div>';
     html += '</div>';
 
@@ -1100,11 +1101,33 @@ window.deleteWorkoutConfirm = function(id) {
                 customAlert('❌ Не удалось удалить тренировку', 'Ошибка');
                 return;
             }
-            // Если мы были в детальном просмотре удалённой тренировки, выходим
             if (workoutsUIState.viewingWorkoutId === id) {
                 workoutsUIState.viewingWorkoutId = null;
             }
             renderTrainingWorkouts();
+        });
+}
+
+// --- Удаление всех тренировок ---
+
+window.deleteAllWorkoutsConfirm = function() {
+    const workouts = TrainingWorkoutAPI.getWorkouts();
+    if (workouts.length === 0) {
+        customAlert('Нет тренировок для удаления', 'Информация');
+        return;
+    }
+    customConfirm('Удалить все ' + workouts.length + ' тренировок? Это действие необратимо.', 'Подтверждение удаления')
+        .then(confirmed => {
+            if (!confirmed) return;
+            const workoutIds = workouts.map(w => w.id);
+            let deleted = 0;
+            workoutIds.forEach(id => {
+                const result = TrainingWorkoutAPI.deleteWorkout(id);
+                if (result) deleted++;
+            });
+            workoutsUIState.viewingWorkoutId = null;
+            renderTrainingWorkouts();
+            customAlert('Удалено тренировок: ' + deleted, 'Готово');
         });
 }
 
