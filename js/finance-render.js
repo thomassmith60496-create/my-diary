@@ -71,13 +71,20 @@ window.renderFinanceDashboard = function() {
     container.innerHTML = html;
 
     const monthSelect = document.getElementById('fin-month-select');
+
+    // Обновляем опции статичного селектора месяцев в тулбаре
+    let monthOptions = '<option value="all">📊 Все месяцы (накопительно)</option>' +
+        sortedMonths.map(m => {
+            const [y, mo] = m.split('-');
+            const monthNames = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+            const label = monthNames[parseInt(mo) - 1] + ' ' + y;
+            return '<option value="' + m + '">' + label + '</option>';
+        }).join('');
+    monthSelect.innerHTML = monthOptions;
+
     const previouslySelected = monthSelect.value || financeSelectedMonth || '';
 
-    // Determine which month to select:
-    // 1. "all" — always valid (Все месяцы)
-    // 2. If a specific month was previously selected, restore it
-    // 3. Otherwise, default to current month if it has data
-    // 4. Otherwise, default to most recent month with data
+    // Определяем какой месяц выбрать
     const today = new Date();
     const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
     if (previouslySelected === 'all') {
@@ -89,6 +96,7 @@ window.renderFinanceDashboard = function() {
     } else if(sortedMonths.length > 0) {
         monthSelect.value = sortedMonths[sortedMonths.length - 1];
     }
+    financeSelectedMonth = monthSelect.value;
     financeSelectedMonth = monthSelect.value;
 
     let filteredTransactions = [...financeData.transactions];
