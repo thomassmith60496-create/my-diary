@@ -320,6 +320,9 @@ function _convertSets(parsedSets) {
                 set.weight = s.type === 'reps_weight' ? s.weight : 0;
                 set.reps = s.type === 'reps_weight' ? s.reps : 0;
                 if (s.unit && s.unit !== 'кг') {
+                    if (s.unit === 'lb' || s.unit === 'lbs') {
+                        set.weight = Math.round(set.weight * 0.453592 * 100) / 100;
+                    }
                     set.comment = (set.comment ? set.comment + '; ' : '') + 'единица: ' + s.unit;
                 }
                 break;
