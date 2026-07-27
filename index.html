@@ -217,12 +217,14 @@
        
        <!-- Подвкладка: Дашборд -->
        <div class="sub-tab-content active" id="fin-sub-dashboard">
-           <div class="fin-month-selector">
-               <label>📅 Месяц:</label>
-               <select id="fin-month-select" onchange="renderFinanceDashboard()">
-                   <option value="all">📊 Все месяцы (накопительно)</option>
-               </select>
-           </div>
+<div class="finance-filter-row">
+                <div class="finance-filter-group">
+                    <label class="finance-filter-label">📅 Месяц</label>
+                    <select class="finance-filter-select" id="fin-month-select" onchange="renderFinanceDashboard()">
+                        <option value="all">📊 Все месяцы (накопительно)</option>
+                    </select>
+                </div>
+            </div>
            <div class="toolbar toolbar-no-margin">
                <button class="btn primary btn-finance-primary" onclick="openFinanceModal()">➕ Добавить операцию</button>
                <button class="btn" onclick="document.getElementById('import-excel-file').click()">📂 Импорт из Excel</button>
