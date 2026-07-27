@@ -1,6 +1,11 @@
 // ============================================
 // 🏋️ ТРЕНИРОВКИ - UI ОТОБРАЖЕНИЕ
 // ============================================
+//
+// UI слой работает ТОЛЬКО через TrainingExerciseAPI.
+// Никаких прямых обращений к localStorage.
+// Никаких прямых обращений к ExerciseStorage.
+// ============================================
 "use strict";
 
 // === СОСТОЯНИЕ UI ===
@@ -20,8 +25,8 @@ function renderTrainingExercises() {
     const container = document.getElementById('training-exercises-content');
     if (!container) return;
 
-    let exercises = searchExercises(trainingUIState.searchQuery);
-    exercises = filterExercisesByCategory(exercises, trainingUIState.categoryFilter);
+    let exercises = TrainingExerciseAPI.searchExercises(trainingUIState.searchQuery);
+    exercises = TrainingExerciseAPI.filterExercisesByCategory(exercises, trainingUIState.categoryFilter);
 
     // Сортируем по алфавиту
     exercises.sort((a, b) => a.name.localeCompare(b.name, 'ru'));
@@ -268,13 +273,13 @@ function openCreateExerciseModal() {
     const name = prompt('Введите название упражнения:');
     if (!name || !name.trim()) return;
 
-    const result = createBaseExercise(name);
+    const result = TrainingExerciseAPI.createBaseExercise(name);
     if (!result) {
         alert('❌ Упражнение с таким названием уже существует');
         return;
     }
 
-    saveTrainingDataToMemory();
+    // API сам сохраняет — не нужно вызывать saveTrainingDataToMemory
     trainingUIState.expandedExercises.add(result.id);
     renderTrainingExercises();
 }
@@ -298,13 +303,12 @@ function saveRenameExercise(id) {
     if (!input) return;
 
     const newName = input.value;
-    const result = renameBaseExercise(id, newName);
+    const result = TrainingExerciseAPI.renameBaseExercise(id, newName);
     if (!result) {
         alert('❌ Не удалось переименовать. Возможно, такое название уже существует.');
         return;
     }
 
-    saveTrainingDataToMemory();
     trainingUIState.editingExerciseId = null;
     renderTrainingExercises();
 }
@@ -319,13 +323,12 @@ function cancelEditExercise() {
 function deleteExerciseConfirm(id) {
     if (!confirm('Вы уверены, что хотите удалить это упражнение?')) return;
 
-    const result = deleteBaseExercise(id);
+    const result = TrainingExerciseAPI.deleteBaseExercise(id);
     if (!result) {
         alert('❌ Не удалось удалить. Возможно, у упражнения есть варианты.');
         return;
     }
 
-    saveTrainingDataToMemory();
     renderTrainingExercises();
 }
 
@@ -344,13 +347,12 @@ function cancelMerge() {
 function confirmMerge(sourceId, targetId) {
     if (!confirm('Переместить все варианты из исходного упражнения в целевое? Исходное упражнение будет удалено.')) return;
 
-    const result = mergeBaseExercise(sourceId, targetId);
+    const result = TrainingExerciseAPI.mergeBaseExercises(sourceId, targetId);
     if (!result) {
         alert('❌ Не удалось выполнить слияние');
         return;
     }
 
-    saveTrainingDataToMemory();
     trainingUIState.mergeSourceId = null;
     renderTrainingExercises();
 }
@@ -361,13 +363,12 @@ function openCreateVariantModal(exerciseId) {
     const name = prompt('Введите название варианта:');
     if (!name || !name.trim()) return;
 
-    const result = createVariant(exerciseId, { name: name });
+    const result = TrainingExerciseAPI.createVariant(exerciseId, { name: name });
     if (!result) {
         alert('❌ Не удалось создать вариант');
         return;
     }
 
-    saveTrainingDataToMemory();
     trainingUIState.expandedExercises.add(exerciseId);
     renderTrainingExercises();
 }
@@ -403,13 +404,12 @@ function saveVariantEdit(exerciseId, variantId) {
         categories: categories
     };
 
-    const result = updateVariant(exerciseId, variantId, data);
+    const result = TrainingExerciseAPI.updateVariant(exerciseId, variantId, data);
     if (!result) {
         alert('❌ Не удалось сохранить изменения');
         return;
     }
 
-    saveTrainingDataToMemory();
     trainingUIState.editingVariantId = null;
     trainingUIState.editingVariantParentId = null;
     renderTrainingExercises();
@@ -426,22 +426,21 @@ function cancelVariantEdit() {
 function deleteVariantConfirm(exerciseId, variantId) {
     if (!confirm('Вы уверены, что хотите удалить этот вариант?')) return;
 
-    const result = deleteVariant(exerciseId, variantId);
+    const result = TrainingExerciseAPI.deleteVariant(exerciseId, variantId);
     if (!result) {
         alert('❌ Не удалось удалить вариант');
         return;
     }
 
-    saveTrainingDataToMemory();
     renderTrainingExercises();
 }
 
 // === ПЕРЕМЕЩЕНИЕ ВАРИАНТА ===
 
 function openMoveVariantModal(fromExerciseId, variantId, variantName) {
-    const options = trainingData.exercises
+    const allExercises = TrainingExerciseAPI.getExercises();
+    const options = allExercises
         .filter(e => e.id !== fromExerciseId)
-        .map(e => ({ id: e.id, name: e.name }))
         .sort((a, b) => a.name.localeCompare(b.name, 'ru'));
 
     if (options.length === 0) {
@@ -464,13 +463,12 @@ function openMoveVariantModal(fromExerciseId, variantId, variantName) {
         return;
     }
 
-    const result = moveVariant(variantId, fromExerciseId, options[idx].id);
+    const result = TrainingExerciseAPI.moveVariant(variantId, fromExerciseId, options[idx].id);
     if (!result) {
         alert('❌ Не удалось переместить вариант');
         return;
     }
 
-    saveTrainingDataToMemory();
     renderTrainingExercises();
 }
 
