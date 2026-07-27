@@ -90,6 +90,7 @@ const TrainingExerciseAPI = {
                 stored.workouts = stored.workouts || [];
                 stored.version = 2;
             }
+            if (!Array.isArray(stored.workouts)) stored.workouts = [];
             _data = stored;
         } else {
             // Данные по умолчанию
@@ -159,6 +160,7 @@ const TrainingExerciseAPI = {
             data.workouts = data.workouts || [];
             data.version = 2;
         }
+        if (!Array.isArray(data.workouts)) data.workouts = [];
         _data = data;
         // Если из Firebase пришли пустые упражнения — сидируем
         if (_data.exercises.length === 0 && typeof SEED_EXERCISES !== 'undefined') {
