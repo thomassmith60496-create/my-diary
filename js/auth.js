@@ -1,7 +1,7 @@
 // ============ AUTH FUNCTIONS ============
 "use strict";
 
-function renderUserBar() {
+window.renderUserBar = function() {
     const container = document.getElementById('user-bar-container');
     if (!currentUser) {
         container.innerHTML = '';
@@ -31,7 +31,7 @@ function renderUserBar() {
     renderReadOnlyBanner();
 }
 
-function renderReadOnlyBanner() {
+window.renderReadOnlyBanner = function() {
     const container = document.getElementById('read-only-banner-container');
     if (currentUserRole === 'reader' || (currentUserRole === 'admin' && isReadOnlyMode)) {
         const msg = currentUserRole === 'reader' 
@@ -43,7 +43,7 @@ function renderReadOnlyBanner() {
     }
 }
 
-function applyReadOnlyState() {
+window.applyReadOnlyState = function() {
     const isReadOnly = currentUserRole === 'reader' || isReadOnlyMode;
     
     // Disable ALL inputs/selects/buttons by default in read-only mode
@@ -232,7 +232,7 @@ window.logoutUser = function() {
     });
 }
 
-function translateFirebaseError(code) {
+window.translateFirebaseError = function(code) {
     const map = {
         'auth/user-not-found': 'Пользователь не найден',
         'auth/wrong-password': 'Неверный пароль',
@@ -266,7 +266,7 @@ window.switchAuthTab = function(tab) {
     }
 }
 
-function initUserSession(uid) {
+window.initUserSession = function(uid) {
     currentUserId = uid;
     usersRef.child(uid).once('value').then((snap) => {
         const userData = snap.val();
@@ -303,13 +303,13 @@ function initUserSession(uid) {
     });
 }
 
-function switchDataContext(uid) {
+window.switchDataContext = function(uid) {
     window._activeDiaryRef = db.ref('lera_diary_v1/' + uid);
     window._activeFinanceRef = db.ref('lera_finance_v1/' + uid);
     loadDataForUser(uid);
 }
 
-function loadDataForUser(uid) {
+window.loadDataForUser = function(uid) {
     var diaryPath = 'lera_diary_v1/' + uid;
     var financePath = 'lera_finance_v1/' + uid;
     
@@ -427,7 +427,7 @@ window.addReader = function() {
     createReaderUser(email);
 }
 
-function createReaderUser(email) {
+window.createReaderUser = function(email) {
     var errorEl = document.getElementById('add-reader-error');
     
     usersRef.orderByChild('email').equalTo(email).once('value', function(snap) {
@@ -495,12 +495,12 @@ window.toggleViewMode = function() {
 
 // ============ AUTH STATE LISTENER ============
 
-function hideAuthOverlay() {
+window.hideAuthOverlay = function() {
     var el = document.getElementById('auth-overlay');
     if (el) el.style.display = 'none';
 }
 
-function showAuthOverlay() {
+window.showAuthOverlay = function() {
     var el = document.getElementById('auth-overlay');
     if (el) el.style.display = 'flex';
 }
