@@ -1152,6 +1152,93 @@ header .macro-badge {
 }
 
 /* ============================================ */
+/* 📥 ИМПОРТ ТРЕНИРОВОК                        */
+/* ============================================ */
+
+.train-import-overlay {
+    position: fixed; inset: 0; z-index: 10000;
+    background: rgba(15,23,42,0.6);
+    display: flex; align-items: flex-start; justify-content: center;
+    padding: 30px 16px; overflow-y: auto;
+}
+.train-import-modal {
+    background: #fff; border-radius: 16px;
+    max-width: 760px; width: 100%;
+    box-shadow: 0 25px 50px -12px rgba(0,0,0,0.4);
+    padding: 24px; margin: auto;
+}
+.train-import-textarea {
+    width: 100%; min-height: 180px; resize: vertical;
+    padding: 12px; border: 1px solid #e2e8f0;
+    border-radius: 10px; font-size: 13px; font-family: inherit;
+    line-height: 1.6; box-sizing: border-box;
+    margin-bottom: 12px;
+}
+.train-import-textarea:focus {
+    outline: none; border-color: #ea580c;
+    box-shadow: 0 0 0 3px rgba(234,88,12,0.15);
+}
+.train-import-actions {
+    display: flex; gap: 8px; margin-bottom: 16px;
+}
+
+/* Summary bar */
+.train-import-summary {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    padding: 12px 14px; background: #f8fafc;
+    border-radius: 10px; border: 1px solid #e2e8f0;
+    margin-bottom: 14px;
+}
+.train-import-summary-item {
+    font-size: 13px; color: #475569;
+    padding-right: 12px; border-right: 1px solid #e2e8f0;
+}
+.train-import-summary-item:last-child { border-right: none; }
+.train-import-summary-item strong { color: #1e293b; }
+
+/* Workout in preview */
+.train-import-workout {
+    border: 1px solid #e2e8f0; border-radius: 12px;
+    padding: 14px; margin-bottom: 12px;
+    background: #fafafa;
+}
+.train-import-workout-header {
+    font-size: 14px; margin-bottom: 10px;
+    padding-bottom: 8px; border-bottom: 1px solid #e2e8f0;
+}
+
+/* Exercise in preview */
+.train-import-exercise {
+    padding: 8px 0; border-bottom: 1px solid #f1f5f9;
+}
+.train-import-exercise:last-child { border-bottom: none; }
+.train-import-exercise-header {
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+    margin-bottom: 6px;
+}
+.train-import-exercise-name {
+    font-weight: 600; font-size: 13px;
+}
+.train-import-exercise-name.matched { color: #166534; }
+.train-import-exercise-name.unmatched { color: #dc2626; }
+
+/* Sets preview */
+.train-import-sets-preview {
+    display: flex; flex-wrap: wrap; gap: 4px;
+}
+.train-import-set {
+    background: #fff; border: 1px solid #e2e8f0;
+    border-radius: 6px; padding: 2px 8px;
+    font-size: 12px; color: #475569;
+}
+
+/* Save area */
+.train-import-save-area {
+    margin-top: 14px; padding-top: 14px;
+    border-top: 2px solid #f1f5f9;
+}
+
+/* ============================================ */
 /* 📊 АНАЛИТИКА ПРОГРЕССА УПРАЖНЕНИЙ           */
 /* ============================================ */
 

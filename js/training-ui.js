@@ -54,6 +54,7 @@ window.renderTrainingExercises = function() {
     // Кнопка создания
     html += '<div class="train-actions-row">';
     html += '<button class="btn primary" onclick="openCreateExerciseModal()">➕ Создать упражнение</button>';
+    html += '<button class="btn" onclick="openImportTraining()">📥 Импорт тренировок</button>';
     if (trainingUIState.mergeSourceId) {
         html += '<button class="btn danger" onclick="cancelMerge()">✕ Отменить слияние</button>';
         html += '<span class="train-merge-hint">Выберите целевое упражнение для слияния</span>';
