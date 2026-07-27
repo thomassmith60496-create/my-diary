@@ -172,7 +172,7 @@ window.registerUser = function() {
                 successEl.style.display = 'block';
                 btn.disabled = false;
                 btn.textContent = 'Зарегистрироваться';
-                document.getElementById('auth-overlay').classList.add('hidden');
+                document.getElementById('auth-overlay').style.display = 'none';
                 initUserSession(uid);
             });
         })
@@ -198,6 +198,7 @@ window.loginUser = function() {
     btn.disabled = true;
     btn.textContent = '⏳ Вход...';
     
+    window._authInitInProgress = true;
     firebase.auth().signInWithEmailAndPassword(email, password)
         .then((cred) => {
             const uid = cred.user.uid;
@@ -205,7 +206,7 @@ window.loginUser = function() {
             successEl.style.display = 'block';
             btn.disabled = false;
             btn.textContent = 'Войти';
-            document.getElementById('auth-overlay').classList.add('hidden');
+            document.getElementById('auth-overlay').style.display = 'none';
             initUserSession(uid);
         })
         .catch((error) => {
@@ -223,7 +224,7 @@ window.logoutUser = function() {
         currentUserId = null;
         isReadOnlyMode = false;
         viewingUserId = null;
-        document.getElementById('auth-overlay').classList.remove('hidden');
+        document.getElementById('auth-overlay').style.display = 'flex';
         renderUserBar();
         applyReadOnlyState();
     }).catch((error) => {
@@ -491,19 +492,35 @@ window.toggleViewMode = function() {
 
 // ============ AUTH STATE LISTENER ============
 
+function hideAuthOverlay() {
+    var el = document.getElementById('auth-overlay');
+    if (el) el.style.display = 'none';
+}
+
+function showAuthOverlay() {
+    var el = document.getElementById('auth-overlay');
+    if (el) el.style.display = 'flex';
+}
+
 firebase.auth().onAuthStateChanged(function(user) {
-    currentUser = user;
     if (user) {
+        currentUser = user;
         currentUserId = user.uid;
-        document.getElementById('auth-overlay').classList.add('hidden');
-        initUserSession(user.uid);
+        hideAuthOverlay();
+        // Don't call initUserSession here - it's called from loginUser/registerUser
+        // to avoid duplicate data loading. Only call if not already initializing.
+        if (!window._authInitInProgress) {
+            window._authInitInProgress = true;
+            initUserSession(user.uid);
+        }
     } else {
         currentUser = null;
         currentUserId = null;
         currentUserRole = 'admin';
         isReadOnlyMode = false;
         viewingUserId = null;
-        document.getElementById('auth-overlay').classList.remove('hidden');
+        window._authInitInProgress = false;
+        showAuthOverlay();
         renderUserBar();
         applyReadOnlyState();
     }
