@@ -1531,7 +1531,14 @@ window.renderTrainingProgress = function() {
         filteredExercises.forEach(function(ex) {
             var hasData = false;
             ex.variants.forEach(function(v) {
-                if (TrainingWorkoutAPI.getVariantHistory(v.id).entries.length > 0) hasData = true;
+                var hist = TrainingWorkoutAPI.getVariantHistory(v.id);
+                // Фильтруем entry по периоду
+                var filteredEntries = hist.entries;
+                if (cutoffDate) {
+                    var cutoffStr = cutoffDate.toISOString().slice(0, 10);
+                    filteredEntries = hist.entries.filter(function(e) { return e.date >= cutoffStr; });
+                }
+                if (filteredEntries.length > 0) hasData = true;
             });
             if (!hasData) return;
 
@@ -1543,16 +1550,27 @@ window.renderTrainingProgress = function() {
             html += '</div>';
             html += '<div class="train-exercise-block-body" id="blk-' + safeName + '" style="display:none;">';
 
+            // Рендерим каждый вариант
+            ex.variants.forEach(function(v) {
+                var hist = TrainingWorkoutAPI.getVariantHistory(v.id);
+                // Фильтруем entry по выбранному периоду для отображения
+                var filteredEntries = hist.entries;
+                if (cutoffDate) {
+                    var cutoffStr2 = cutoffDate.toISOString().slice(0, 10);
+                    filteredEntries = hist.entries.filter(function(e) { return e.date >= cutoffStr2; });
+                }
+                if (filteredEntries.length === 0) return;
+
                 var mt = hist.measurementType;
                 var mtLabel = getMeasurementTypeLabel(mt);
-                var last = hist.entries[hist.entries.length - 1];
+                var last = filteredEntries[filteredEntries.length - 1];
                 var lastVal = getVariantSetValue(last, mt);
                 var bestVal = getVariantBestValue(hist.overall, mt);
 
                 var sparkline = '';
-                if (hist.entries.length > 1) {
+                if (filteredEntries.length > 1) {
                     sparkline = '<div class="train-variant-sparkline">' + 
-                                renderVariantSparkline(hist, mt, 80, 20) + 
+                                renderVariantSparklineCustom(filteredEntries, mt, 80, 20) + 
                                 '</div>';
                 }
 
@@ -1567,6 +1585,7 @@ window.renderTrainingProgress = function() {
                 html += '</div>';
                 html += sparkline;
                 html += '</div>';
+            });
 
             html += '</div>';
             html += '</div>';
@@ -1575,6 +1594,54 @@ window.renderTrainingProgress = function() {
     }
 
     container.innerHTML = html;
+}
+
+function getVariantBestValue(overall, mt) {
+    if (!overall) return '-';
+    switch (mt) {
+        case 'reps_weight': return (overall.bestWeight || 0) + ' кг';
+        case 'reps': return (overall.maxReps || 0) + ' повт';
+        case 'time': return (overall.bestTime || 0) + ' с';
+        case 'distance': return (overall.bestDistance || 0) + ' м';
+        case 'weight_only': return (overall.bestWeight || 0) + ' кг';
+        default: return '-';
+    }
+}
+
+function renderVariantSparklineCustom(entries, mt, width, height) {
+    if (!entries || entries.length === 0) return '';
+
+    const dataEntries = entries.filter(function(_, i) { return i % 2 === 0; }).slice(-8);
+    if (dataEntries.length === 0) return '';
+
+    var max = 1;
+    dataEntries.forEach(function(entry) {
+        var val = 0;
+        if (mt === 'reps_weight') val = entry.bestWeight || 0;
+        else if (mt === 'reps') val = entry.maxReps || 0;
+        else if (mt === 'time') val = entry.bestTime || 0;
+        else if (mt === 'distance') val = entry.bestDistance || 0;
+        else if (mt === 'weight_only') val = entry.bestWeight || 0;
+        if (val > max) max = val;
+    });
+
+    const points = dataEntries.map(function(entry, i) {
+        let value = 0;
+        if (mt === 'reps_weight') value = entry.bestWeight || 0;
+        else if (mt === 'reps') value = entry.maxReps || 0;
+        else if (mt === 'time') value = entry.bestTime || 0;
+        else if (mt === 'distance') value = entry.bestDistance || 0;
+        else if (mt === 'weight_only') value = entry.bestWeight || 0;
+        
+        const x = (i / (dataEntries.length - 1)) * width;
+        const y = height - 5 - (value / max) * (height - 10);
+        return x + ',' + y;
+    });
+
+    const linePath = points.join(' L');
+    const d = 'M ' + linePath;
+
+    return '<svg width="' + width + '" height="' + height + '" viewBox="0 0 ' + width + ' ' + height + '"><path d="' + d + '" fill="none" stroke="#6366f1" stroke-width="1.5"/></svg>';
 }
 
 function toggleExerciseBlock(safeName) {
