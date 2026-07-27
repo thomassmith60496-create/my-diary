@@ -21,7 +21,7 @@ let trainingUIState = {
 
 // === ГЛАВНАЯ ФУНКЦИЯ РЕНДЕРИНГА ===
 
-function renderTrainingExercises() {
+window.renderTrainingExercises = function() {
     const container = document.getElementById('training-exercises-content');
     if (!container) return;
 
@@ -81,7 +81,7 @@ function renderTrainingExercises() {
 
 // === РЕНДЕРИНГ КАРТОЧКИ УПРАЖНЕНИЯ ===
 
-function renderExerciseCard(exercise) {
+window.renderExerciseCard = function(exercise) {
     const isExpanded = trainingUIState.expandedExercises.has(exercise.id);
     const isEditing = trainingUIState.editingExerciseId === exercise.id;
     const isMergeTarget = trainingUIState.mergeSourceId && trainingUIState.mergeSourceId !== exercise.id;
@@ -153,7 +153,7 @@ function renderExerciseCard(exercise) {
 
 // === РЕНДЕРИНГ СТРОКИ ВАРИАНТА ===
 
-function renderVariantRow(exerciseId, variant) {
+window.renderVariantRow = function(exerciseId, variant) {
     const isEditing = trainingUIState.editingVariantId === variant.id && trainingUIState.editingVariantParentId === exerciseId;
 
     let html = '<div class="train-variant-row" data-id="' + variant.id + '">';
@@ -248,17 +248,17 @@ function renderVariantRow(exerciseId, variant) {
 
 // === ОБРАБОТЧИКИ UI ===
 
-function onTrainingSearch(query) {
+window.onTrainingSearch = function(query) {
     trainingUIState.searchQuery = query;
     renderTrainingExercises();
 }
 
-function setTrainingCategoryFilter(category) {
+window.setTrainingCategoryFilter = function(category) {
     trainingUIState.categoryFilter = category;
     renderTrainingExercises();
 }
 
-function toggleExerciseExpand(id) {
+window.toggleExerciseExpand = function(id) {
     if (trainingUIState.expandedExercises.has(id)) {
         trainingUIState.expandedExercises.delete(id);
     } else {
@@ -269,7 +269,7 @@ function toggleExerciseExpand(id) {
 
 // === СОЗДАНИЕ БАЗОВОГО УПРАЖНЕНИЯ ===
 
-function openCreateExerciseModal() {
+window.openCreateExerciseModal = function() {
     customPrompt('Введите название упражнения:', '', '', 'Создание упражнения')
         .then(name => {
             if (!name || !name.trim()) return;
@@ -288,7 +288,7 @@ function openCreateExerciseModal() {
 
 // === ПЕРЕИМЕНОВАНИЕ ===
 
-function startRenameExercise(id) {
+window.startRenameExercise = function(id) {
     trainingUIState.editingExerciseId = id;
     renderTrainingExercises();
     setTimeout(() => {
@@ -300,7 +300,7 @@ function startRenameExercise(id) {
     }, 50);
 }
 
-function saveRenameExercise(id) {
+window.saveRenameExercise = function(id) {
     const input = document.getElementById('train-rename-input-' + id);
     if (!input) return;
 
@@ -315,14 +315,14 @@ function saveRenameExercise(id) {
     renderTrainingExercises();
 }
 
-function cancelEditExercise() {
+window.cancelEditExercise = function() {
     trainingUIState.editingExerciseId = null;
     renderTrainingExercises();
 }
 
 // === УДАЛЕНИЕ ===
 
-function deleteExerciseConfirm(id) {
+window.deleteExerciseConfirm = function(id) {
     customConfirm('Вы уверены, что хотите удалить это упражнение?', 'Подтверждение удаления')
         .then(confirmed => {
             if (!confirmed) return;
@@ -339,17 +339,17 @@ function deleteExerciseConfirm(id) {
 
 // === СЛИЯНИЕ ===
 
-function startMergeExercise(id) {
+window.startMergeExercise = function(id) {
     trainingUIState.mergeSourceId = id;
     renderTrainingExercises();
 }
 
-function cancelMerge() {
+window.cancelMerge = function() {
     trainingUIState.mergeSourceId = null;
     renderTrainingExercises();
 }
 
-function confirmMerge(sourceId, targetId) {
+window.confirmMerge = function(sourceId, targetId) {
     customConfirm('Переместить все варианты из исходного упражнения в целевое? Исходное упражнение будет удалено.', 'Подтверждение слияния')
         .then(confirmed => {
             if (!confirmed) return;
@@ -367,7 +367,7 @@ function confirmMerge(sourceId, targetId) {
 
 // === СОЗДАНИЕ ВАРИАНТА ===
 
-function openCreateVariantModal(exerciseId) {
+window.openCreateVariantModal = function(exerciseId) {
     customPrompt('Введите название варианта:', '', '', 'Создание варианта')
         .then(name => {
             if (!name || !name.trim()) return;
@@ -385,14 +385,14 @@ function openCreateVariantModal(exerciseId) {
 
 // === РЕДАКТИРОВАНИЕ ВАРИАНТА ===
 
-function startVariantEdit(exerciseId, variantId) {
+window.startVariantEdit = function(exerciseId, variantId) {
     trainingUIState.editingVariantId = variantId;
     trainingUIState.editingVariantParentId = exerciseId;
     trainingUIState.expandedExercises.add(exerciseId);
     renderTrainingExercises();
 }
 
-function saveVariantEdit(exerciseId, variantId) {
+window.saveVariantEdit = function(exerciseId, variantId) {
     const nameInput = document.getElementById('train-edit-variant-name');
     const loadSelect = document.getElementById('train-edit-variant-load');
     const measureSelect = document.getElementById('train-edit-variant-measure');
@@ -425,7 +425,7 @@ function saveVariantEdit(exerciseId, variantId) {
     renderTrainingExercises();
 }
 
-function cancelVariantEdit() {
+window.cancelVariantEdit = function() {
     trainingUIState.editingVariantId = null;
     trainingUIState.editingVariantParentId = null;
     renderTrainingExercises();
@@ -433,7 +433,7 @@ function cancelVariantEdit() {
 
 // === УДАЛЕНИЕ ВАРИАНТА ===
 
-function deleteVariantConfirm(exerciseId, variantId) {
+window.deleteVariantConfirm = function(exerciseId, variantId) {
     customConfirm('Вы уверены, что хотите удалить этот вариант?', 'Подтверждение удаления')
         .then(confirmed => {
             if (!confirmed) return;
@@ -450,7 +450,7 @@ function deleteVariantConfirm(exerciseId, variantId) {
 
 // === ПЕРЕМЕЩЕНИЕ ВАРИАНТА ===
 
-function openMoveVariantModal(fromExerciseId, variantId, variantName) {
+window.openMoveVariantModal = function(fromExerciseId, variantId, variantName) {
     const allExercises = TrainingExerciseAPI.getExercises();
     const options = allExercises
         .filter(e => e.id !== fromExerciseId)
@@ -506,7 +506,7 @@ let workoutsUIState = {
 
 // === ГЛАВНАЯ ФУНКЦИЯ ===
 
-function renderTrainingWorkouts() {
+window.renderTrainingWorkouts = function() {
     const container = document.getElementById('training-workouts-content');
     if (!container) return;
 
@@ -547,7 +547,7 @@ function renderTrainingWorkouts() {
 
 // === РЕНДЕРИНГ КАРТОЧКИ ТРЕНИРОВКИ В СПИСКЕ ===
 
-function renderWorkoutCard(workout) {
+window.renderWorkoutCard = function(workout) {
     const isEditing = workoutsUIState.editingWorkoutId === workout.id;
     const dateStr = formatDateForDisplay(workout.date);
     const exerciseCount = workout.exercises.length;
@@ -612,7 +612,7 @@ function renderWorkoutCard(workout) {
     return html;
 }
 
-function renderSetSummary(sets, variant) {
+window.renderSetSummary = function(sets, variant) {
     if (!variant || !sets.length) return '';
     const mt = variant.measurementType || 'reps_weight';
     switch (mt) {
@@ -635,17 +635,17 @@ function renderSetSummary(sets, variant) {
 
 // === ПРОСМОТР ТРЕНИРОВКИ (ДЕТАЛЬНО) ===
 
-function viewWorkoutDetail(workoutId) {
+window.viewWorkoutDetail = function(workoutId) {
     workoutsUIState.viewingWorkoutId = workoutId;
     renderTrainingWorkouts();
 }
 
-function closeWorkoutDetail() {
+window.closeWorkoutDetail = function() {
     workoutsUIState.viewingWorkoutId = null;
     renderTrainingWorkouts();
 }
 
-function renderWorkoutDetail(workoutId) {
+window.renderWorkoutDetail = function(workoutId) {
     const workout = TrainingWorkoutAPI.getWorkoutById(workoutId);
     if (!workout) {
         return '<div class="empty-state"><div class="empty-state-icon">❌</div><div class="empty-state-title">Тренировка не найдена</div></div>';
@@ -741,7 +741,7 @@ function renderWorkoutDetail(workoutId) {
 
 // === БЛОК УПРАЖНЕНИЯ В ДЕТАЛЬНОМ ПРОСМОТРЕ ===
 
-function renderWorkoutExerciseBlock(workoutId, exercise, idx, total) {
+window.renderWorkoutExerciseBlock = function(workoutId, exercise, idx, total) {
     const variant = TrainingWorkoutAPI.getVariantById(exercise.variantId);
     const name = variant
         ? escapeHtml(variant.baseExerciseName) + ' — ' + escapeHtml(variant.name)
@@ -800,7 +800,7 @@ function renderWorkoutExerciseBlock(workoutId, exercise, idx, total) {
     return html;
 }
 
-function renderSetHeaderRow(mt) {
+window.renderSetHeaderRow = function(mt) {
     let html = '<span class="train-set-col num">#</span>';
     html += '<span class="train-set-col warmup">Разм</span>';
     switch (mt) {
@@ -826,7 +826,7 @@ function renderSetHeaderRow(mt) {
     return html;
 }
 
-function renderSetRow(workoutId, variantId, set, num, mt, totalSets) {
+window.renderSetRow = function(workoutId, variantId, set, num, mt, totalSets) {
     const setIndex = num - 1; // 0-based index
     const isEditing = workoutsUIState.editSetId === set.id
         && workoutsUIState.editSetWorkoutId === workoutId
@@ -882,7 +882,7 @@ function renderSetRow(workoutId, variantId, set, num, mt, totalSets) {
     return html;
 }
 
-function renderSetEditFields(set, mt) {
+window.renderSetEditFields = function(set, mt) {
     let html = '';
     html += '<div class="train-edit-field">';
     html += '<label><input type="checkbox" ' + (set.warmup ? 'checked' : '') + ' id="train-edit-set-warmup"> Разминка</label>';
@@ -933,7 +933,7 @@ function renderSetEditFields(set, mt) {
     return html;
 }
 
-function renderAddSetForm(workoutId, variantId, mt) {
+window.renderAddSetForm = function(workoutId, variantId, mt) {
     let html = '<div class="train-add-set-inline">';
     html += '<div class="train-add-set-fields">';
     html += '<label class="train-add-set-warmup"><input type="checkbox" id="train-new-set-warmup-' + variantId + '"> Разм.</label>';
@@ -964,7 +964,7 @@ function renderAddSetForm(workoutId, variantId, mt) {
 
 // === ФОРМА ДОБАВЛЕНИЯ УПРАЖНЕНИЯ ===
 
-function renderAddExerciseForm(workoutId) {
+window.renderAddExerciseForm = function(workoutId) {
     const allExercises = TrainingExerciseAPI.getExercises();
     const usedVariantIds = TrainingWorkoutAPI.getUsedVariantIds(workoutId);
 
@@ -1007,7 +1007,7 @@ function renderAddExerciseForm(workoutId) {
 
 // --- Создание тренировки ---
 
-function openCreateWorkoutModal() {
+window.openCreateWorkoutModal = function() {
     const today = new Date().toISOString().slice(0, 10);
     customPrompt('Введите дату тренировки (ГГГГ-ММ-ДД):', '', today, 'Новая тренировка')
         .then(date => {
@@ -1036,17 +1036,17 @@ function openCreateWorkoutModal() {
 
 // --- Редактирование тренировки (в списке) ---
 
-function startEditWorkout(id) {
+window.startEditWorkout = function(id) {
     workoutsUIState.editingWorkoutId = id;
     renderTrainingWorkouts();
 }
 
-function startEditWorkoutDetail(id) {
+window.startEditWorkoutDetail = function(id) {
     workoutsUIState.editingWorkoutId = id;
     renderTrainingWorkouts();
 }
 
-function saveWorkoutEdit(id) {
+window.saveWorkoutEdit = function(id) {
     const dateInput = document.getElementById('train-edit-w-date');
     const commentInput = document.getElementById('train-edit-w-comment');
     if (!dateInput || !dateInput.value) {
@@ -1065,18 +1065,18 @@ function saveWorkoutEdit(id) {
     renderTrainingWorkouts();
 }
 
-function saveWorkoutDetailEdit(id) {
+window.saveWorkoutDetailEdit = function(id) {
     saveWorkoutEdit(id);
 }
 
-function cancelWorkoutEdit() {
+window.cancelWorkoutEdit = function() {
     workoutsUIState.editingWorkoutId = null;
     renderTrainingWorkouts();
 }
 
 // --- Удаление тренировки ---
 
-function deleteWorkoutConfirm(id) {
+window.deleteWorkoutConfirm = function(id) {
     customConfirm('Вы уверены, что хотите удалить эту тренировку?', 'Подтверждение удаления')
         .then(confirmed => {
             if (!confirmed) return;
@@ -1095,17 +1095,17 @@ function deleteWorkoutConfirm(id) {
 
 // --- Добавление упражнения ---
 
-function openAddExerciseToWorkout(workoutId) {
+window.openAddExerciseToWorkout = function(workoutId) {
     workoutsUIState.addExerciseWorkoutId = workoutId;
     renderTrainingWorkouts();
 }
 
-function cancelAddExerciseToWorkout() {
+window.cancelAddExerciseToWorkout = function() {
     workoutsUIState.addExerciseWorkoutId = null;
     renderTrainingWorkouts();
 }
 
-function addExerciseToWorkout(workoutId, variantId) {
+window.addExerciseToWorkout = function(workoutId, variantId) {
     const result = TrainingWorkoutAPI.addExerciseToWorkout(workoutId, variantId);
     if (!result) {
         customAlert('❌ Не удалось добавить упражнение. Возможно, оно уже добавлено.', 'Ошибка');
@@ -1119,7 +1119,7 @@ function addExerciseToWorkout(workoutId, variantId) {
 
 // --- Удаление упражнения ---
 
-function removeExerciseFromWorkout(workoutId, variantId) {
+window.removeExerciseFromWorkout = function(workoutId, variantId) {
     customConfirm('Удалить это упражнение из тренировки?', 'Подтверждение удаления')
         .then(confirmed => {
             if (!confirmed) return;
@@ -1134,7 +1134,7 @@ function removeExerciseFromWorkout(workoutId, variantId) {
 
 // --- Добавление подхода ---
 
-function addSetToExercise(workoutId, variantId) {
+window.addSetToExercise = function(workoutId, variantId) {
     const variant = TrainingWorkoutAPI.getVariantById(variantId);
     const mt = variant ? (variant.measurementType || 'reps_weight') : 'reps_weight';
 
@@ -1173,14 +1173,14 @@ function addSetToExercise(workoutId, variantId) {
 
 // --- Редактирование подхода ---
 
-function startEditSet(workoutId, variantId, setId) {
+window.startEditSet = function(workoutId, variantId, setId) {
     workoutsUIState.editSetWorkoutId = workoutId;
     workoutsUIState.editSetVariantId = variantId;
     workoutsUIState.editSetId = setId;
     renderTrainingWorkouts();
 }
 
-function saveSetEdit(workoutId, variantId, setId) {
+window.saveSetEdit = function(workoutId, variantId, setId) {
     const warmupCheckbox = document.getElementById('train-edit-set-warmup');
     const weightInput = document.getElementById('train-edit-set-weight');
     const repsInput = document.getElementById('train-edit-set-reps');
@@ -1206,7 +1206,7 @@ function saveSetEdit(workoutId, variantId, setId) {
     cancelSetEdit();
 }
 
-function cancelSetEdit() {
+window.cancelSetEdit = function() {
     workoutsUIState.editSetId = null;
     workoutsUIState.editSetWorkoutId = null;
     workoutsUIState.editSetVariantId = null;
@@ -1215,7 +1215,7 @@ function cancelSetEdit() {
 
 // --- Удаление / разминка подхода ---
 
-function deleteSetConfirm(workoutId, variantId, setId) {
+window.deleteSetConfirm = function(workoutId, variantId, setId) {
     customConfirm('Удалить этот подход?', 'Подтверждение удаления')
         .then(confirmed => {
             if (!confirmed) return;
@@ -1228,14 +1228,14 @@ function deleteSetConfirm(workoutId, variantId, setId) {
         });
 }
 
-function toggleSetWarmup(workoutId, variantId, setId) {
+window.toggleSetWarmup = function(workoutId, variantId, setId) {
     TrainingWorkoutAPI.toggleSetWarmup(workoutId, variantId, setId);
     renderTrainingWorkouts();
 }
 
 // --- Перемещение упражнения ---
 
-function moveExercise(workoutId, fromIndex, toIndex) {
+window.moveExercise = function(workoutId, fromIndex, toIndex) {
     if (toIndex < 0) return;
     const result = TrainingWorkoutAPI.moveExercise(workoutId, fromIndex, toIndex);
     if (!result) {
@@ -1247,7 +1247,7 @@ function moveExercise(workoutId, fromIndex, toIndex) {
 
 // --- Перемещение подхода ---
 
-function moveSet(workoutId, variantId, fromIndex, toIndex) {
+window.moveSet = function(workoutId, variantId, fromIndex, toIndex) {
     if (toIndex < 0) return;
     const result = TrainingWorkoutAPI.moveSet(workoutId, variantId, fromIndex, toIndex);
     if (!result) {
@@ -1259,7 +1259,7 @@ function moveSet(workoutId, variantId, fromIndex, toIndex) {
 
 // --- Копирование упражнения ---
 
-function copyExercise(workoutId, variantId) {
+window.copyExercise = function(workoutId, variantId) {
     customConfirm('Копировать это упражнение со всеми подходами?', 'Подтверждение копирования')
         .then(confirmed => {
             if (!confirmed) return;
@@ -1274,7 +1274,7 @@ function copyExercise(workoutId, variantId) {
 
 // --- Сворачивание / разворачивание упражнения ---
 
-function toggleExerciseCollapse(variantId) {
+window.toggleExerciseCollapse = function(variantId) {
     if (workoutsUIState.collapsedExercises.has(variantId)) {
         workoutsUIState.collapsedExercises.delete(variantId);
     } else {
@@ -1285,7 +1285,7 @@ function toggleExerciseCollapse(variantId) {
 
 // --- Копирование подхода ---
 
-function copySet(workoutId, variantId, setId) {
+window.copySet = function(workoutId, variantId, setId) {
     const result = TrainingWorkoutAPI.copySet(workoutId, variantId, setId);
     if (!result) {
         customAlert('❌ Не удалось скопировать подход', 'Ошибка');
@@ -1296,7 +1296,7 @@ function copySet(workoutId, variantId, setId) {
 
 // --- Быстрое добавление подхода по предыдущему (автозаполнение) ---
 
-function addSetFromPrevious(workoutId, variantId) {
+window.addSetFromPrevious = function(workoutId, variantId) {
     const workout = TrainingWorkoutAPI.getWorkoutById(workoutId);
     if (!workout) return;
     const exercise = workout.exercises.find(e => e.variantId === variantId);
@@ -1323,7 +1323,7 @@ function addSetFromPrevious(workoutId, variantId) {
 
 // === ВСПОМОГАТЕЛЬНЫЕ ===
 
-function formatDateForDisplay(dateStr) {
+window.formatDateForDisplay = function(dateStr) {
     if (!dateStr) return '';
     // ГГГГ-ММ-ДД → ДД.ММ.ГГГГ
     const parts = dateStr.split('-');
@@ -1333,7 +1333,7 @@ function formatDateForDisplay(dateStr) {
     return dateStr;
 }
 
-function escapeHtml(str) {
+window.escapeHtml = function(str) {
     if (!str) return '';
     var div = document.createElement('div');
     div.appendChild(document.createTextNode(str));
