@@ -316,7 +316,10 @@ window.loadDataForUser = function(uid) {
     
     var diaryLoad = db.ref(diaryPath).once('value');
     var financeLoad = db.ref(financePath).once('value');
-    var trainingLoad = db.ref(trainingPath).once('value');
+    // Тренировки загружаем отдельно — их ошибка не должна блокировать питание и финансы
+    var trainingLoad = db.ref(trainingPath).once('value').catch(function() {
+        return null; // ошибка тренировок не фатальна
+    });
     
     Promise.all([diaryLoad, financeLoad, trainingLoad]).then(function(results) {
         var diarySnap = results[0];
@@ -324,7 +327,7 @@ window.loadDataForUser = function(uid) {
         var trainingSnap = results[2];
         var diaryData = diarySnap.val();
         var financeDataSnap = financeSnap.val();
-        var trainingDataSnap = trainingSnap.val();
+        var trainingDataSnap = trainingSnap ? trainingSnap.val() : null;
         
         if (diaryData) {
             if (diaryData.nutrition) nutritionData = diaryData.nutrition;
@@ -347,12 +350,8 @@ window.loadDataForUser = function(uid) {
         // Загружаем тренировки из Firebase (или сидируем если пусто)
         if (typeof TrainingExerciseAPI !== 'undefined') {
             if (trainingDataSnap) {
-                var tv = trainingDataSnap.version || 1;
-                var te = trainingDataSnap.exercises || [];
-                var tw = trainingDataSnap.workouts || [];
-                TrainingExerciseAPI.loadFromFirebase({ version: tv, exercises: te, workouts: tw });
+                TrainingExerciseAPI.loadFromFirebase(trainingDataSnap);
             } else {
-                // Нет данных в Firebase — load из localStorage (там может быть сид)
                 TrainingExerciseAPI.load();
             }
         }

@@ -160,7 +160,7 @@ function syncToCloud() {
             lastUpdated: Date.now()
         };
         
-        db.ref(`lera_diary_v1/${targetUid}`).set(data);
+        db.ref(`lera_diary_v1/${targetUid}`).set(data).catch(() => {});
         
         // Также сохраняем тренировки отдельным ключом
         try {
@@ -172,7 +172,7 @@ function syncToCloud() {
                         exercises: td.exercises,
                         workouts: td.workouts,
                         lastUpdated: Date.now()
-                    });
+                    }).catch(() => {});
                 }
             }
         } catch(e) {}
