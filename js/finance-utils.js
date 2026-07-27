@@ -5,7 +5,7 @@
 
 // --- PARSE FORMULA ---
 
-function parseAmountFormula(val) {
+window.parseAmountFormula = function(val) {
     if(typeof val === 'string' && val.trim().startsWith('=')) {
         try {
             const expr = val.trim().substring(1);
@@ -22,7 +22,7 @@ function parseAmountFormula(val) {
     return parseFloat(val);
 }
 
-function safeEval(expr) {
+window.safeEval = function(expr) {
     // Simple recursive descent parser for basic arithmetic
     const tokens = expr.match(/(\d+\.?\d*|[+\-*/().])/g) || [];
     let pos = 0;
@@ -74,7 +74,7 @@ function safeEval(expr) {
 
 // --- DATE FORMAT HELPER ---
 
-function formatFinanceDate(dateStr) {
+window.formatFinanceDate = function(dateStr) {
     if(!dateStr) return '';
     if(/^\d{2}\.\d{2}\.\d{4}$/.test(dateStr)) return dateStr;
     const parts = dateStr.split('-');

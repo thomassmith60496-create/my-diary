@@ -84,7 +84,7 @@ window.removeSubcategoryTag = function(el, idx) {
     }
 }
 
-function renderSubcategoryTags() {
+window.renderSubcategoryTags = function() {
     const container = document.getElementById('f-cat-subcats-container');
     if(!window._editingSubcategories) window._editingSubcategories = [];
     if(!window._editingSubcategoryLimits) window._editingSubcategoryLimits = {};

@@ -3,7 +3,7 @@
 // ============================================
 "use strict";
 
-function migrateCategoryColors() {
+window.migrateCategoryColors = function() {
     if (!financeData || !financeData.categories) return;
     // Don't save if Firebase Auth isn't ready yet
     if (!currentUser || !currentUserId) {
@@ -26,7 +26,7 @@ function migrateCategoryColors() {
     }
 }
 
-function saveFinance() {
+window.saveFinance = function() {
     // Guard: block writes in read-only mode
     const isReadOnly = currentUserRole === 'reader' || window.isReadOnlyMode;
     if (isReadOnly) {
