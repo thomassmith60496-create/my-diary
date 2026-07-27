@@ -1575,7 +1575,11 @@ window.renderTrainingProgress = function() {
                     }
                 }
 
-                var chartWidth = 400, chartHeight = 100;
+                var chartWidth = 420, chartHeight = 130;
+                var padLeft = 45, padRight = 10, padTop = 8, padBottom = 24;
+                var plotW = chartWidth - padLeft - padRight;
+                var plotH = chartHeight - padTop - padBottom;
+
                 var allValues = entries.map(function(e) {
                     if (mt === 'reps_weight') return e.bestWeight || 0;
                     if (mt === 'reps') return e.maxReps || 0;
@@ -1586,8 +1590,10 @@ window.renderTrainingProgress = function() {
                 }).filter(function(v) { return v > 0; });
 
                 var maxVal = allValues.length > 0 ? Math.max.apply(null, allValues) : 1;
+                var minVal = allValues.length > 0 ? Math.min.apply(null, allValues) : 0;
+                var yRange = maxVal - minVal || 1;
 
-                var xStep = chartWidth / Math.max(entries.length - 1, 1);
+                var xStep = plotW / Math.max(entries.length - 1, 1);
                 var chartPoints = entries.map(function(e, i) {
                     var val = 0;
                     if (mt === 'reps_weight') val = e.bestWeight || 0;
@@ -1595,23 +1601,45 @@ window.renderTrainingProgress = function() {
                     else if (mt === 'time') val = e.bestTime || 0;
                     else if (mt === 'distance') val = e.bestDistance || 0;
                     else if (mt === 'weight_only') val = e.bestWeight || 0;
-                    var x = i * xStep;
-                    var y = chartHeight - 10 - (val / maxVal) * (chartHeight - 20);
-                    return { x: x, y: y, val: val };
+                    var x = padLeft + i * xStep;
+                    var y = padTop + plotH - ((val - minVal) / yRange) * plotH;
+                    return { x: x, y: y, val: val, date: e.date };
                 });
 
                 var linePath = chartPoints.map(function(p) { return p.x + ',' + p.y; }).join(' L');
-                var areaPath = 'M 0,' + chartHeight + ' L ' + chartPoints.map(function(p) { return p.x + ',' + p.y; }).join(' L') + ' L ' + chartWidth + ',' + chartHeight + ' Z';
+                var areaPath = 'M ' + padLeft + ',' + (padTop + plotH) + ' L ' + chartPoints.map(function(p) { return p.x + ',' + p.y; }).join(' L') + ' L ' + (padLeft + (chartPoints.length - 1) * xStep) + ',' + (padTop + plotH) + ' Z';
+
+                var yTicks = 4;
+                var yAxisLabels = '';
+                for (var t = 0; t <= yTicks; t++) {
+                    var yVal = minVal + (yRange * t / yTicks);
+                    var yPos = padTop + plotH - (yRange * t / yTicks) * plotH;
+                    var yLabel = mt === 'time' ? Math.round(yVal) + 'с' : mt === 'distance' ? Math.round(yVal) + 'м' : Math.round(yVal) + '';
+                    yAxisLabels += '<text x="' + (padLeft - 4) + '" y="' + (yPos + 3) + '" text-anchor="end" font-size="8" fill="#94a3b8">' + yLabel + '</text>';
+                }
+
+                var dateStep = Math.max(1, Math.floor(entries.length / 5));
+                var xAxisLabels = '';
+                chartPoints.forEach(function(p, i) {
+                    if (i % dateStep === 0 || i === entries.length - 1) {
+                        var dateLabel = p.date.slice(5);
+                        xAxisLabels += '<text x="' + p.x + '" y="' + (chartHeight - 4) + '" text-anchor="middle" font-size="7" fill="#94a3b8">' + dateLabel + '</text>';
+                    }
+                });
 
                 var chartSvg = '<svg width="100%" height="' + chartHeight + '" viewBox="0 0 ' + chartWidth + ' ' + chartHeight + '" style="overflow:visible;">';
                 chartSvg += '<defs><linearGradient id="grad-' + safeName + '-' + v.id + '" x1="0" y1="0" x2="0" y2="1">';
                 chartSvg += '<stop offset="0%" stop-color="#6366f1" stop-opacity="0.3"/>';
                 chartSvg += '<stop offset="100%" stop-color="#6366f1" stop-opacity="0.02"/>';
                 chartSvg += '</linearGradient></defs>';
+                chartSvg += '<line x1="' + padLeft + '" y1="' + (padTop + plotH) + '" x2="' + (padLeft + plotW) + '" y2="' + (padTop + plotH) + '" stroke="#e2e8f0" stroke-width="1"/>';
+                chartSvg += '<line x1="' + padLeft + '" y1="' + padTop + '" x2="' + padLeft + '" y2="' + (padTop + plotH) + '" stroke="#e2e8f0" stroke-width="1"/>';
+                chartSvg += yAxisLabels;
+                chartSvg += xAxisLabels;
                 chartSvg += '<path d="' + areaPath + '" fill="url(#grad-' + safeName + '-' + v.id + ')"/>';
                 chartSvg += '<path d="M ' + linePath + '" fill="none" stroke="#6366f1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>';
                 chartPoints.forEach(function(p) {
-                    chartSvg += '<circle cx="' + p.x + '" cy="' + p.y + '" r="3" fill="white" stroke="#6366f1" stroke-width="2"/>';
+                    chartSvg += '<circle cx="' + p.x + '" cy="' + p.y + '" r="3.5" fill="white" stroke="#6366f1" stroke-width="2"/>';
                 });
                 chartSvg += '</svg>';
 
