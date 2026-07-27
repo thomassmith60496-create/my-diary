@@ -395,9 +395,10 @@ window.renderMeal = function(m, di, mi, weekId) {
         </div>
     `;
     
+    const mealTypeClass = 'meal-' + (m.type || 'snack');
     return `
         <div class="meal ${prepClass}">
-            <div class="meal-head">
+            <div class="meal-head ${mealTypeClass}">
                 <div class="meal-icon">${icon}</div>
                 <div class="meal-name">${m.name}</div>
                 ${showTime?`<input type="time" class="meal-time" data-week="${weekId}" data-key="time-${di}-${mi}" oninput="debouncedSaveNutrition()" value="${timeVal}">`:''}
