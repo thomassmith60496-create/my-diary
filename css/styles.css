@@ -1814,13 +1814,13 @@ header .macro-badge {
 }
 .train-progress-card {
     flex: 1; background: white; border-radius: 12px;
-    padding: 16px; text-align: center;
+    padding: 20px; text-align: center;
     box-shadow: 0 2px 8px rgba(0,0,0,0.06);
     border: 1px solid #e2e8f0;
 }
-.train-progress-card-icon { font-size: 24px; margin-bottom: 4px; }
-.train-progress-card-value { font-size: 22px; font-weight: 700; color: #1e293b; }
-.train-progress-card-label { font-size: 12px; color: #64748b; margin-top: 2px; }
+.train-progress-card-icon { font-size: 36px; margin-bottom: 6px; }
+.train-progress-card-value { font-size: 28px; font-weight: 700; color: #1e293b; }
+.train-progress-card-label { font-size: 14px; color: #64748b; margin-top: 2px; }
 .train-progress-list { display: flex; flex-direction: column; gap: 10px; }
 .train-progress-exercise-card {
     background: white; border-radius: 12px; padding: 14px 16px;
@@ -1864,21 +1864,21 @@ header .macro-badge {
 .train-progress-summary > .train-progress-card:nth-child(2) { flex: 1; max-width: 25%; text-align: center; }
 .train-progress-summary > .train-progress-card:nth-child(3) { flex: 2; min-width: 0; }
 .train-progress-card {
-    flex: 1; background: white; border-radius: 12px; padding: 16px; text-align: center;
+    flex: 1; background: white; border-radius: 12px; padding: 20px; text-align: center;
     box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 1px solid #e2e8f0;
 }
-.train-progress-card-icon { font-size: 24px; margin-bottom: 4px; }
-.train-progress-card-value { font-size: 22px; font-weight: 700; color: #1e293b; }
-.train-progress-card-label { font-size: 12px; color: #64748b; margin-top: 2px; }
+.train-progress-card-icon { font-size: 36px; margin-bottom: 6px; }
+.train-progress-card-value { font-size: 28px; font-weight: 700; color: #1e293b; }
+.train-progress-card-label { font-size: 14px; color: #64748b; margin-top: 2px; }
 .train-progress-chart-section { background: white; border-radius: 12px; padding: 16px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; }
 .train-progress-section-title { font-size: 15px; font-weight: 700; color: #1e293b; margin: 0 0 12px 0; }
 .train-chart-row { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; }
 .train-donut-wrap { flex-shrink: 0; }
-.train-legend { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; }
-.train-legend-item { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; }
-.train-legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
-.train-legend-name { color: #1e293b; font-weight: 600; font-size: 14px; }
-.train-legend-val { color: #64748b; font-size: 14px; margin-left: auto; font-weight: 700; }
+.train-legend { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 20px; }
+.train-legend-item { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600; }
+.train-legend-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
+.train-legend-name { color: #1e293b; font-weight: 600; font-size: 15px; }
+.train-legend-val { color: #64748b; font-size: 15px; margin-left: auto; font-weight: 700; }
 .train-muscle-filter { display: flex; gap: 10px; align-items: center; margin-bottom: 16px; }
 .train-progress-list { display: flex; flex-direction: column; gap: 10px; }
 .train-exercise-block { background: white; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,0.04); overflow: hidden; }

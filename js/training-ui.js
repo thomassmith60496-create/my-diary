@@ -1477,13 +1477,13 @@ window.renderTrainingProgress = function() {
 
         html += '<div class="train-progress-card" style="display:flex;align-items:center;gap:16px;text-align:left;padding:14px;">';
         html += donutSvg;
-        html += '<div style="font-size:14px;line-height:1.6;">';
+        html += '<div style="font-size:15px;line-height:1.8;">';
         var halfLen = Math.ceil(segments.length / 2);
-        html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;">';
+        html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 20px;">';
         segments.forEach(function(seg, si) {
             var pct = totalSets > 0 ? ((seg.value / totalSets) * 100).toFixed(1) : 0;
-            html += '<div style="display:flex;align-items:center;gap:6px;"><span style="width:12px;height:12px;background:' + seg.color + ';border-radius:50%;display:inline-block;flex-shrink:0;"></span><span style="font-size:14px;font-weight:600;color:#1e293b;">' + seg.name + '</span></div>';
-            html += '<div style="font-size:14px;color:#1e293b;text-align:right;">' + seg.value + ' (' + pct + '%)</div>';
+            html += '<div style="display:flex;align-items:center;gap:8px;"><span style="width:14px;height:14px;background:' + seg.color + ';border-radius:50%;display:inline-block;flex-shrink:0;"></span><span style="font-size:15px;font-weight:600;color:#1e293b;">' + seg.name + '</span></div>';
+            html += '<div style="font-size:15px;color:#1e293b;text-align:right;font-weight:600;">' + seg.value + ' (' + pct + '%)</div>';
         });
         html += '</div>';
         html += '</div>';
@@ -1672,6 +1672,53 @@ window.renderTrainingProgress = function() {
                     html += '</div>';
                     html += '</div>';
                     html += '<div class="train-variant-card-chart">' + chartSvg + '</div>';
+                    html += '<div style="padding:8px 14px;">';
+                    html += '<button class="btn" onclick="toggleVariantHistory(\'' + v.id + '\')" style="font-size:12px;padding:4px 10px;">📋 История</button>';
+                    html += '<div id="variant-history-' + v.id + '" style="display:none;margin-top:8px;overflow-x:auto;">';
+                    html += '<table class="train-history-table">';
+                    html += '<thead><tr><th>Дата</th><th>Тренировка</th><th>Подходов</th><th>Результат</th></tr></thead>';
+                    html += '<tbody>';
+                    if (entries.length === 0) {
+                        html += '<tr><td colspan="4" style="text-align:center;padding:12px;color:#94a3b8;">Нет записей</td></tr>';
+                    } else {
+                        entries.forEach(function(entry) {
+                            const dateStr = formatDateForDisplay(entry.date);
+                            const workoutComment = entry.comment || '';
+                            const setCount = (entry.sets || []).length;
+                            const workingSets = (entry.sets || []).filter(function(s) { return !s.warmup; });
+                            let resultText = '';
+                            switch (mt) {
+                                case 'reps_weight': resultText = (entry.bestWeight || 0) + ' кг'; break;
+                                case 'reps': resultText = (entry.maxReps || 0) + ' повт'; break;
+                                case 'time': resultText = (entry.bestTime || 0) + ' с'; break;
+                                case 'distance': resultText = (entry.bestDistance || 0) + ' км'; break;
+                                case 'weight_only': resultText = (entry.bestWeight || 0) + ' кг'; break;
+                            }
+                            html += '<tr>';
+                            html += '<td>' + dateStr + '</td>';
+                            html += '<td>' + escapeHtml(workoutComment || 'Тренировка') + '</td>';
+                            html += '<td>' + setCount + '</td>';
+                            html += '<td style="font-weight:600;">' + resultText + '</td>';
+                            html += '</tr>';
+                            entry.sets.forEach(function(s, si) {
+                                const warmupLabel = s.warmup ? ' (разм)' : '';
+                                let setDetail = '';
+                                switch (mt) {
+                                    case 'reps_weight': setDetail = (s.weight || 0) + ' кг × ' + (s.reps || 0) + warmupLabel; break;
+                                    case 'reps': setDetail = (s.reps || 0) + ' повт' + warmupLabel; break;
+                                    case 'time': setDetail = (s.time || 0) + ' с' + warmupLabel; break;
+                                    case 'distance': setDetail = (s.distance || 0) + ' км' + warmupLabel; break;
+                                    case 'weight_only': setDetail = (s.weight || 0) + ' кг' + warmupLabel; break;
+                                }
+                                if (s.comment) setDetail += ' — ' + escapeHtml(s.comment);
+                                html += '<tr style="background:#fefce8;">';
+                                html += '<td></td><td></td><td></td>';
+                                html += '<td style="font-size:12px;color:#64748b;">Подход #' + (si + 1) + ': ' + setDetail + '</td>';
+                                html += '</tr>';
+                            });
+                        });
+                    }
+                    html += '</tbody></table></div></div>';
                     html += '</div>';
                 }
             });
@@ -1864,6 +1911,12 @@ function toggleExerciseBlock(safeName) {
     var isHidden = body.style.display === 'none';
     body.style.display = isHidden ? 'block' : 'none';
     if (toggle) toggle.textContent = isHidden ? '▼' : '▶';
+}
+
+window.toggleVariantHistory = function(variantId) {
+    var el = document.getElementById('variant-history-' + variantId);
+    if (!el) return;
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
 
 window.setProgressPeriod = function(period) {
