@@ -36,7 +36,12 @@ window.switchTrainingSubTab = function(tab, event) {
     trainContent.querySelectorAll('.train-sub-tab-btn').forEach(b => b.classList.remove('active'));
     trainContent.querySelectorAll('.train-sub-tab-content').forEach(c => c.classList.remove('active'));
     
-    event.target.classList.add('active');
+    if (event && event.target) {
+        event.target.classList.add('active');
+    } else {
+        const btn = trainContent.querySelector('.train-sub-tab-btn[onclick*="' + tab + '"]');
+        if (btn) btn.classList.add('active');
+    }
     document.getElementById(`train-sub-${tab}`).classList.add('active');
     
     if(tab === 'exercises') renderTrainingExercises();

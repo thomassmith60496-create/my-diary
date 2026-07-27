@@ -533,14 +533,19 @@ function _formatSetPreview(set) {
 window.confirmImportTraining = function() {
     if (!_importState || _importState.matchedCount === 0) return;
 
-    customConfirm('Создать ' + _importState.totalWorkouts + ' тренировок(и) с ' + _importState.matchedCount + ' упражнениями и ' + _importState.totalSets + ' подходами?', 'Подтверждение импорта')
+    // Сохраняем состояние до закрытия окна
+    var state = _importState;
+    // Закрываем окно импорта, чтобы модалка подтверждения не пряталась за ним
+    closeImportTraining();
+
+    customConfirm('Создать ' + state.totalWorkouts + ' тренировок(и) с ' + state.matchedCount + ' упражнениями и ' + state.totalSets + ' подходами?', 'Подтверждение импорта')
         .then(confirmed => {
             if (!confirmed) return;
 
             let created = 0;
             let errors = 0;
 
-            for (const w of _importState.workouts) {
+            for (const w of state.workouts) {
                 // Создаём тренировку
                 const workout = TrainingWorkoutAPI.createWorkout({
                     date: w.date,
@@ -568,15 +573,10 @@ window.confirmImportTraining = function() {
                 if (hasExercises) created++;
             }
 
-            // Закрываем импорт
-            closeImportTraining();
-
             if (created > 0) {
-                customAlert('✅ Импортировано ' + created + ' из ' + _importState.totalWorkouts + ' тренировок' + (errors > 0 ? ' (' + errors + ' ошибок)' : ''), 'Импорт завершён');
+                customAlert('✅ Импортировано ' + created + ' из ' + state.totalWorkouts + ' тренировок' + (errors > 0 ? ' (' + errors + ' ошибок)' : ''), 'Импорт завершён');
                 // Переключаем на вкладку тренировок, чтобы увидеть результат
-                if (typeof switchTrainingSubTab === 'function') {
-                    switchTrainingSubTab('workouts');
-                }
+                renderTrainingWorkouts();
             } else {
                 customAlert('❌ Не удалось импортировать ни одной тренировки', 'Ошибка');
             }
