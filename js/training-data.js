@@ -383,7 +383,7 @@ const TrainingWorkoutAPI = {
                 id: w.id,
                 date: w.date,
                 comment: w.comment || '',
-                exercises: w.exercises.map(e => ({ ...e, sets: e.sets.map(s => ({ ...s })) }))
+                exercises: (w.exercises || []).map(e => ({ ...e, sets: (e.sets || []).map(s => ({ ...s })) }))
             }))
             .sort((a, b) => b.date.localeCompare(a.date));
     },
@@ -396,7 +396,7 @@ const TrainingWorkoutAPI = {
             id: w.id,
             date: w.date,
             comment: w.comment || '',
-            exercises: w.exercises.map(e => ({ ...e, sets: e.sets.map(s => ({ ...s })) }))
+            exercises: (w.exercises || []).map(e => ({ ...e, sets: (e.sets || []).map(s => ({ ...s })) }))
         };
     },
 
@@ -417,7 +417,7 @@ const TrainingWorkoutAPI = {
                 id: w.id,
                 date: w.date,
                 comment: w.comment || '',
-                exercises: w.exercises.map(e => ({ ...e, sets: e.sets.map(s => ({ ...s })) }))
+                exercises: (w.exercises || []).map(e => ({ ...e, sets: (e.sets || []).map(s => ({ ...s })) }))
             }));
     },
 
@@ -562,7 +562,7 @@ const TrainingWorkoutAPI = {
     getUsedVariantIds: function(workoutId) {
         const workout = _data.workouts.find(w => w.id === workoutId);
         if (!workout) return [];
-        return workout.exercises.map(e => e.variantId);
+        return (workout.exercises || []).map(e => e.variantId);
     },
 
     // -------------------------------------------------------
@@ -637,7 +637,7 @@ const TrainingWorkoutAPI = {
         if (!exercise) return false;
         const newExercise = {
             variantId: variantId,
-            sets: exercise.sets.map(s => ({ ...s, id: _generateId() }))
+            sets: (exercise.sets || []).map(s => ({ ...s, id: _generateId() }))
         };
         // Вставляем после текущего
         const idx = workout.exercises.findIndex(e => e.variantId === variantId);
@@ -661,7 +661,7 @@ const TrainingWorkoutAPI = {
 
         for (const w of workouts) {
             const we = w.exercises.find(e => e.variantId === variantId);
-            if (!we || we.sets.length === 0) continue;
+            if (!we || !we.sets || we.sets.length === 0) continue;
 
             const entry = {
                 workoutId: w.id,
@@ -761,12 +761,12 @@ const TrainingWorkoutAPI = {
     getWorkoutStats: function(workoutId) {
         const workout = _data.workouts.find(w => w.id === workoutId);
         if (!workout) return null;
-        let exerciseCount = workout.exercises.length;
+        let exerciseCount = (workout.exercises || []).length;
         let setCount = 0;
         let totalVolume = 0;
-        workout.exercises.forEach(e => {
-            setCount += e.sets.length;
-            e.sets.forEach(s => {
+        (workout.exercises || []).forEach(e => {
+            setCount += (e.sets || []).length;
+            (e.sets || []).forEach(s => {
                 if (s.weight && s.reps) {
                     totalVolume += s.weight * s.reps;
                 }
