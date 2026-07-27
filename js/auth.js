@@ -323,11 +323,8 @@ function loadDataForUser(uid) {
         
         if (diaryData) {
             if (diaryData.nutrition) nutritionData = diaryData.nutrition;
-            if (diaryData.workouts) workouts = diaryData.workouts;
-            if (diaryData.progress) localStorage.setItem('exercise-progress', JSON.stringify(diaryData.progress));
         } else {
             nutritionData = { weeks: [], currentWeekId: null };
-            workouts = [];
         }
         
         // Migrate old dates to include year
@@ -344,7 +341,6 @@ function loadDataForUser(uid) {
         
         isInitialLoad = false;
         renderNutritionAll();
-        renderTrainAll();
         renderFinanceDashboard();
         updateFinanceStats();
         

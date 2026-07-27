@@ -21,7 +21,6 @@ window.renderHomePage = function() {
     
     // Получаем данные
     const todayNutrition = getTodayNutrition(dateStr);
-    const todayWorkout = getTodayWorkout(dateStr);
     const todayFinance = getTodayFinance(dateStr);
     const recentActivity = getRecentActivity();
     
@@ -42,10 +41,6 @@ window.renderHomePage = function() {
                 <span class="quick-action-icon">📥</span>
                 <span class="quick-action-text">Добавить приём пищи</span>
             </button>
-            <button class="quick-action-btn workout" onclick="openTrainModal()">
-                <span class="quick-action-icon">🏋️</span>
-                <span class="quick-action-text">Добавить тренировку</span>
-            </button>
             <button class="quick-action-btn expense" onclick="openFinanceModalWithType('expense')">
                 <span class="quick-action-icon">📉</span>
                 <span class="quick-action-text">Добавить расход</span>
@@ -57,14 +52,11 @@ window.renderHomePage = function() {
         </div>
     `;
     
-    // Карточки в две колонки
+    // Карточки в одну колонку
     html += `<div class="home-grid">`;
     
     // Карточка питания
     html += renderNutritionCard(todayNutrition, dateStr);
-    
-    // Карточка тренировок
-    html += renderWorkoutCard(todayWorkout, dateStr);
     
     html += `</div>`;
     
@@ -105,7 +97,6 @@ function renderNutritionCard(todayData, dateStr) {
             <div class="home-card-header">
                 <h2 class="home-card-title">📘 Сегодня</h2>
                 <div class="home-card-badge">Питание</div>
-            </div>
             <div class="home-card-body">
                 ${hasData ? `
                     <div class="nutrition-stats">
@@ -116,7 +107,6 @@ function renderNutritionCard(todayData, dateStr) {
                             </div>
                             <div class="nutrition-progress-bar">
                                 <div class="nutrition-progress-fill" style="width: ${calProgress}%"></div>
-                            </div>
                         </div>
                         <div class="nutrition-macros">
                             <div class="macro-item">
@@ -126,7 +116,6 @@ function renderNutritionCard(todayData, dateStr) {
                                 </div>
                                 <div class="macro-progress">
                                     <div class="macro-progress-fill prot" style="width: ${protProgress}%"></div>
-                                </div>
                             </div>
                             <div class="macro-item">
                                 <div class="macro-info">
@@ -135,7 +124,6 @@ function renderNutritionCard(todayData, dateStr) {
                                 </div>
                                 <div class="macro-progress">
                                     <div class="macro-progress-fill fat" style="width: ${Math.min(100, (todayData.fat / 55) * 100)}%"></div>
-                                </div>
                             </div>
                             <div class="macro-item">
                                 <div class="macro-info">
@@ -144,21 +132,16 @@ function renderNutritionCard(todayData, dateStr) {
                                 </div>
                                 <div class="macro-progress">
                                     <div class="macro-progress-fill carb" style="width: ${Math.min(100, (todayData.carbs / 100) * 100)}%"></div>
-                                </div>
                             </div>
-                        </div>
                         <div class="nutrition-meals">
                             <span class="meals-count">🍽️ ${todayData.mealsCount} приём${getPlural(todayData.mealsCount, ['ов', '', 'а'])} пищи</span>
                         </div>
-                    </div>
                 ` : `
                     <div class="empty-state-mini">
                         <div class="empty-state-mini-icon">📘</div>
                         <div class="empty-state-mini-text">Сегодня ещё нет приёмов пищи</div>
-                    </div>
                 `}
             </div>
-        </div>
     `;
 }
 
@@ -170,17 +153,13 @@ function getTodayNutrition(dateStr) {
     let carbs = 0;
     
     if(nutritionData.weeks && nutritionData.weeks.length > 0) {
-        // Search through ALL weeks to find today's meals
         nutritionData.weeks.forEach((week, weekIndex) => {
             if(week && week.menu) {
                 week.menu.forEach((day, dayIndex) => {
-                    // Normalize dates for comparison (handle both "20.07" and "2026-07-20" formats)
                     const normalizedDayDate = normalizeDate(day.date);
                     const normalizedToday = normalizeDate(dateStr);
                     
                     if(normalizedDayDate === normalizedToday && day.meals && day.meals.length > 0) {
-                        
-                        // Add nutritional data if it exists
                         if(week.data) {
                             day.meals.forEach((meal, mealIndex) => {
                                 const calKey = `m-${dayIndex}-${mealIndex}-cal`;
@@ -198,7 +177,7 @@ function getTodayNutrition(dateStr) {
                                     protein += !isNaN(protVal) ? protVal : 0;
                                     fat += !isNaN(fatVal) ? fatVal : 0;
                                     carbs += !isNaN(carbVal) ? carbVal : 0;
-                                    mealsCount++; // Count only meals with actual data
+                                    mealsCount++;
                                 }
                             });
                         }
@@ -211,95 +190,21 @@ function getTodayNutrition(dateStr) {
     return { mealsCount, calories: Math.round(calories), protein: Math.round(protein), fat: Math.round(fat), carbs: Math.round(carbs) };
 }
 
-// Helper function to normalize dates for comparison
 function normalizeDate(dateStr) {
     if(!dateStr) return '';
-    
-    // If already in YYYY-MM-DD format, return as is
     if(dateStr.includes('-') && dateStr.length === 10) {
         return dateStr;
     }
-    
-    // If in DD.MM.YYYY format, convert to YYYY-MM-DD
     if(dateStr.includes('.') && dateStr.length === 10) {
         const [day, month, year] = dateStr.split('.');
         return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
     }
-    
-    // If in DD.MM format (legacy), add current year
     if(dateStr.includes('.') && dateStr.length === 5) {
         const [day, month] = dateStr.split('.');
         const year = new Date().getFullYear();
         return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
     }
-    
     return dateStr;
-}
-
-// === КАРТОЧКА ТРЕНИРОВОК ===
-
-function renderWorkoutCard(todayData, dateStr) {
-    const hasWorkout = todayData.hasWorkout;
-    
-    return `
-        <div class="home-card workout-card">
-            <div class="home-card-header">
-                <h2 class="home-card-title">🏋️ Тренировки</h2>
-                <div class="home-card-badge">${hasWorkout ? 'Сегодня' : 'Отдых'}</div>
-            </div>
-            <div class="home-card-body">
-                ${hasWorkout ? `
-                    <div class="workout-info">
-                        <div class="workout-type-badge">${todayData.typeLabel || 'Тренировка'}</div>
-                        <div class="workout-details">
-                            ${todayData.duration ? `<div class="workout-detail">⏱ ${todayData.duration} мин</div>` : ''}
-                            ${todayData.exercisesCount > 0 ? `<div class="workout-detail">🎯 ${todayData.exercisesCount} упражнений</div>` : ''}
-                        </div>
-                    </div>
-                ` : `
-                    <div class="empty-state-mini">
-                        <div class="empty-state-mini-icon">🏋️</div>
-                        <div class="empty-state-mini-text">Сегодня нет тренировок</div>
-                    </div>
-                `}
-                ${todayData.lastWorkout ? `
-                    <div class="last-workout">
-                        <div class="last-workout-label">Последняя тренировка:</div>
-                        <div class="last-workout-date">${formatDateShortRussian(todayData.lastWorkout.date)}</div>
-                    </div>
-                ` : ''}
-                <div class="week-stats">
-                    <span class="week-stat">📊 ${todayData.weekCount} тренировок на неделе</span>
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-function getTodayWorkout(dateStr) {
-    const todayWorkouts = workouts.filter(w => w.date === dateStr);
-    const hasWorkout = todayWorkouts.length > 0;
-    const workout = hasWorkout ? todayWorkouts[0] : null;
-    
-    const weekStart = new Date(dateStr);
-    weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekStart.getDate() + 6);
-    const weekStartStr = weekStart.toISOString().slice(0, 10);
-    const weekEndStr = weekEnd.toISOString().slice(0, 10);
-    
-    const weekWorkouts = workouts.filter(w => w.date >= weekStartStr && w.date <= weekEndStr);
-    
-    const lastWorkout = workouts.length > 0 ? [...workouts].sort((a, b) => b.date.localeCompare(a.date))[0] : null;
-    
-    return {
-        hasWorkout,
-        typeLabel: workout ? (typeLabels[workout.type] || 'Тренировка') : null,
-        duration: workout ? workout.duration : 0,
-        exercisesCount: workout && workout.parsedExercises ? workout.parsedExercises.length : 0,
-        lastWorkout,
-        weekCount: weekWorkouts.length
-    };
 }
 
 // === КАРТОЧКА ФИНАНСОВ ===
@@ -312,7 +217,6 @@ function renderFinanceCard(todayData, dateStr) {
             <div class="home-card-header">
                 <h2 class="home-card-title">💰 Финансы</h2>
                 <div class="home-card-badge">${todayData.monthLabel}</div>
-            </div>
             <div class="home-card-body">
                 ${hasTransactions ? `
                     <div class="finance-today">
@@ -325,13 +229,11 @@ function renderFinanceCard(todayData, dateStr) {
                                 <span class="finance-label">📈 Доходы</span>
                                 <span class="finance-value">${todayData.monthIncome.toLocaleString('ru-RU')} ₽</span>
                             </div>
-                        </div>
                     </div>
                 ` : `
                     <div class="empty-state-mini">
                         <div class="empty-state-mini-icon">💰</div>
                         <div class="empty-state-mini-text">Нет операций за этот месяц</div>
-                    </div>
                 `}
                 ${todayData.nextPlanned ? `
                     <div class="finance-month">
@@ -340,18 +242,15 @@ function renderFinanceCard(todayData, dateStr) {
                             <span class="month-value">${todayData.nextPlanned.amount.toLocaleString('ru-RU')} ₽</span>
                             <span class="month-date">${formatDateShortRussian(todayData.nextPlanned.date)}</span>
                         </div>
-                    </div>
                 ` : ''}
                 ${todayData.savingsProgress > 0 ? `
                     <div class="savings-progress">
                         <div class="savings-label">🏦 Накопления: ${todayData.savingsProgress.toLocaleString('ru-RU')} ₽</div>
                         <div class="savings-bar">
                             <div class="savings-bar-fill" style="width: ${Math.min(100, todayData.savingsProgress / 100)}%"></div>
-                        </div>
                     </div>
                 ` : ''}
             </div>
-        </div>
     `;
 }
 
@@ -399,14 +298,13 @@ function renderRecentActivity(activity) {
             <div class="home-card-body">
     `;
     
-    const hasAnyActivity = activity.lastMeal || activity.lastWorkout || activity.lastFinance;
+    const hasAnyActivity = activity.lastMeal || activity.lastFinance;
     
     if(!hasAnyActivity) {
         html += `
             <div class="empty-state-mini">
                 <div class="empty-state-mini-icon">📋</div>
                 <div class="empty-state-mini-text">Пока нет активности</div>
-            </div>
         `;
     } else {
         html += `<div class="activity-list">`;
@@ -420,20 +318,6 @@ function renderRecentActivity(activity) {
                         <div class="activity-details">${activity.lastMeal.name} • ${formatDateShortRussian(activity.lastMeal.date)}</div>
                         ${activity.lastMeal.calories > 0 ? `<div class="activity-meta">🔥 ${activity.lastMeal.calories} ккал</div>` : ''}
                     </div>
-                </div>
-            `;
-        }
-        
-        if(activity.lastWorkout) {
-            html += `
-                <div class="activity-item">
-                    <div class="activity-icon">🏋️</div>
-                    <div class="activity-content">
-                        <div class="activity-title">Последняя тренировка</div>
-                        <div class="activity-details">${typeLabels[activity.lastWorkout.type] || 'Тренировка'} • ${formatDateShortRussian(activity.lastWorkout.date)}</div>
-                        ${activity.lastWorkout.duration > 0 ? `<div class="activity-meta">⏱ ${activity.lastWorkout.duration} мин</div>` : ''}
-                    </div>
-                </div>
             `;
         }
         
@@ -446,7 +330,6 @@ function renderRecentActivity(activity) {
                         <div class="activity-title">Последняя операция</div>
                         <div class="activity-details">${isExpense ? 'Расход' : 'Доход'} • ${formatDateShortRussian(activity.lastFinance.date)}</div>
                         <div class="activity-meta">${isExpense ? '−' : '+'}${Math.abs(activity.lastFinance.amount).toLocaleString('ru-RU')} ₽</div>
-                    </div>
                 </div>
             `;
         }
@@ -454,13 +337,12 @@ function renderRecentActivity(activity) {
         html += `</div>`;
     }
     
-    html += `</div></div>`;
+    html += `</div>`;
     return html;
 }
 
 function getRecentActivity() {
     let lastMeal = null;
-    let lastWorkout = null;
     let lastFinance = null;
     
     // Последний приём пищи
@@ -471,7 +353,6 @@ function getRecentActivity() {
                 week.menu.forEach((day, dayIndex) => {
                     if(day.meals) {
                         day.meals.forEach((meal, mealIndex) => {
-                            // Only add meal if it has a name
                             if(meal.name) {
                                 const calData = week.data ? week.data[`m-${dayIndex}-${mealIndex}-cal`] : undefined;
                                 const calVal = calData ? parseFloat(calData) : NaN;
@@ -492,12 +373,6 @@ function getRecentActivity() {
         }
     }
     
-    // Последняя тренировка
-    if(workouts.length > 0) {
-        const sorted = [...workouts].sort((a, b) => b.date.localeCompare(a.date));
-        lastWorkout = sorted[0];
-    }
-    
     // Последняя финансовая операция
     if(financeData.transactions.length > 0) {
         const sorted = [...financeData.transactions].sort((a, b) => {
@@ -507,7 +382,7 @@ function getRecentActivity() {
         lastFinance = sorted[0];
     }
     
-    return { lastMeal, lastWorkout, lastFinance };
+    return { lastMeal, lastFinance };
 }
 
 // === ДАШБОРД ПИТАНИЯ ===
@@ -531,7 +406,6 @@ window.renderWeightChart = function() {
     const statsContainer = document.getElementById('weight-stats-container');
     const period = document.getElementById('weight-period').value;
     
-    // Collect weight data from all weeks
     const weightData = [];
     if(nutritionData.weeks && nutritionData.weeks.length > 0) {
         nutritionData.weeks.forEach(week => {
@@ -548,7 +422,6 @@ window.renderWeightChart = function() {
         });
     }
     
-    // Filter by period (dates are already normalized to YYYY-MM-DD)
     let filteredData = weightData;
     if(period !== 'all') {
         const weeks = parseInt(period);
@@ -558,7 +431,6 @@ window.renderWeightChart = function() {
         filteredData = weightData.filter(d => d.date >= cutoffStr);
     }
     
-    // Sort by date
     filteredData.sort((a, b) => a.date.localeCompare(b.date));
     
     if(filteredData.length === 0) {
@@ -567,10 +439,8 @@ window.renderWeightChart = function() {
         return;
     }
     
-    // Normalize dates for display
     filteredData = filteredData.map(d => ({ ...d, date: normalizeDate(d.date) }));
     
-    // Render chart
     const data = filteredData.map(d => ({ date: normalizeDate(d.date), value: d.weight }));
     container.innerHTML = renderSVGLineChart(data, 'value', 'кг', '#2563eb', 'weightGrad', {
         title: 'Динамика веса',
@@ -579,7 +449,6 @@ window.renderWeightChart = function() {
         gridColor: '#a7f3d0'
     });
     
-    // Render stats
     const values = filteredData.map(d => d.weight);
     const first = values[0] || 0;
     const last = values[values.length - 1] || 0;
@@ -589,9 +458,9 @@ window.renderWeightChart = function() {
     
     statsContainer.innerHTML = `
         <div class="dashboard-stats">
-            <div class="stat-card"><div class="stat-label">Старт</div><div class="stat-value">${first.toFixed(1)} кг</div><div class="stat-sub">${formatDateShortRussian(filteredData[0].date)}</div></div>
-            <div class="stat-card"><div class="stat-label">Сейчас</div><div class="stat-value">${last.toFixed(1)} кг</div><div class="stat-sub">${formatDateShortRussian(filteredData[filteredData.length - 1].date)}</div></div>
-            <div class="stat-card" style="border-left-color:${trendColor};"><div class="stat-label">Изменение ${trendIcon}</div><div class="stat-value" style="color:${trendColor};">${diff > 0 ? '+' : ''}${diff.toFixed(1)} кг</div><div class="stat-sub">${filteredData.length} измерений</div></div>
+            <div class="stat-card"><div class="stat-label">Старт</div><div class="stat-value">${first.toFixed(1)} кг</div><div class="stat-sub">${formatDateShortRussian(filteredData[0].date)}</div>
+            <div class="stat-card"><div class="stat-label">Сейчас</div><div class="stat-value">${last.toFixed(1)} кг</div><div class="stat-sub">${formatDateShortRussian(filteredData[filteredData.length - 1].date)}</div>
+            <div class="stat-card" style="border-left-color:${trendColor};"><div class="stat-label">Изменение ${trendIcon}</div><div class="stat-value" style="color:${trendColor};">${diff > 0 ? '+' : ''}${diff.toFixed(1)} кг</div><div class="stat-sub">${filteredData.length} измерений</div>
         </div>
     `;
 }
@@ -601,7 +470,6 @@ window.renderKbjuChart = function() {
     const statsContainer = document.getElementById('kbju-stats-container');
     const period = document.getElementById('kbju-period').value;
     
-    // Collect daily KBJU data
     const dailyData = [];
     if(nutritionData.weeks && nutritionData.weeks.length > 0) {
         nutritionData.weeks.forEach(week => {
@@ -631,7 +499,6 @@ window.renderKbjuChart = function() {
         });
     }
     
-    // Filter by period (dates are already normalized to YYYY-MM-DD)
     let filteredData = dailyData;
     if(period !== 'all') {
         const weeks = parseInt(period);
@@ -641,7 +508,6 @@ window.renderKbjuChart = function() {
         filteredData = dailyData.filter(d => d.date >= cutoffStr);
     }
     
-    // Sort by date
     filteredData.sort((a, b) => a.date.localeCompare(b.date));
     
     if(filteredData.length === 0) {
@@ -650,10 +516,8 @@ window.renderKbjuChart = function() {
         return;
     }
     
-    // Normalize dates for display
     filteredData = filteredData.map(d => ({ ...d, date: normalizeDate(d.date) }));
     
-    // Get metric to display
     const metric = currentKbjuMetric;
     const metricConfig = {
         cal: { label: 'Калории', unit: 'ккал', color: '#2563eb', field: 'cal' },
@@ -663,7 +527,6 @@ window.renderKbjuChart = function() {
     };
     const config = metricConfig[metric];
     
-    // Render chart
     const data = filteredData.map(d => ({ date: normalizeDate(d.date), value: d[config.field] }));
     container.innerHTML = renderSVGLineChart(data, 'value', config.unit, config.color, 'kbjuGrad', {
         title: config.label + ' по дням',
@@ -672,7 +535,6 @@ window.renderKbjuChart = function() {
         gridColor: '#a7f3d0'
     });
     
-    // Render stats
     const values = filteredData.map(d => d[config.field]);
     const avg = values.reduce((s, v) => s + v, 0) / values.length;
     const max = Math.max(...values);
@@ -680,9 +542,9 @@ window.renderKbjuChart = function() {
     
     statsContainer.innerHTML = `
         <div class="dashboard-stats">
-            <div class="stat-card"><div class="stat-label">Среднее</div><div class="stat-value">${Math.round(avg)} ${config.unit}</div><div class="stat-sub">${config.label}</div></div>
-            <div class="stat-card"><div class="stat-label">Макс</div><div class="stat-value">${max} ${config.unit}</div><div class="stat-sub">${config.label}</div></div>
-            <div class="stat-card"><div class="stat-label">Мин</div><div class="stat-value">${min} ${config.unit}</div><div class="stat-sub">${config.label}</div></div>
+            <div class="stat-card"><div class="stat-label">Среднее</div><div class="stat-value">${Math.round(avg)} ${config.unit}</div><div class="stat-sub">${config.label}</div>
+            <div class="stat-card"><div class="stat-label">Макс</div><div class="stat-value">${max} ${config.unit}</div><div class="stat-sub">${config.label}</div>
+            <div class="stat-card"><div class="stat-label">Мин</div><div class="stat-value">${min} ${config.unit}</div><div class="stat-sub">${config.label}</div>
         </div>
     `;
 }
@@ -690,7 +552,6 @@ window.renderKbjuChart = function() {
 function renderWeeklyAvg() {
     const container = document.getElementById('weekly-avg-container');
     
-    // Calculate weekly averages
     const weeklyData = [];
     if(nutritionData.weeks && nutritionData.weeks.length > 0) {
         nutritionData.weeks.forEach(week => {
@@ -733,43 +594,20 @@ function renderWeeklyAvg() {
     }
     
     if(weeklyData.length === 0) {
-        container.innerHTML = '<div class="empty-state-mini"><div class="empty-state-mini-icon">📊</div><div class="empty-state-mini-text">Нет данных для средних значений</div></div>';
+        container.innerHTML = '<div class="chart-empty">Нет данных по неделям</div>';
         return;
     }
     
-    // Render weekly averages as a table
-    let html = '<table class="weekly-table">';
-    html += '<thead><tr><th>Неделя</th><th>Дней</th><th>Калории</th><th>Белки</th><th>Жиры</th><th>Углеводы</th></tr></thead>';
-    html += '<tbody>';
-    weeklyData.forEach(week => {
-        html += `
-            <tr>
-                <td>${week.title}</td>
-                <td>${week.days}</td>
-                <td class="cal">${week.cal} ккал</td>
-                <td class="prot">${week.prot}г</td>
-                <td class="fat">${week.fat}г</td>
-                <td class="carb">${week.carb}г</td>
-            </tr>
-        `;
+    let html = '<table class="weekly-table"><thead><tr><th>Неделя</th><th>Дней</th><th class="cal">🔥 Ккал (средн.)</th><th class="prot">Белки</th><th class="fat">Жиры</th><th class="carb">Углеводы</th></tr></thead><tbody>';
+    weeklyData.forEach(w => {
+        html += `<tr><td>${w.title}</td><td>${w.days}</td><td class="cal">${w.cal}</td><td class="prot">${w.prot}</td><td class="fat">${w.fat}</td><td class="carb">${w.carb}</td></tr>`;
     });
     html += '</tbody></table>';
-    
     container.innerHTML = html;
 }
 
-// === ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ===
-
-function getPlural(n, forms) {
-    const mod10 = n % 10;
-    const mod100 = n % 100;
-    if(mod100 >= 11 && mod100 <= 19) return forms[0];
-    if(mod10 === 1) return forms[1];
-    if(mod10 >= 2 && mod10 <= 4) return forms[2];
-    return forms[0];
-}
-
-// Инициализация при загрузке
-if(typeof renderHomePage !== 'undefined') {
-    // Функция будет вызвана при переключении на вкладку
+function getPlural(count, forms) {
+    if(count % 10 === 1 && count % 100 !== 11) return forms[1] || '';
+    if(count % 10 >= 2 && count % 10 <= 4 && (count % 100 < 10 || count % 100 >= 20)) return forms[2] || forms[0] || '';
+    return forms[0] || '';
 }

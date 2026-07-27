@@ -11,14 +11,11 @@ window.switchMainTab = function(tab) {
     document.querySelector(`.main-tab-btn.${tab}`).classList.add('active');
     document.getElementById(`main-tab-${tab}`).classList.add('active');
     if(tab === 'home') renderHomePage();
-    if(tab === 'train') { renderTrainAll(); WorkoutIndex.render(); }
     if(tab === 'finance') renderFinanceDashboard();
     if(tab === 'food') {
         renderNutritionAll();
-        // Navigate to today's date after rendering
         setTimeout(() => scrollToToday(), 100);
     }
-    // Re-apply read-only state after rendering dynamic content
     setTimeout(() => applyReadOnlyState(), 50);
 }
    
@@ -28,7 +25,6 @@ window.switchSubTab = function(tab, event) {
     event.target.classList.add('active');
     document.getElementById(`sub-tab-${tab}`).classList.add('active');
     if(tab === 'dashboard') renderDashboard();
-    // Re-apply read-only state after rendering dynamic content
     setTimeout(() => applyReadOnlyState(), 50);
 }
 
@@ -45,42 +41,6 @@ window.switchFinanceSubTab = function(tab, event) {
     if(tab === 'savings') renderFinanceSavings();
     if(tab === 'planned') renderFinancePlanned();
     if(tab === 'categories') renderFinanceCategories();
-    // Re-apply read-only state after rendering dynamic content
-    setTimeout(() => applyReadOnlyState(), 50);
-}
-
-window.switchTrainSubTab = function(tab, event) {
-    const trainContent = document.getElementById('main-tab-train');
-    trainContent.querySelectorAll('.sub-tab-btn').forEach(b => b.classList.remove('active'));
-    trainContent.querySelectorAll('.sub-tab-content').forEach(c => c.classList.remove('active'));
-    
-    if(event) {
-        event.target.classList.add('active');
-    } else {
-        // If no event provided, find the button for this tab
-        const buttons = trainContent.querySelectorAll('.sub-tab-btn');
-        buttons.forEach(b => {
-            if(b.getAttribute('onclick').includes(`'${tab}'`)) {
-                b.classList.add('active');
-            }
-        });
-    }
-    
-    document.getElementById(`train-sub-${tab}`).classList.add('active');
-    
-    if(tab === 'exercises') {
-        renderExerciseCategories();
-        renderBaseExercises();
-        renderExerciseVariants();
-    } else if(tab === 'workouts') {
-        renderTrainAll();
-    } else if(tab === 'all-exercises') {
-        renderAllExercises();
-    } else if(tab === 'needs-review') {
-        renderNeedsReviewSection();
-    }
-    
-    // Re-apply read-only state after rendering dynamic content
     setTimeout(() => applyReadOnlyState(), 50);
 }
 
@@ -98,38 +58,8 @@ window.openNutritionModal = function() {
     document.getElementById('nutrition-modal').classList.add('visible');
 }
 
-window.openTrainModal = function(id = null) {
-    editingWorkoutId = id;
-    document.getElementById('train-modal-title').textContent = id ? '✏️ Редактировать' : '➕ Новая тренировка';
-    if(id) {
-        const w = workouts.find(x => x.id === id);
-        if(!w) return;
-        document.getElementById('f-train-date').value = w.date || '';
-        document.getElementById('f-train-type').value = w.type || '';
-        document.getElementById('f-train-duration').value = w.duration || '';
-        document.getElementById('f-train-time').value = w.time || '';
-        document.getElementById('f-train-log').value = w.log || '';
-        document.getElementById('f-train-note').value = w.note || '';
-        setFormStars('f-train-feel-before', w.feelBefore || 0);
-        setFormStars('f-train-feel-after', w.feelAfter || 0);
-        setFormStars('f-train-rating', w.rating || 0);
-    } else {
-        document.getElementById('f-train-date').value = new Date().toISOString().slice(0,10);
-        document.getElementById('f-train-type').value = '';
-        document.getElementById('f-train-duration').value = '';
-        document.getElementById('f-train-time').value = '';
-        document.getElementById('f-train-log').value = '';
-        document.getElementById('f-train-note').value = '';
-        setFormStars('f-train-feel-before', 0);
-        setFormStars('f-train-feel-after', 0);
-        setFormStars('f-train-rating', 0);
-    }
-    document.getElementById('train-modal').classList.add('visible');
-}
-
 window.closeAllModals = function() {
     document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('visible'));
-    editingWorkoutId = null;
 }
 
 window.setFormStars = function(containerId, rating) {
@@ -167,7 +97,6 @@ function scrollToToday() {
     const today = new Date();
     const todayStr = `${String(today.getDate()).padStart(2, '0')}.${String(today.getMonth() + 1).padStart(2, '0')}.${today.getFullYear()}`;
     
-    // Find the day card that matches today's date
     const dayCards = document.querySelectorAll('.day-card');
     for (const card of dayCards) {
         const dayDateEl = card.querySelector('.day-title');
@@ -196,14 +125,6 @@ function showSyncStatus(message, type = 'success') {
     setTimeout(() => { statusEl.classList.remove('visible'); }, 3000);
 }
 
-function getProgressData() {
-    try {
-        return JSON.parse(localStorage.getItem('exercise-progress') || '{}');
-    } catch(e) {
-        return {};
-    }
-}
-
 function isReadOnlyActive() {
     return currentUserRole === 'reader' || isReadOnlyMode;
 }
@@ -220,15 +141,9 @@ function syncToCloud() {
     }
     syncTimeout = setTimeout(() => {
         const targetUid = getTargetUid();
-        const progress = getProgressData();
         const data = {
             nutrition: nutritionData,
-            workouts: workouts,
-            progress: progress,
             financeData: financeData,
-            exerciseCategories: exerciseCategories,
-            baseExercises: baseExercises,
-            exerciseVariants: exerciseVariants,
             lastUpdated: Date.now()
         };
         
@@ -246,8 +161,6 @@ function syncToCloud() {
 function exportAllData() {
     const data = { 
         nutrition: nutritionData, 
-        workouts, 
-        progress: getProgressData(), 
         financeData: financeData,
         exportedAt: new Date().toISOString() 
     };
@@ -278,22 +191,6 @@ function importAllData(input) {
                 });
                 if(parsed.nutrition.currentWeekId && !nutritionData.currentWeekId) nutritionData.currentWeekId = parsed.nutrition.currentWeekId;
             }
-            if(parsed.workouts && Array.isArray(parsed.workouts)) {
-                const existingIds = new Set(workouts.map(w => w.id));
-                parsed.workouts.forEach(w => { 
-                    if(w && w.id && !existingIds.has(w.id)) workouts.push(w); 
-                });
-            }
-            if(parsed.progress) localStorage.setItem('exercise-progress', JSON.stringify(parsed.progress));
-            if(parsed.exerciseCategories && Array.isArray(parsed.exerciseCategories)) {
-                exerciseCategories = parsed.exerciseCategories;
-            }
-            if(parsed.baseExercises && Array.isArray(parsed.baseExercises)) {
-                baseExercises = parsed.baseExercises;
-            }
-            if(parsed.exerciseVariants && Array.isArray(parsed.exerciseVariants)) {
-                exerciseVariants = parsed.exerciseVariants;
-            }
             if(parsed.financeData) {
                 if(parsed.financeData.transactions && Array.isArray(parsed.financeData.transactions)) {
                     const existingIds = new Set(financeData.transactions.map(t => t.id));
@@ -322,7 +219,6 @@ function importAllData(input) {
             }
             syncToCloud();
             renderNutritionAll();
-            renderTrainAll();
             renderFinanceDashboard();
             updateFinanceStats();
             alert('✅ Данные импортированы!');
@@ -334,79 +230,32 @@ function importAllData(input) {
     input.value = '';
 }
 
-function importTrainData(input) {
-    const file = input.files[0];
-    if(!file) return;
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        try {
-            const parsed = JSON.parse(e.target.result);
-            if(parsed.workouts && Array.isArray(parsed.workouts)) {
-                const existingIds = new Set(workouts.map(w => w.id));
-                parsed.workouts.forEach(w => { 
-                    if(w && w.id && !existingIds.has(w.id)) workouts.push(w); 
-                });
-                if(parsed.progress) localStorage.setItem('exercise-progress', JSON.stringify(parsed.progress));
-                syncToCloud();
-                renderTrainAll();
-                alert(`✅ Импортировано тренировок: ${parsed.workouts.length}`);
-            } else { alert('❌ Неверный формат'); }
-        } catch(err) { 
-            alert('❌ Ошибка чтения файла');
-        }
-    };
-    reader.readAsText(file);
-    input.value = '';
-}
-
 function resetAllData() {
-    if(confirm('Удалить ВСЕ данные (питание + тренировки + финансы)? Это нельзя отменить.')) {
+    if(confirm('Удалить ВСЕ данные (питание + финансы)? Это нельзя отменить.')) {
         const targetUid = getTargetUid();
         db.ref(`lera_diary_v1/${targetUid}`).remove();
         db.ref(`lera_finance_v1/${targetUid}`).remove();
-        localStorage.removeItem('exercise-progress');
         nutritionData = { weeks: [], currentWeekId: null };
-        workouts = [];
         financeData = { transactions: [], savings: [], planned: [], categories: [] };
         renderNutritionAll();
-        renderTrainAll();
         renderCurrentFinanceTab();
         updateFinanceStats();
     }
 }
 
-function saveTrainings() {
-    syncToCloud();
-}
-
 // === ИНИЦИАЛИЗАЦИЯ ===
 
 (function init() {
-    // Migrate old nutrition dates to include year
     if (typeof migrateNutritionDates === 'function') {
         migrateNutritionDates();
     }
-    
-    // Migrate category colors
     if (typeof migrateCategoryColors === 'function') {
         migrateCategoryColors();
     }
     
-    // Initialize exercise data
-    if (typeof initExerciseData === 'function') {
-        initExerciseData();
-    }
-    
-    // Migrate old exercises to new structure
-    if (typeof migrateOldExercises === 'function') {
-        migrateOldExercises();
-    }
-    
-    // Render with initial data (auth state will reload if needed)
     renderHomePage();
     if (!currentUser) {
         renderNutritionAll();
-        renderTrainAll();
         renderFinanceDashboard();
         updateFinanceStats();
         isInitialLoad = false;
