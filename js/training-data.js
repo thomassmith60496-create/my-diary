@@ -56,8 +56,9 @@ const EQUIPMENT_TYPES = [
 // Доступно только через TrainingExerciseAPI
 
 let _data = {
-    version: 1,             // версия структуры данных
-    exercises: []           // базовые упражнения
+    version: 2,             // версия структуры данных
+    exercises: [],           // базовые упражнения
+    workouts: []             // тренировки
 };
 
 // === ВСПОМОГАТЕЛЬНЫЕ ===
@@ -84,11 +85,15 @@ const TrainingExerciseAPI = {
         if (stored) {
             // Версионирование — применяем миграции если нужно
             stored.version = stored.version || 1;
-            // В будущем: if (stored.version < 2) { applyMigrationV2(stored); }
+            // Миграция v1 → v2: добавляем workouts
+            if (stored.version < 2) {
+                stored.workouts = stored.workouts || [];
+                stored.version = 2;
+            }
             _data = stored;
         } else {
             // Данные по умолчанию
-            _data = { version: 1, exercises: [] };
+            _data = { version: 2, exercises: [], workouts: [] };
         }
         return this;
     },
@@ -275,6 +280,210 @@ const TrainingExerciseAPI = {
         to.variants.push(variant);
         this.save();
         return true;
+    }
+};
+
+// ============================================
+// 🏋️ ТРЕНИРОВКИ - API СЛОЙ ТРЕНИРОВОК
+// ============================================
+//
+// Работает через то же _data, что и TrainingExerciseAPI.
+// Сохраняет тренировки в _data.workouts.
+// ============================================
+
+const TrainingWorkoutAPI = {
+
+    // -------------------------------------------------------
+    // ЧТЕНИЕ
+    // -------------------------------------------------------
+
+    /** Получить копию всех тренировок (сортировка по дате DESC) */
+    getWorkouts: function() {
+        return _data.workouts
+            .map(w => ({
+                id: w.id,
+                date: w.date,
+                comment: w.comment || '',
+                exercises: w.exercises.map(e => ({ ...e, sets: e.sets.map(s => ({ ...s })) }))
+            }))
+            .sort((a, b) => b.date.localeCompare(a.date));
+    },
+
+    /** Получить тренировку по ID (копия) */
+    getWorkoutById: function(id) {
+        const w = _data.workouts.find(w => w.id === id);
+        if (!w) return null;
+        return {
+            id: w.id,
+            date: w.date,
+            comment: w.comment || '',
+            exercises: w.exercises.map(e => ({ ...e, sets: e.sets.map(s => ({ ...s })) }))
+        };
+    },
+
+    /** Найти вариант упражнения по variantId во всех базовых упражнениях */
+    getVariantById: function(variantId) {
+        for (const ex of _data.exercises) {
+            const v = ex.variants.find(v => v.id === variantId);
+            if (v) return { ...v, baseExerciseId: ex.id, baseExerciseName: ex.name };
+        }
+        return null;
+    },
+
+    /** Получить все тренировки за указанную дату */
+    getWorkoutsByDate: function(dateStr) {
+        return _data.workouts
+            .filter(w => w.date === dateStr)
+            .map(w => ({
+                id: w.id,
+                date: w.date,
+                comment: w.comment || '',
+                exercises: w.exercises.map(e => ({ ...e, sets: e.sets.map(s => ({ ...s })) }))
+            }));
+    },
+
+    // -------------------------------------------------------
+    // МУТАЦИИ
+    // -------------------------------------------------------
+
+    /** Создать тренировку. Возвращает созданный объект или null. */
+    createWorkout: function(data) {
+        if (!data.date) return null;
+        const workout = {
+            id: _generateId(),
+            date: data.date,
+            comment: data.comment || '',
+            exercises: []    // [{ variantId, sets: [{ weight, reps, time, distance, warmup, comment }] }]
+        };
+        _data.workouts.push(workout);
+        TrainingExerciseAPI.save();
+        return { ...workout, exercises: [] };
+    },
+
+    /** Обновить поля тренировки (дата, комментарий). Возвращает boolean. */
+    updateWorkout: function(id, data) {
+        const workout = _data.workouts.find(w => w.id === id);
+        if (!workout) return false;
+        if (data.date !== undefined) workout.date = data.date;
+        if (data.comment !== undefined) workout.comment = data.comment;
+        TrainingExerciseAPI.save();
+        return true;
+    },
+
+    /** Удалить тренировку. Возвращает boolean. */
+    deleteWorkout: function(id) {
+        const idx = _data.workouts.findIndex(w => w.id === id);
+        if (idx === -1) return false;
+        _data.workouts.splice(idx, 1);
+        TrainingExerciseAPI.save();
+        return true;
+    },
+
+    // -------------------------------------------------------
+    // УПРАЖНЕНИЯ В ТРЕНИРОВКЕ
+    // -------------------------------------------------------
+
+    /** Добавить выполненное упражнение в тренировку. Возвращает boolean. */
+    addExerciseToWorkout: function(workoutId, variantId) {
+        const workout = _data.workouts.find(w => w.id === workoutId);
+        if (!workout) return false;
+        // Проверяем, что такой variantId существует в базе
+        const variant = this.getVariantById(variantId);
+        if (!variant) return false;
+        // Проверяем, не добавлен ли уже
+        if (workout.exercises.some(e => e.variantId === variantId)) return false;
+        workout.exercises.push({
+            variantId: variantId,
+            sets: []
+        });
+        TrainingExerciseAPI.save();
+        return true;
+    },
+
+    /** Удалить выполненное упражнение из тренировки. Возвращает boolean. */
+    removeExerciseFromWorkout: function(workoutId, variantId) {
+        const workout = _data.workouts.find(w => w.id === workoutId);
+        if (!workout) return false;
+        const idx = workout.exercises.findIndex(e => e.variantId === variantId);
+        if (idx === -1) return false;
+        workout.exercises.splice(idx, 1);
+        TrainingExerciseAPI.save();
+        return true;
+    },
+
+    // -------------------------------------------------------
+    // ПОДХОДЫ
+    // -------------------------------------------------------
+
+    /** Добавить подход к упражнению в тренировке. Возвращает созданный подход или null. */
+    addSet: function(workoutId, variantId, setData) {
+        const workout = _data.workouts.find(w => w.id === workoutId);
+        if (!workout) return null;
+        const exercise = workout.exercises.find(e => e.variantId === variantId);
+        if (!exercise) return null;
+        const set = {
+            id: _generateId(),
+            weight: setData.weight || 0,
+            reps: setData.reps || 0,
+            time: setData.time || 0,
+            distance: setData.distance || 0,
+            warmup: !!setData.warmup,
+            comment: setData.comment || ''
+        };
+        exercise.sets.push(set);
+        TrainingExerciseAPI.save();
+        return { ...set };
+    },
+
+    /** Обновить подход. Возвращает boolean. */
+    updateSet: function(workoutId, variantId, setId, setData) {
+        const workout = _data.workouts.find(w => w.id === workoutId);
+        if (!workout) return false;
+        const exercise = workout.exercises.find(e => e.variantId === variantId);
+        if (!exercise) return false;
+        const set = exercise.sets.find(s => s.id === setId);
+        if (!set) return false;
+        if (setData.weight !== undefined) set.weight = setData.weight;
+        if (setData.reps !== undefined) set.reps = setData.reps;
+        if (setData.time !== undefined) set.time = setData.time;
+        if (setData.distance !== undefined) set.distance = setData.distance;
+        if (setData.warmup !== undefined) set.warmup = !!setData.warmup;
+        if (setData.comment !== undefined) set.comment = setData.comment;
+        TrainingExerciseAPI.save();
+        return true;
+    },
+
+    /** Удалить подход. Возвращает boolean. */
+    deleteSet: function(workoutId, variantId, setId) {
+        const workout = _data.workouts.find(w => w.id === workoutId);
+        if (!workout) return false;
+        const exercise = workout.exercises.find(e => e.variantId === variantId);
+        if (!exercise) return false;
+        const idx = exercise.sets.findIndex(s => s.id === setId);
+        if (idx === -1) return false;
+        exercise.sets.splice(idx, 1);
+        TrainingExerciseAPI.save();
+        return true;
+    },
+
+    /** Пометить подход как разминочный */
+    toggleSetWarmup: function(workoutId, variantId, setId) {
+        const workout = _data.workouts.find(w => w.id === workoutId);
+        if (!workout) return false;
+        const exercise = workout.exercises.find(e => e.variantId === variantId);
+        if (!exercise) return false;
+        const set = exercise.sets.find(s => s.id === setId);
+        if (!set) return false;
+        set.warmup = !set.warmup;
+        TrainingExerciseAPI.save();
+        return true;
+    },
+
+    /** Получить все variantId, которые уже добавлены в тренировку */
+    getUsedVariantIds: function(workoutId) {
+        const workout = _data.workouts.find(w => w.id === workoutId);
+        if (!workout) return [];
+        return workout.exercises.map(e => e.variantId);
     }
 };
 

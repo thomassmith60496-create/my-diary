@@ -611,6 +611,263 @@ header .macro-badge {
     display: flex; gap: 6px; margin-top: 4px;
 }
 
+.train-edit-field textarea {
+    padding: 6px 10px; border: 2px solid #fed7aa;
+    border-radius: 6px; font-size: 13px; font-family: inherit;
+    background: white; resize: vertical;
+}
+.train-edit-field textarea:focus {
+    outline: none; border-color: #ea580c;
+}
+
+/* ========== ТРЕНИРОВКИ - КАРТОЧКИ ========== */
+
+.train-workout-list {
+    display: flex; flex-direction: column; gap: 10px;
+    margin-top: 16px;
+}
+
+.train-workout-card {
+    background: white; border-radius: 12px; border: 2px solid #fed7aa;
+    overflow: hidden; transition: all 0.2s;
+}
+.train-workout-card:hover {
+    border-color: #fdba74;
+}
+
+.train-workout-header {
+    padding: 14px 16px; cursor: pointer;
+    display: flex; flex-direction: column; gap: 4px;
+}
+.train-workout-header:hover {
+    background: #fff7ed;
+}
+
+.train-workout-date {
+    font-size: 16px; font-weight: 700; color: #9a3412;
+}
+
+.train-workout-meta {
+    display: flex; gap: 12px; font-size: 12px; color: #78716c;
+}
+.train-workout-meta span {
+    background: #fef3c7; padding: 2px 8px; border-radius: 4px;
+}
+
+.train-workout-comment {
+    font-size: 13px; color: #57534e; margin-top: 4px;
+    font-style: italic;
+}
+
+.train-workout-actions {
+    display: flex; gap: 4px; padding: 6px 16px 10px;
+    border-top: 1px solid #fef3c7;
+}
+
+.train-workout-edit-form {
+    padding: 16px; background: #fff7ed;
+    display: flex; flex-direction: column; gap: 10px;
+}
+
+/* Превью упражнений в списке тренировок */
+.train-workout-preview {
+    padding: 8px 16px 12px; border-top: 1px solid #fef3c7;
+    display: flex; flex-direction: column; gap: 4px;
+}
+.train-workout-preview-item {
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 8px; font-size: 12px;
+}
+.train-workout-preview-name {
+    font-weight: 600; color: #44403c; flex: 1;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.train-workout-preview-sets {
+    color: #78716c; flex-shrink: 0;
+}
+
+/* ========== ДЕТАЛЬНЫЙ ПРОСМОТР ТРЕНИРОВКИ ========== */
+
+.train-detail-header {
+    padding: 12px 0;
+}
+
+.train-back-btn {
+    background: none; border: none; color: #ea580c;
+    font-size: 15px; font-weight: 600; cursor: pointer;
+    padding: 6px 12px; border-radius: 8px;
+    font-family: inherit; transition: all 0.2s;
+}
+.train-back-btn:hover {
+    background: #fff7ed;
+}
+
+.train-detail-card {
+    background: white; border-radius: 12px; border: 2px solid #fed7aa;
+    padding: 20px;
+}
+
+.train-detail-date {
+    font-size: 18px; font-weight: 700; color: #9a3412;
+    margin-bottom: 8px;
+}
+
+.train-detail-comment {
+    font-size: 14px; color: #57534e; margin-bottom: 12px;
+    font-style: italic;
+}
+
+.train-detail-actions {
+    display: flex; gap: 8px; margin-bottom: 16px;
+}
+
+.train-detail-section-title {
+    font-size: 15px; font-weight: 700; color: #9a3412;
+    margin: 0 0 10px 0;
+}
+
+.train-detail-exercises {
+    margin-top: 16px;
+}
+
+/* Блок упражнения в детальном просмотре */
+.train-detail-exercise-block {
+    background: #fef3c7; border-radius: 10px; padding: 12px;
+    margin-bottom: 10px;
+}
+
+.train-detail-exercise-header {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 8px; font-weight: 600; font-size: 14px;
+    color: #78350f;
+}
+
+.train-detail-exercise-name {
+    flex: 1;
+}
+
+.train-detail-no-sets {
+    font-size: 12px; color: #78716c; font-style: italic;
+    padding: 8px 0;
+}
+
+/* Таблица подходов */
+.train-sets-table {
+    display: flex; flex-direction: column; gap: 2px;
+    margin-bottom: 8px;
+}
+
+.train-sets-table-header {
+    display: flex; gap: 4px; padding: 6px 4px;
+    font-size: 10px; font-weight: 700; color: #9a3412;
+    background: #ffedd5; border-radius: 6px;
+}
+
+.train-set-row {
+    display: flex; gap: 4px; align-items: center;
+    padding: 6px 4px; font-size: 13px;
+    background: white; border-radius: 6px;
+    border: 1px solid transparent; transition: all 0.2s;
+}
+.train-set-row:hover {
+    border-color: #fed7aa;
+}
+.train-set-row.warmup {
+    background: #fef9ef;
+}
+
+.train-set-col {
+    display: flex; align-items: center;
+}
+.train-set-col.num { width: 24px; justify-content: center; font-weight: 700; color: #a8a29e; }
+.train-set-col.warmup { width: 36px; justify-content: center; }
+.train-set-col.weight { width: 64px; }
+.train-set-col.reps { width: 56px; }
+.train-set-col.time { width: 64px; }
+.train-set-col.dist { width: 64px; }
+.train-set-col.comment { flex: 1; font-size: 11px; color: #78716c; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.train-set-col.actions { width: 80px; display: flex; gap: 2px; justify-content: flex-end; }
+
+/* Форма редактирования подхода */
+.train-set-edit-form {
+    width: 100%; display: flex; flex-wrap: wrap; gap: 6px;
+    align-items: flex-end;
+}
+.train-set-edit-form .train-edit-field {
+    flex: 0 0 auto;
+}
+.train-set-edit-form .train-edit-field input[type="number"],
+.train-set-edit-form .train-edit-field input[type="text"] {
+    width: 70px; padding: 4px 6px; font-size: 12px;
+}
+.train-set-edit-actions {
+    display: flex; gap: 2px;
+}
+
+/* Форма добавления подхода */
+.train-add-set-form {
+    margin-top: 6px;
+}
+
+.train-add-set-inline {
+    display: flex; flex-direction: column; gap: 4px;
+}
+
+.train-add-set-fields {
+    display: flex; gap: 6px; flex-wrap: wrap;
+    align-items: center;
+}
+
+.train-add-set-warmup {
+    display: flex; align-items: center; gap: 3px;
+    font-size: 12px; cursor: pointer;
+    white-space: nowrap;
+}
+.train-add-set-warmup input { accent-color: #ea580c; }
+
+.train-set-input {
+    width: 80px; padding: 5px 8px;
+    border: 2px solid #fed7aa; border-radius: 6px;
+    font-size: 12px; font-family: inherit;
+}
+.train-set-input:focus {
+    outline: none; border-color: #ea580c;
+}
+
+/* Форма добавления упражнения в тренировку */
+.train-add-exercise-form {
+    background: #fff7ed; border-radius: 10px; padding: 14px;
+    margin-top: 8px;
+}
+.train-add-exercise-form h4 {
+    margin: 0 0 10px 0; font-size: 14px; color: #9a3412;
+}
+
+.train-add-exercise-group {
+    margin-bottom: 10px;
+}
+.train-add-exercise-group-name {
+    font-weight: 700; font-size: 13px; color: #78350f;
+    padding: 4px 0; border-bottom: 1px solid #fed7aa;
+    margin-bottom: 4px;
+}
+
+.train-add-exercise-item {
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px 8px; cursor: pointer; border-radius: 6px;
+    font-size: 13px; transition: all 0.2s;
+}
+.train-add-exercise-item:hover {
+    background: #fef3c7;
+}
+.train-add-exercise-item-name {
+    flex: 1;
+}
+
+.btn.small {
+    padding: 5px 12px; font-size: 13px;
+}
+
 @media (max-width: 768px) {
     .home-grid { grid-template-columns: 1fr; }
     .quick-actions { grid-template-columns: 1fr; }

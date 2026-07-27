@@ -40,6 +40,7 @@ window.switchTrainingSubTab = function(tab, event) {
     document.getElementById(`train-sub-${tab}`).classList.add('active');
     
     if(tab === 'exercises') renderTrainingExercises();
+    if(tab === 'workouts') renderTrainingWorkouts();
 }
 
 window.switchFinanceSubTab = function(tab, event) {

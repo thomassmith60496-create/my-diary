@@ -472,7 +472,708 @@ function openMoveVariantModal(fromExerciseId, variantId, variantName) {
     renderTrainingExercises();
 }
 
+// ============================================
+// 📋 ТРЕНИРОВКИ - UI ТРЕНИРОВОК
+// ============================================
+
+// === СОСТОЯНИЕ UI ТРЕНИРОВОК ===
+let workoutsUIState = {
+    viewingWorkoutId: null,      // ID тренировки для просмотра/редактирования
+    editingWorkoutId: null,      // ID тренировки в режиме редактирования
+    editingWorkoutDate: '',      // дата при редактировании
+    editingWorkoutComment: '',   // комментарий при редактировании
+    addExerciseWorkoutId: null,  // ID тренировки, куда добавляем упражнение
+    editSetWorkoutId: null,      // ID тренировки, где редактируем подход
+    editSetVariantId: null,      // variantId упражнения, где редактируем подход
+    editSetId: null              // ID редактируемого подхода
+};
+
+// === ГЛАВНАЯ ФУНКЦИЯ ===
+
+function renderTrainingWorkouts() {
+    const container = document.getElementById('training-workouts-content');
+    if (!container) return;
+
+    // Если просматриваем конкретную тренировку
+    if (workoutsUIState.viewingWorkoutId) {
+        container.innerHTML = renderWorkoutDetail(workoutsUIState.viewingWorkoutId);
+        return;
+    }
+
+    const workouts = TrainingWorkoutAPI.getWorkouts();
+
+    let html = '';
+
+    // === ПАНЕЛЬ УПРАВЛЕНИЯ ===
+    html += '<div class="train-control-panel">';
+    html += '<div class="train-actions-row">';
+    html += '<button class="btn primary" onclick="openCreateWorkoutModal()">➕ Новая тренировка</button>';
+    html += '</div>';
+    html += '</div>';
+
+    // === СПИСОК ТРЕНИРОВОК ===
+    if (workouts.length === 0) {
+        html += '<div class="empty-state">';
+        html += '<div class="empty-state-icon">📋</div>';
+        html += '<div class="empty-state-title">Нет тренировок</div>';
+        html += '<div class="empty-state-text">Создайте первую тренировку, чтобы начать</div>';
+        html += '</div>';
+    } else {
+        html += '<div class="train-workout-list">';
+        workouts.forEach(w => {
+            html += renderWorkoutCard(w);
+        });
+        html += '</div>';
+    }
+
+    container.innerHTML = html;
+}
+
+// === РЕНДЕРИНГ КАРТОЧКИ ТРЕНИРОВКИ В СПИСКЕ ===
+
+function renderWorkoutCard(workout) {
+    const isEditing = workoutsUIState.editingWorkoutId === workout.id;
+    const dateStr = formatDateForDisplay(workout.date);
+    const exerciseCount = workout.exercises.length;
+    const totalSets = workout.exercises.reduce((sum, e) => sum + e.sets.length, 0);
+
+    let html = '<div class="train-workout-card" data-id="' + workout.id + '">';
+
+    if (isEditing) {
+        // === РЕЖИМ РЕДАКТИРОВАНИЯ ===
+        html += '<div class="train-workout-edit-form">';
+        html += '<div class="train-edit-field">';
+        html += '<label>Дата</label>';
+        html += '<input type="date" id="train-edit-w-date" value="' + workout.date + '">';
+        html += '</div>';
+        html += '<div class="train-edit-field">';
+        html += '<label>Комментарий</label>';
+        html += '<textarea id="train-edit-w-comment" rows="2">' + escapeHtml(workout.comment) + '</textarea>';
+        html += '</div>';
+        html += '<div class="train-edit-actions">';
+        html += '<button class="btn primary" onclick="saveWorkoutEdit(\'' + workout.id + '\')">💾 Сохранить</button>';
+        html += '<button class="btn" onclick="cancelWorkoutEdit()">✕ Отмена</button>';
+        html += '</div>';
+        html += '</div>';
+    } else {
+        // === РЕЖИМ ПРОСМОТРА В СПИСКЕ ===
+        html += '<div class="train-workout-header" onclick="viewWorkoutDetail(\'' + workout.id + '\')">';
+        html += '<div class="train-workout-date">' + dateStr + '</div>';
+        html += '<div class="train-workout-meta">';
+        html += '<span>' + exerciseCount + ' упр.</span>';
+        html += '<span>' + totalSets + ' подходов</span>';
+        html += '</div>';
+        if (workout.comment) {
+            html += '<div class="train-workout-comment">' + escapeHtml(workout.comment) + '</div>';
+        }
+        html += '</div>'; // header
+
+        // Кнопки действий
+        html += '<div class="train-workout-actions">';
+        html += '<button class="train-action-btn" onclick="event.stopPropagation(); startEditWorkout(\'' + workout.id + '\')" title="Редактировать">✏️</button>';
+        html += '<button class="train-action-btn" onclick="event.stopPropagation(); deleteWorkoutConfirm(\'' + workout.id + '\')" title="Удалить">🗑️</button>';
+        html += '</div>';
+    }
+
+    // Список упражнений (свёрнутый превью)
+    if (!isEditing && workout.exercises.length > 0) {
+        html += '<div class="train-workout-preview">';
+        workout.exercises.forEach(e => {
+            const variant = TrainingWorkoutAPI.getVariantById(e.variantId);
+            const name = variant ? variant.baseExerciseName + ' — ' + variant.name : '❓ Неизвестное (' + e.variantId + ')';
+            const setsSummary = e.sets.length > 0
+                ? e.sets.length + ' п. | ' + renderSetSummary(e.sets, variant)
+                : 'нет подходов';
+            html += '<div class="train-workout-preview-item">';
+            html += '<span class="train-workout-preview-name">' + escapeHtml(name) + '</span>';
+            html += '<span class="train-workout-preview-sets">' + setsSummary + '</span>';
+            html += '</div>';
+        });
+        html += '</div>';
+    }
+
+    html += '</div>'; // card
+    return html;
+}
+
+function renderSetSummary(sets, variant) {
+    if (!variant || !sets.length) return '';
+    const mt = variant.measurementType || 'reps_weight';
+    switch (mt) {
+        case 'reps_weight':
+            return sets.map(s => s.warmup
+                ? (s.weight ? s.weight + 'кг' : '') + '×' + (s.reps || '—') + ' (разм)'
+                : (s.weight ? s.weight + 'кг' : '') + '×' + (s.reps || '—')).join(', ');
+        case 'reps':
+            return sets.map(s => (s.reps || '—') + ' повт').join(', ');
+        case 'time':
+            return sets.map(s => (s.time || '—') + ' с').join(', ');
+        case 'distance':
+            return sets.map(s => (s.distance || '—') + ' м').join(', ');
+        case 'weight_only':
+            return sets.map(s => (s.weight ? s.weight + 'кг' : '—')).join(', ');
+        default:
+            return sets.length + ' подходов';
+    }
+}
+
+// === ПРОСМОТР ТРЕНИРОВКИ (ДЕТАЛЬНО) ===
+
+function viewWorkoutDetail(workoutId) {
+    workoutsUIState.viewingWorkoutId = workoutId;
+    renderTrainingWorkouts();
+}
+
+function closeWorkoutDetail() {
+    workoutsUIState.viewingWorkoutId = null;
+    renderTrainingWorkouts();
+}
+
+function renderWorkoutDetail(workoutId) {
+    const workout = TrainingWorkoutAPI.getWorkoutById(workoutId);
+    if (!workout) {
+        return '<div class="empty-state"><div class="empty-state-icon">❌</div><div class="empty-state-title">Тренировка не найдена</div></div>';
+    }
+
+    const dateStr = formatDateForDisplay(workout.date);
+    const isEditing = workoutsUIState.editingWorkoutId === workoutId;
+    const addExerciseActive = workoutsUIState.addExerciseWorkoutId === workoutId;
+
+    let html = '';
+
+    // === ШАПКА ===
+    html += '<div class="train-detail-header">';
+    html += '<button class="train-back-btn" onclick="closeWorkoutDetail()">← Назад к списку</button>';
+    html += '</div>';
+
+    html += '<div class="train-detail-card">';
+
+    // Дата и комментарий
+    if (isEditing) {
+        html += '<div class="train-edit-field">';
+        html += '<label>Дата</label>';
+        html += '<input type="date" id="train-edit-w-date" value="' + workout.date + '">';
+        html += '</div>';
+        html += '<div class="train-edit-field">';
+        html += '<label>Комментарий</label>';
+        html += '<textarea id="train-edit-w-comment" rows="2">' + escapeHtml(workout.comment) + '</textarea>';
+        html += '</div>';
+        html += '<div class="train-edit-actions">';
+        html += '<button class="btn primary" onclick="saveWorkoutDetailEdit(\'' + workout.id + '\')">💾 Сохранить</button>';
+        html += '<button class="btn" onclick="cancelWorkoutEdit()">✕ Отмена</button>';
+        html += '</div>';
+    } else {
+        html += '<div class="train-detail-date">' + dateStr + '</div>';
+        if (workout.comment) {
+            html += '<div class="train-detail-comment">' + escapeHtml(workout.comment) + '</div>';
+        }
+        html += '<div class="train-detail-actions">';
+        html += '<button class="btn" onclick="startEditWorkoutDetail(\'' + workout.id + '\')">✏️ Редактировать</button>';
+        html += '<button class="btn danger" onclick="deleteWorkoutConfirm(\'' + workout.id + '\')">🗑️ Удалить</button>';
+        html += '</div>';
+    }
+
+    // === СПИСОК УПРАЖНЕНИЙ ===
+    html += '<div class="train-detail-exercises">';
+    html += '<h3 class="train-detail-section-title">Упражнения</h3>';
+
+    if (workout.exercises.length === 0) {
+        html += '<div class="empty-state" style="padding:16px;">';
+        html += '<div class="empty-state-text">Нет упражнений. Добавьте первое.</div>';
+        html += '</div>';
+    } else {
+        workout.exercises.forEach(e => {
+            html += renderWorkoutExerciseBlock(workout.id, e);
+        });
+    }
+
+    // Кнопка добавления упражнения
+    html += '<div style="margin-top:12px;">';
+    if (addExerciseActive) {
+        html += renderAddExerciseForm(workout.id);
+    } else {
+        html += '<button class="btn primary" onclick="openAddExerciseToWorkout(\'' + workout.id + '\')">➕ Добавить упражнение</button>';
+    }
+    html += '</div>';
+
+    html += '</div>'; // detail-exercises
+    html += '</div>'; // detail-card
+
+    return html;
+}
+
+// === БЛОК УПРАЖНЕНИЯ В ДЕТАЛЬНОМ ПРОСМОТРЕ ===
+
+function renderWorkoutExerciseBlock(workoutId, exercise) {
+    const variant = TrainingWorkoutAPI.getVariantById(exercise.variantId);
+    const name = variant
+        ? escapeHtml(variant.baseExerciseName) + ' — ' + escapeHtml(variant.name)
+        : '❓ Неизвестное (' + exercise.variantId + ')';
+    const mt = variant ? (variant.measurementType || 'reps_weight') : 'reps_weight';
+
+    let html = '<div class="train-detail-exercise-block" data-variant="' + exercise.variantId + '">';
+
+    // Заголовок упражнения
+    html += '<div class="train-detail-exercise-header">';
+    html += '<span class="train-detail-exercise-name">' + name + '</span>';
+    if (variant) {
+        html += '<span class="train-variant-tags" style="margin-left:8px;">';
+        const measureLabel = MEASUREMENT_TYPES.find(mt2 => mt2.id === variant.measurementType);
+        if (measureLabel) html += '<span class="train-tag">' + measureLabel.label + '</span>';
+        html += '</span>';
+    }
+    html += '<button class="train-action-btn" onclick="removeExerciseFromWorkout(\'' + workoutId + '\', \'' + exercise.variantId + '\')" title="Удалить упражнение" style="margin-left:auto;">🗑️</button>';
+    html += '</div>';
+
+    // Таблица подходов
+    if (exercise.sets.length === 0) {
+        html += '<div class="train-detail-no-sets">Нет подходов. Добавьте первый.</div>';
+    } else {
+        html += '<div class="train-sets-table">';
+        html += '<div class="train-sets-table-header">';
+        html += renderSetHeaderRow(mt);
+        html += '</div>';
+        exercise.sets.forEach((set, idx) => {
+            html += renderSetRow(workoutId, exercise.variantId, set, idx + 1, mt);
+        });
+        html += '</div>';
+    }
+
+    // Форма добавления подхода
+    html += '<div class="train-add-set-form" data-variant="' + exercise.variantId + '">';
+    html += renderAddSetForm(workoutId, exercise.variantId, mt);
+    html += '</div>';
+
+    html += '</div>'; // exercise-block
+    return html;
+}
+
+function renderSetHeaderRow(mt) {
+    let html = '<span class="train-set-col num">#</span>';
+    html += '<span class="train-set-col warmup">Разм</span>';
+    switch (mt) {
+        case 'reps_weight':
+            html += '<span class="train-set-col weight">Вес, кг</span>';
+            html += '<span class="train-set-col reps">Повт.</span>';
+            break;
+        case 'reps':
+            html += '<span class="train-set-col reps">Повторения</span>';
+            break;
+        case 'time':
+            html += '<span class="train-set-col time">Время, с</span>';
+            break;
+        case 'distance':
+            html += '<span class="train-set-col dist">Дист., м</span>';
+            break;
+        case 'weight_only':
+            html += '<span class="train-set-col weight">Вес, кг</span>';
+            break;
+    }
+    html += '<span class="train-set-col comment">Комментарий</span>';
+    html += '<span class="train-set-col actions"></span>';
+    return html;
+}
+
+function renderSetRow(workoutId, variantId, set, num, mt) {
+    const isEditing = workoutsUIState.editSetId === set.id
+        && workoutsUIState.editSetWorkoutId === workoutId
+        && workoutsUIState.editSetVariantId === variantId;
+
+    let html = '<div class="train-set-row' + (set.warmup ? ' warmup' : '') + '" data-id="' + set.id + '">';
+
+    if (isEditing) {
+        // Режим редактирования подхода
+        html += '<div class="train-set-edit-form">';
+        html += renderSetEditFields(set, mt);
+        html += '<div class="train-set-edit-actions">';
+        html += '<button class="train-action-btn" onclick="saveSetEdit(\'' + workoutId + '\', \'' + variantId + '\', \'' + set.id + '\')" title="Сохранить">💾</button>';
+        html += '<button class="train-action-btn" onclick="cancelSetEdit()" title="Отмена">✕</button>';
+        html += '</div>';
+        html += '</div>';
+    } else {
+        // Режим просмотра
+        html += '<span class="train-set-col num">' + num + '</span>';
+        html += '<span class="train-set-col warmup">' + (set.warmup ? '🔥' : '') + '</span>';
+        switch (mt) {
+            case 'reps_weight':
+                html += '<span class="train-set-col weight">' + (set.weight || '—') + '</span>';
+                html += '<span class="train-set-col reps">' + (set.reps || '—') + '</span>';
+                break;
+            case 'reps':
+                html += '<span class="train-set-col reps">' + (set.reps || '—') + '</span>';
+                break;
+            case 'time':
+                html += '<span class="train-set-col time">' + (set.time || '—') + '</span>';
+                break;
+            case 'distance':
+                html += '<span class="train-set-col dist">' + (set.distance || '—') + '</span>';
+                break;
+            case 'weight_only':
+                html += '<span class="train-set-col weight">' + (set.weight || '—') + '</span>';
+                break;
+        }
+        html += '<span class="train-set-col comment">' + escapeHtml(set.comment || '') + '</span>';
+        html += '<span class="train-set-col actions">';
+        html += '<button class="train-action-btn" onclick="startEditSet(\'' + workoutId + '\', \'' + variantId + '\', \'' + set.id + '\')" title="Редактировать">✏️</button>';
+        html += '<button class="train-action-btn" onclick="toggleSetWarmup(\'' + workoutId + '\', \'' + variantId + '\', \'' + set.id + '\')" title="Разминка">' + (set.warmup ? '➖' : '🔥') + '</button>';
+        html += '<button class="train-action-btn" onclick="deleteSetConfirm(\'' + workoutId + '\', \'' + variantId + '\', \'' + set.id + '\')" title="Удалить">🗑️</button>';
+        html += '</span>';
+    }
+
+    html += '</div>'; // set-row
+    return html;
+}
+
+function renderSetEditFields(set, mt) {
+    let html = '';
+    html += '<div class="train-edit-field">';
+    html += '<label><input type="checkbox" ' + (set.warmup ? 'checked' : '') + ' id="train-edit-set-warmup"> Разминка</label>';
+    html += '</div>';
+    
+    function _val(v) { return (v !== undefined && v !== null) ? v : ''; }
+    
+    switch (mt) {
+        case 'reps_weight':
+            html += '<div class="train-edit-field">';
+            html += '<label>Вес, кг</label>';
+            html += '<input type="number" step="0.5" id="train-edit-set-weight" value="' + _val(set.weight) + '">';
+            html += '</div>';
+            html += '<div class="train-edit-field">';
+            html += '<label>Повторения</label>';
+            html += '<input type="number" id="train-edit-set-reps" value="' + _val(set.reps) + '">';
+            html += '</div>';
+            break;
+        case 'reps':
+            html += '<div class="train-edit-field">';
+            html += '<label>Повторения</label>';
+            html += '<input type="number" id="train-edit-set-reps" value="' + _val(set.reps) + '">';
+            html += '</div>';
+            break;
+        case 'time':
+            html += '<div class="train-edit-field">';
+            html += '<label>Время, с</label>';
+            html += '<input type="number" step="0.1" id="train-edit-set-time" value="' + _val(set.time) + '">';
+            html += '</div>';
+            break;
+        case 'distance':
+            html += '<div class="train-edit-field">';
+            html += '<label>Дистанция, м</label>';
+            html += '<input type="number" step="1" id="train-edit-set-dist" value="' + _val(set.distance) + '">';
+            html += '</div>';
+            break;
+        case 'weight_only':
+            html += '<div class="train-edit-field">';
+            html += '<label>Вес, кг</label>';
+            html += '<input type="number" step="0.5" id="train-edit-set-weight" value="' + _val(set.weight) + '">';
+            html += '</div>';
+            break;
+    }
+    html += '<div class="train-edit-field">';
+    html += '<label>Комментарий</label>';
+    html += '<input type="text" id="train-edit-set-comment" value="' + escapeHtml(set.comment || '') + '">';
+    html += '</div>';
+    return html;
+}
+
+function renderAddSetForm(workoutId, variantId, mt) {
+    let html = '<div class="train-add-set-inline">';
+    html += '<div class="train-add-set-fields">';
+    html += '<label class="train-add-set-warmup"><input type="checkbox" id="train-new-set-warmup-' + variantId + '"> Разм.</label>';
+    switch (mt) {
+        case 'reps_weight':
+            html += '<input type="number" step="0.5" class="train-set-input" id="train-new-set-weight-' + variantId + '" placeholder="Вес, кг">';
+            html += '<input type="number" class="train-set-input" id="train-new-set-reps-' + variantId + '" placeholder="Повт.">';
+            break;
+        case 'reps':
+            html += '<input type="number" class="train-set-input" id="train-new-set-reps-' + variantId + '" placeholder="Повторения">';
+            break;
+        case 'time':
+            html += '<input type="number" step="0.1" class="train-set-input" id="train-new-set-time-' + variantId + '" placeholder="Время, с">';
+            break;
+        case 'distance':
+            html += '<input type="number" step="1" class="train-set-input" id="train-new-set-dist-' + variantId + '" placeholder="Дист., м">';
+            break;
+        case 'weight_only':
+            html += '<input type="number" step="0.5" class="train-set-input" id="train-new-set-weight-' + variantId + '" placeholder="Вес, кг">';
+            break;
+    }
+    html += '<input type="text" class="train-set-input" id="train-new-set-comment-' + variantId + '" placeholder="Коммент.">';
+    html += '<button class="btn primary small" onclick="addSetToExercise(\'' + workoutId + '\', \'' + variantId + '\')">➕</button>';
+    html += '</div>';
+    html += '</div>';
+    return html;
+}
+
+// === ФОРМА ДОБАВЛЕНИЯ УПРАЖНЕНИЯ ===
+
+function renderAddExerciseForm(workoutId) {
+    const allExercises = TrainingExerciseAPI.getExercises();
+    const usedVariantIds = TrainingWorkoutAPI.getUsedVariantIds(workoutId);
+
+    let html = '<div class="train-add-exercise-form">';
+    html += '<h4>Выберите упражнение для добавления:</h4>';
+
+    // Группируем по базовым упражнениям
+    let hasAvailable = false;
+    allExercises.sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+    allExercises.forEach(ex => {
+        const availableVariants = ex.variants.filter(v => !usedVariantIds.includes(v.id));
+        if (availableVariants.length === 0) return;
+        hasAvailable = true;
+
+        html += '<div class="train-add-exercise-group">';
+        html += '<div class="train-add-exercise-group-name">' + escapeHtml(ex.name) + '</div>';
+        availableVariants.sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+        availableVariants.forEach(v => {
+            html += '<div class="train-add-exercise-item" onclick="addExerciseToWorkout(\'' + workoutId + '\', \'' + v.id + '\')">';
+            html += '<span class="train-add-exercise-item-name">' + escapeHtml(v.name) + '</span>';
+            const measureLabel = MEASUREMENT_TYPES.find(mt => mt.id === v.measurementType);
+            if (measureLabel) html += '<span class="train-tag">' + measureLabel.label + '</span>';
+            html += '</div>';
+        });
+        html += '</div>';
+    });
+
+    if (!hasAvailable) {
+        html += '<div class="empty-state" style="padding:12px;">';
+        html += '<div class="empty-state-text">Нет доступных вариантов. Все уже добавлены или база упражнений пуста.</div>';
+        html += '</div>';
+    }
+
+    html += '<button class="btn" onclick="cancelAddExerciseToWorkout()" style="margin-top:8px;">✕ Отмена</button>';
+    html += '</div>';
+    return html;
+}
+
+// === ОБРАБОТЧИКИ ===
+
+// --- Создание тренировки ---
+
+function openCreateWorkoutModal() {
+    const date = prompt('Введите дату тренировки (ГГГГ-ММ-ДД):', new Date().toISOString().slice(0, 10));
+    if (!date || !date.trim()) return;
+
+    // Проверка формата даты
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date.trim())) {
+        alert('❌ Неверный формат даты. Используйте ГГГГ-ММ-ДД.');
+        return;
+    }
+
+    const result = TrainingWorkoutAPI.createWorkout({
+        date: date.trim(),
+        comment: ''
+    });
+    if (!result) {
+        alert('❌ Не удалось создать тренировку');
+        return;
+    }
+
+    // Открываем детальный просмотр новой тренировки
+    workoutsUIState.viewingWorkoutId = result.id;
+    renderTrainingWorkouts();
+}
+
+// --- Редактирование тренировки (в списке) ---
+
+function startEditWorkout(id) {
+    workoutsUIState.editingWorkoutId = id;
+    renderTrainingWorkouts();
+}
+
+function startEditWorkoutDetail(id) {
+    workoutsUIState.editingWorkoutId = id;
+    renderTrainingWorkouts();
+}
+
+function saveWorkoutEdit(id) {
+    const dateInput = document.getElementById('train-edit-w-date');
+    const commentInput = document.getElementById('train-edit-w-comment');
+    if (!dateInput || !dateInput.value) {
+        alert('❌ Дата обязательна');
+        return;
+    }
+    const result = TrainingWorkoutAPI.updateWorkout(id, {
+        date: dateInput.value,
+        comment: commentInput ? commentInput.value : ''
+    });
+    if (!result) {
+        alert('❌ Не удалось сохранить');
+        return;
+    }
+    workoutsUIState.editingWorkoutId = null;
+    renderTrainingWorkouts();
+}
+
+function saveWorkoutDetailEdit(id) {
+    saveWorkoutEdit(id);
+}
+
+function cancelWorkoutEdit() {
+    workoutsUIState.editingWorkoutId = null;
+    renderTrainingWorkouts();
+}
+
+// --- Удаление тренировки ---
+
+function deleteWorkoutConfirm(id) {
+    if (!confirm('Вы уверены, что хотите удалить эту тренировку?')) return;
+    const result = TrainingWorkoutAPI.deleteWorkout(id);
+    if (!result) {
+        alert('❌ Не удалось удалить тренировку');
+        return;
+    }
+    // Если мы были в детальном просмотре удалённой тренировки, выходим
+    if (workoutsUIState.viewingWorkoutId === id) {
+        workoutsUIState.viewingWorkoutId = null;
+    }
+    renderTrainingWorkouts();
+}
+
+// --- Добавление упражнения ---
+
+function openAddExerciseToWorkout(workoutId) {
+    workoutsUIState.addExerciseWorkoutId = workoutId;
+    renderTrainingWorkouts();
+}
+
+function cancelAddExerciseToWorkout() {
+    workoutsUIState.addExerciseWorkoutId = null;
+    renderTrainingWorkouts();
+}
+
+function addExerciseToWorkout(workoutId, variantId) {
+    const result = TrainingWorkoutAPI.addExerciseToWorkout(workoutId, variantId);
+    if (!result) {
+        alert('❌ Не удалось добавить упражнение. Возможно, оно уже добавлено.');
+        return;
+    }
+    workoutsUIState.addExerciseWorkoutId = null;
+    // После добавления показываем детальный просмотр
+    workoutsUIState.viewingWorkoutId = workoutId;
+    renderTrainingWorkouts();
+}
+
+// --- Удаление упражнения ---
+
+function removeExerciseFromWorkout(workoutId, variantId) {
+    if (!confirm('Удалить это упражнение из тренировки?')) return;
+    const result = TrainingWorkoutAPI.removeExerciseFromWorkout(workoutId, variantId);
+    if (!result) {
+        alert('❌ Не удалось удалить упражнение');
+        return;
+    }
+    renderTrainingWorkouts();
+}
+
+// --- Добавление подхода ---
+
+function addSetToExercise(workoutId, variantId) {
+    const variant = TrainingWorkoutAPI.getVariantById(variantId);
+    const mt = variant ? (variant.measurementType || 'reps_weight') : 'reps_weight';
+
+    const warmupCheckbox = document.getElementById('train-new-set-warmup-' + variantId);
+    const weightInput = document.getElementById('train-new-set-weight-' + variantId);
+    const repsInput = document.getElementById('train-new-set-reps-' + variantId);
+    const timeInput = document.getElementById('train-new-set-time-' + variantId);
+    const distInput = document.getElementById('train-new-set-dist-' + variantId);
+    const commentInput = document.getElementById('train-new-set-comment-' + variantId);
+
+    const setData = {
+        warmup: warmupCheckbox ? warmupCheckbox.checked : false,
+        weight: weightInput ? parseFloat(weightInput.value) || 0 : 0,
+        reps: repsInput ? parseInt(repsInput.value) || 0 : 0,
+        time: timeInput ? parseFloat(timeInput.value) || 0 : 0,
+        distance: distInput ? parseFloat(distInput.value) || 0 : 0,
+        comment: commentInput ? commentInput.value : ''
+    };
+
+    const result = TrainingWorkoutAPI.addSet(workoutId, variantId, setData);
+    if (!result) {
+        alert('❌ Не удалось добавить подход');
+        return;
+    }
+
+    // Очищаем поля
+    if (weightInput) weightInput.value = '';
+    if (repsInput) repsInput.value = '';
+    if (timeInput) timeInput.value = '';
+    if (distInput) distInput.value = '';
+    if (commentInput) commentInput.value = '';
+    if (warmupCheckbox) warmupCheckbox.checked = false;
+
+    renderTrainingWorkouts();
+}
+
+// --- Редактирование подхода ---
+
+function startEditSet(workoutId, variantId, setId) {
+    workoutsUIState.editSetWorkoutId = workoutId;
+    workoutsUIState.editSetVariantId = variantId;
+    workoutsUIState.editSetId = setId;
+    renderTrainingWorkouts();
+}
+
+function saveSetEdit(workoutId, variantId, setId) {
+    const warmupCheckbox = document.getElementById('train-edit-set-warmup');
+    const weightInput = document.getElementById('train-edit-set-weight');
+    const repsInput = document.getElementById('train-edit-set-reps');
+    const timeInput = document.getElementById('train-edit-set-time');
+    const distInput = document.getElementById('train-edit-set-dist');
+    const commentInput = document.getElementById('train-edit-set-comment');
+
+    const setData = {
+        warmup: warmupCheckbox ? warmupCheckbox.checked : false,
+        weight: weightInput ? parseFloat(weightInput.value) || 0 : 0,
+        reps: repsInput ? parseInt(repsInput.value) || 0 : 0,
+        time: timeInput ? parseFloat(timeInput.value) || 0 : 0,
+        distance: distInput ? parseFloat(distInput.value) || 0 : 0,
+        comment: commentInput ? commentInput.value : ''
+    };
+
+    const result = TrainingWorkoutAPI.updateSet(workoutId, variantId, setId, setData);
+    if (!result) {
+        alert('❌ Не удалось сохранить подход');
+        return;
+    }
+
+    cancelSetEdit();
+}
+
+function cancelSetEdit() {
+    workoutsUIState.editSetId = null;
+    workoutsUIState.editSetWorkoutId = null;
+    workoutsUIState.editSetVariantId = null;
+    renderTrainingWorkouts();
+}
+
+// --- Удаление / разминка подхода ---
+
+function deleteSetConfirm(workoutId, variantId, setId) {
+    if (!confirm('Удалить этот подход?')) return;
+    const result = TrainingWorkoutAPI.deleteSet(workoutId, variantId, setId);
+    if (!result) {
+        alert('❌ Не удалось удалить подход');
+        return;
+    }
+    renderTrainingWorkouts();
+}
+
+function toggleSetWarmup(workoutId, variantId, setId) {
+    TrainingWorkoutAPI.toggleSetWarmup(workoutId, variantId, setId);
+    renderTrainingWorkouts();
+}
+
 // === ВСПОМОГАТЕЛЬНЫЕ ===
+
+function formatDateForDisplay(dateStr) {
+    if (!dateStr) return '';
+    // ГГГГ-ММ-ДД → ДД.ММ.ГГГГ
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+        return parts[2] + '.' + parts[1] + '.' + parts[0];
+    }
+    return dateStr;
+}
 
 function escapeHtml(str) {
     if (!str) return '';
