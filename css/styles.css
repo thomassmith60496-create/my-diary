@@ -868,6 +868,58 @@ header .macro-badge {
     padding: 5px 12px; font-size: 13px;
 }
 
+/* Статистика тренировки */
+.train-stats-bar {
+    display: flex; gap: 16px; flex-wrap: wrap;
+    padding: 12px 16px; background: #fff7ed;
+    border-radius: 10px; margin-bottom: 16px;
+    border: 2px solid #fed7aa;
+}
+.train-stat-item {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+}
+.train-stat-value {
+    font-size: 20px; font-weight: 800; color: #9a3412;
+}
+.train-stat-label {
+    font-size: 11px; color: #78716c; font-weight: 600;
+}
+
+/* Кнопки порядка упражнений */
+.train-exercise-order-btns {
+    display: flex; gap: 2px; margin-right: 4px;
+}
+.train-exercise-order-btns .train-action-btn {
+    font-size: 12px; padding: 2px 6px;
+}
+.train-exercise-order-btns .train-action-btn:disabled {
+    opacity: 0.3; cursor: not-allowed;
+}
+
+/* Кнопка копирования упражнения */
+.train-action-btn[title*="Копировать упражнение"] {
+    color: #2563eb;
+}
+.train-action-btn[title*="Копировать упражнение"]:hover {
+    background: #dbeafe;
+}
+
+/* Кнопка быстрого добавления подхода */
+.train-action-btn[title*="Добавить по предыдущему"] {
+    color: #059669;
+}
+.train-action-btn[title*="Добавить по предыдущему"]:hover {
+    background: #d1fae5;
+}
+
+/* Кнопка копирования подхода */
+.train-action-btn[title*="Копировать подход"] {
+    color: #7c3aed;
+}
+.train-action-btn[title*="Копировать подход"]:hover {
+    background: #ede9fe;
+}
+
 @media (max-width: 768px) {
     .home-grid { grid-template-columns: 1fr; }
     .quick-actions { grid-template-columns: 1fr; }

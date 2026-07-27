@@ -484,6 +484,113 @@ const TrainingWorkoutAPI = {
         const workout = _data.workouts.find(w => w.id === workoutId);
         if (!workout) return [];
         return workout.exercises.map(e => e.variantId);
+    },
+
+    // -------------------------------------------------------
+    // ПОРЯДОК УПРАЖНЕНИЙ
+    // -------------------------------------------------------
+
+    /** Переместить упражнение в тренировке. Возвращает boolean. */
+    moveExercise: function(workoutId, fromIndex, toIndex) {
+        const workout = _data.workouts.find(w => w.id === workoutId);
+        if (!workout) return false;
+        if (fromIndex < 0 || fromIndex >= workout.exercises.length) return false;
+        if (toIndex < 0 || toIndex >= workout.exercises.length) return false;
+        if (fromIndex === toIndex) return true;
+        const [exercise] = workout.exercises.splice(fromIndex, 1);
+        workout.exercises.splice(toIndex, 0, exercise);
+        TrainingExerciseAPI.save();
+        return true;
+    },
+
+    // -------------------------------------------------------
+    // ПОРЯДОК ПОДХОДОВ
+    // -------------------------------------------------------
+
+    /** Переместить подход. Возвращает boolean. */
+    moveSet: function(workoutId, variantId, fromIndex, toIndex) {
+        const workout = _data.workouts.find(w => w.id === workoutId);
+        if (!workout) return false;
+        const exercise = workout.exercises.find(e => e.variantId === variantId);
+        if (!exercise) return false;
+        if (fromIndex < 0 || fromIndex >= exercise.sets.length) return false;
+        if (toIndex < 0 || toIndex >= exercise.sets.length) return false;
+        if (fromIndex === toIndex) return true;
+        const [set] = exercise.sets.splice(fromIndex, 1);
+        exercise.sets.splice(toIndex, 0, set);
+        TrainingExerciseAPI.save();
+        return true;
+    },
+
+    // -------------------------------------------------------
+    // КОПИРОВАНИЕ
+    // -------------------------------------------------------
+
+    /** Копировать подход. Возвращает созданный подход или null. */
+    copySet: function(workoutId, variantId, setId) {
+        const workout = _data.workouts.find(w => w.id === workoutId);
+        if (!workout) return null;
+        const exercise = workout.exercises.find(e => e.variantId === variantId);
+        if (!exercise) return null;
+        const set = exercise.sets.find(s => s.id === setId);
+        if (!set) return null;
+        const newSet = {
+            id: _generateId(),
+            weight: set.weight,
+            reps: set.reps,
+            time: set.time,
+            distance: set.distance,
+            warmup: false,
+            comment: set.comment
+        };
+        // Вставляем после текущего
+        const idx = exercise.sets.findIndex(s => s.id === setId);
+        exercise.sets.splice(idx + 1, 0, newSet);
+        TrainingExerciseAPI.save();
+        return { ...newSet };
+    },
+
+    /** Копировать упражнение со всеми подходами. Возвращает boolean. */
+    copyExercise: function(workoutId, variantId) {
+        const workout = _data.workouts.find(w => w.id === workoutId);
+        if (!workout) return false;
+        const exercise = workout.exercises.find(e => e.variantId === variantId);
+        if (!exercise) return false;
+        const newExercise = {
+            variantId: variantId,
+            sets: exercise.sets.map(s => ({ ...s, id: _generateId() }))
+        };
+        // Вставляем после текущего
+        const idx = workout.exercises.findIndex(e => e.variantId === variantId);
+        workout.exercises.splice(idx + 1, 0, newExercise);
+        TrainingExerciseAPI.save();
+        return true;
+    },
+
+    // -------------------------------------------------------
+    // СТАТИСТИКА
+    // -------------------------------------------------------
+
+    /** Получить статистику тренировки: { exerciseCount, setCount, totalVolume } */
+    getWorkoutStats: function(workoutId) {
+        const workout = _data.workouts.find(w => w.id === workoutId);
+        if (!workout) return null;
+        let exerciseCount = workout.exercises.length;
+        let setCount = 0;
+        let totalVolume = 0;
+        workout.exercises.forEach(e => {
+            setCount += e.sets.length;
+            e.sets.forEach(s => {
+                if (s.weight && s.reps) {
+                    totalVolume += s.weight * s.reps;
+                }
+            });
+        });
+        return {
+            exerciseCount: exerciseCount,
+            setCount: setCount,
+            totalVolume: totalVolume
+        };
     }
 };
 

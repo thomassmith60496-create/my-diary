@@ -485,7 +485,8 @@ let workoutsUIState = {
     addExerciseWorkoutId: null,  // ID тренировки, куда добавляем упражнение
     editSetWorkoutId: null,      // ID тренировки, где редактируем подход
     editSetVariantId: null,      // variantId упражнения, где редактируем подход
-    editSetId: null              // ID редактируемого подхода
+    editSetId: null,             // ID редактируемого подхода
+    collapsedExercises: new Set() // свёрнутые упражнения в детальном просмотре
 };
 
 // === ГЛАВНАЯ ФУНКЦИЯ ===
@@ -638,6 +639,7 @@ function renderWorkoutDetail(workoutId) {
     const dateStr = formatDateForDisplay(workout.date);
     const isEditing = workoutsUIState.editingWorkoutId === workoutId;
     const addExerciseActive = workoutsUIState.addExerciseWorkoutId === workoutId;
+    const stats = TrainingWorkoutAPI.getWorkoutStats(workoutId);
 
     let html = '';
 
@@ -673,6 +675,26 @@ function renderWorkoutDetail(workoutId) {
         html += '</div>';
     }
 
+    // === СТАТИСТИКА ===
+    if (stats && !isEditing) {
+        html += '<div class="train-stats-bar">';
+        html += '<div class="train-stat-item">';
+        html += '<span class="train-stat-value">' + stats.exerciseCount + '</span>';
+        html += '<span class="train-stat-label">упражнений</span>';
+        html += '</div>';
+        html += '<div class="train-stat-item">';
+        html += '<span class="train-stat-value">' + stats.setCount + '</span>';
+        html += '<span class="train-stat-label">подходов</span>';
+        html += '</div>';
+        if (stats.totalVolume > 0) {
+            html += '<div class="train-stat-item">';
+            html += '<span class="train-stat-value">' + Math.round(stats.totalVolume).toLocaleString() + '</span>';
+            html += '<span class="train-stat-label">кг (объём)</span>';
+            html += '</div>';
+        }
+        html += '</div>';
+    }
+
     // === СПИСОК УПРАЖНЕНИЙ ===
     html += '<div class="train-detail-exercises">';
     html += '<h3 class="train-detail-section-title">Упражнения</h3>';
@@ -682,8 +704,8 @@ function renderWorkoutDetail(workoutId) {
         html += '<div class="empty-state-text">Нет упражнений. Добавьте первое.</div>';
         html += '</div>';
     } else {
-        workout.exercises.forEach(e => {
-            html += renderWorkoutExerciseBlock(workout.id, e);
+        workout.exercises.forEach((e, idx) => {
+            html += renderWorkoutExerciseBlock(workout.id, e, idx, workout.exercises.length);
         });
     }
 
@@ -704,17 +726,19 @@ function renderWorkoutDetail(workoutId) {
 
 // === БЛОК УПРАЖНЕНИЯ В ДЕТАЛЬНОМ ПРОСМОТРЕ ===
 
-function renderWorkoutExerciseBlock(workoutId, exercise) {
+function renderWorkoutExerciseBlock(workoutId, exercise, idx, total) {
     const variant = TrainingWorkoutAPI.getVariantById(exercise.variantId);
     const name = variant
         ? escapeHtml(variant.baseExerciseName) + ' — ' + escapeHtml(variant.name)
         : '❓ Неизвестное (' + exercise.variantId + ')';
     const mt = variant ? (variant.measurementType || 'reps_weight') : 'reps_weight';
+    const isCollapsed = workoutsUIState.collapsedExercises.has(exercise.variantId);
 
     let html = '<div class="train-detail-exercise-block" data-variant="' + exercise.variantId + '">';
 
     // Заголовок упражнения
     html += '<div class="train-detail-exercise-header">';
+    html += '<button class="train-action-btn" onclick="toggleExerciseCollapse(\'' + exercise.variantId + '\')" title="' + (isCollapsed ? 'Развернуть' : 'Свернуть') + '">' + (isCollapsed ? '▶' : '▼') + '</button>';
     html += '<span class="train-detail-exercise-name">' + name + '</span>';
     if (variant) {
         html += '<span class="train-variant-tags" style="margin-left:8px;">';
@@ -722,9 +746,20 @@ function renderWorkoutExerciseBlock(workoutId, exercise) {
         if (measureLabel) html += '<span class="train-tag">' + measureLabel.label + '</span>';
         html += '</span>';
     }
-    html += '<button class="train-action-btn" onclick="removeExerciseFromWorkout(\'' + workoutId + '\', \'' + exercise.variantId + '\')" title="Удалить упражнение" style="margin-left:auto;">🗑️</button>';
+    
+    // Кнопки порядка
+    html += '<span class="train-exercise-order-btns">';
+    html += '<button class="train-action-btn" onclick="moveExercise(\'' + workoutId + '\', ' + idx + ', ' + (idx - 1) + ')" title="Вверх" ' + (idx === 0 ? 'disabled' : '') + '>⬆️</button>';
+    html += '<button class="train-action-btn" onclick="moveExercise(\'' + workoutId + '\', ' + idx + ', ' + (idx + 1) + ')" title="Вниз" ' + (idx === total - 1 ? 'disabled' : '') + '>⬇️</button>';
+    html += '</span>';
+    
+    html += '<button class="train-action-btn" onclick="copyExercise(\'' + workoutId + '\', \'' + exercise.variantId + '\')" title="Копировать упражнение">📋</button>';
+    html += '<button class="train-action-btn" onclick="removeExerciseFromWorkout(\'' + workoutId + '\', \'' + exercise.variantId + '\')" title="Удалить упражнение">🗑️</button>';
     html += '</div>';
 
+    // Сворачиваемое содержимое
+    html += '<div class="train-exercise-collapsible" style="display:' + (isCollapsed ? 'none' : 'block') + ';">';
+    
     // Таблица подходов
     if (exercise.sets.length === 0) {
         html += '<div class="train-detail-no-sets">Нет подходов. Добавьте первый.</div>';
@@ -734,7 +769,7 @@ function renderWorkoutExerciseBlock(workoutId, exercise) {
         html += renderSetHeaderRow(mt);
         html += '</div>';
         exercise.sets.forEach((set, idx) => {
-            html += renderSetRow(workoutId, exercise.variantId, set, idx + 1, mt);
+            html += renderSetRow(workoutId, exercise.variantId, set, idx + 1, mt, exercise.sets.length);
         });
         html += '</div>';
     }
@@ -743,6 +778,8 @@ function renderWorkoutExerciseBlock(workoutId, exercise) {
     html += '<div class="train-add-set-form" data-variant="' + exercise.variantId + '">';
     html += renderAddSetForm(workoutId, exercise.variantId, mt);
     html += '</div>';
+
+    html += '</div>'; // collapsible
 
     html += '</div>'; // exercise-block
     return html;
@@ -774,7 +811,8 @@ function renderSetHeaderRow(mt) {
     return html;
 }
 
-function renderSetRow(workoutId, variantId, set, num, mt) {
+function renderSetRow(workoutId, variantId, set, num, mt, totalSets) {
+    const setIndex = num - 1; // 0-based index
     const isEditing = workoutsUIState.editSetId === set.id
         && workoutsUIState.editSetWorkoutId === workoutId
         && workoutsUIState.editSetVariantId === variantId;
@@ -814,7 +852,12 @@ function renderSetRow(workoutId, variantId, set, num, mt) {
         }
         html += '<span class="train-set-col comment">' + escapeHtml(set.comment || '') + '</span>';
         html += '<span class="train-set-col actions">';
+        // Кнопки порядка
+        html += '<button class="train-action-btn" onclick="moveSet(\'' + workoutId + '\', \'' + variantId + '\', ' + setIndex + ', ' + (setIndex - 1) + ')" title="Вверх" ' + (setIndex === 0 ? 'disabled' : '') + '>⬆️</button>';
+        html += '<button class="train-action-btn" onclick="moveSet(\'' + workoutId + '\', \'' + variantId + '\', ' + setIndex + ', ' + (setIndex + 1) + ')" title="Вниз" ' + (setIndex === totalSets - 1 ? 'disabled' : '') + '>⬇️</button>';
         html += '<button class="train-action-btn" onclick="startEditSet(\'' + workoutId + '\', \'' + variantId + '\', \'' + set.id + '\')" title="Редактировать">✏️</button>';
+        html += '<button class="train-action-btn" onclick="copySet(\'' + workoutId + '\', \'' + variantId + '\', \'' + set.id + '\')" title="Копировать подход">📋</button>';
+        html += '<button class="train-action-btn" onclick="addSetFromPrevious(\'' + workoutId + '\', \'' + variantId + '\')" title="Добавить по предыдущему">➕</button>';
         html += '<button class="train-action-btn" onclick="toggleSetWarmup(\'' + workoutId + '\', \'' + variantId + '\', \'' + set.id + '\')" title="Разминка">' + (set.warmup ? '➖' : '🔥') + '</button>';
         html += '<button class="train-action-btn" onclick="deleteSetConfirm(\'' + workoutId + '\', \'' + variantId + '\', \'' + set.id + '\')" title="Удалить">🗑️</button>';
         html += '</span>';
@@ -1160,6 +1203,91 @@ function deleteSetConfirm(workoutId, variantId, setId) {
 
 function toggleSetWarmup(workoutId, variantId, setId) {
     TrainingWorkoutAPI.toggleSetWarmup(workoutId, variantId, setId);
+    renderTrainingWorkouts();
+}
+
+// --- Перемещение упражнения ---
+
+function moveExercise(workoutId, fromIndex, toIndex) {
+    if (toIndex < 0) return;
+    const result = TrainingWorkoutAPI.moveExercise(workoutId, fromIndex, toIndex);
+    if (!result) {
+        alert('❌ Не удалось переместить упражнение');
+        return;
+    }
+    renderTrainingWorkouts();
+}
+
+// --- Перемещение подхода ---
+
+function moveSet(workoutId, variantId, fromIndex, toIndex) {
+    if (toIndex < 0) return;
+    const result = TrainingWorkoutAPI.moveSet(workoutId, variantId, fromIndex, toIndex);
+    if (!result) {
+        alert('❌ Не удалось переместить подход');
+        return;
+    }
+    renderTrainingWorkouts();
+}
+
+// --- Копирование упражнения ---
+
+function copyExercise(workoutId, variantId) {
+    if (!confirm('Копировать это упражнение со всеми подходами?')) return;
+    const result = TrainingWorkoutAPI.copyExercise(workoutId, variantId);
+    if (!result) {
+        alert('❌ Не удалось скопировать упражнение');
+        return;
+    }
+    renderTrainingWorkouts();
+}
+
+// --- Сворачивание / разворачивание упражнения ---
+
+function toggleExerciseCollapse(variantId) {
+    if (workoutsUIState.collapsedExercises.has(variantId)) {
+        workoutsUIState.collapsedExercises.delete(variantId);
+    } else {
+        workoutsUIState.collapsedExercises.add(variantId);
+    }
+    renderTrainingWorkouts();
+}
+
+// --- Копирование подхода ---
+
+function copySet(workoutId, variantId, setId) {
+    const result = TrainingWorkoutAPI.copySet(workoutId, variantId, setId);
+    if (!result) {
+        alert('❌ Не удалось скопировать подход');
+        return;
+    }
+    renderTrainingWorkouts();
+}
+
+// --- Быстрое добавление подхода по предыдущему (автозаполнение) ---
+
+function addSetFromPrevious(workoutId, variantId) {
+    const workout = TrainingWorkoutAPI.getWorkoutById(workoutId);
+    if (!workout) return;
+    const exercise = workout.exercises.find(e => e.variantId === variantId);
+    if (!exercise || exercise.sets.length === 0) {
+        alert('Нет предыдущих подходов для копирования');
+        return;
+    }
+    const lastSet = exercise.sets[exercise.sets.length - 1];
+    const setData = {
+        weight: lastSet.weight || 0,
+        reps: lastSet.reps || 0,
+        time: lastSet.time || 0,
+        distance: lastSet.distance || 0,
+        warmup: false,
+        comment: lastSet.comment || ''
+    };
+    const result = TrainingWorkoutAPI.addSet(workoutId, variantId, setData);
+    if (!result) {
+        alert('❌ Не удалось добавить подход');
+        return;
+    }
     renderTrainingWorkouts();
 }
 
