@@ -172,7 +172,7 @@ window.createEmptyWeek = function() {
     renderNutritionAll();
 }
 
-function migrateNutritionDates() {
+window.migrateNutritionDates = function() {
     if (!nutritionData || !nutritionData.weeks) return;
     
     let needsUpdate = false;
@@ -225,12 +225,12 @@ window.deleteWeek = function() {
         });
 }
 
-function renderNutritionAll() {
+window.renderNutritionAll = function() {
     renderWeekSelector();
     renderDays();
-}
+};
 
-function renderWeekSelector() {
+window.renderWeekSelector = function() {
     const select = document.getElementById('week-select');
     if(nutritionData.weeks.length === 0) {
         select.innerHTML = '<option value="">— нет недель —</option>';
@@ -240,7 +240,7 @@ function renderWeekSelector() {
     if(nutritionData.currentWeekId) select.value = nutritionData.currentWeekId;
 }
 
-function renderDays() {
+window.renderDays = function() {
     const container = document.getElementById('days-container');
     if(nutritionData.weeks.length === 0) {
         container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📘</div><div class="empty-state-title">Нет недель</div><div class="empty-state-text">Импортируйте меню или создайте пустую неделю</div></div>`;
@@ -323,7 +323,7 @@ function renderDays() {
     week.menu.forEach((_, di) => updateTotals(week.id, di));
 }
 
-function renderMeal(m, di, mi, weekId) {
+window.renderMeal = function(m, di, mi, weekId) {
     const icon = mealIcons[m.type]||"•";
     const isPrep = ['prep','preworkout','postworkout'].includes(m.type);
     const prepClass = isPrep ? 'prep-block' : '';
@@ -405,7 +405,7 @@ function renderMeal(m, di, mi, weekId) {
         </div>`;
 }
 
-function getWeekData(weekId, key) {
+window.getWeekData = function(weekId, key) {
     const week = nutritionData.weeks.find(w => w.id === weekId);
     if(!week || !week.data) return '';
     return week.data[key] || '';
@@ -494,15 +494,15 @@ window.updateTotals = function(weekId, di) {
 // Debounce timer for saveNutrition
 let _saveNutritionTimer = null;
 
-function debouncedSaveNutrition() {
+window.debouncedSaveNutrition = function() {
     if (_saveNutritionTimer) clearTimeout(_saveNutritionTimer);
     _saveNutritionTimer = setTimeout(function() {
         saveNutrition();
         _saveNutritionTimer = null;
     }, 300);
-}
+};
 
-function saveNutrition() {
+window.saveNutrition = function() {
     const week = nutritionData.weeks.find(w => w.id === nutritionData.currentWeekId);
     if(!week) return;
     
@@ -592,4 +592,3 @@ window.printMenu = function() {
     printArea.style.display = 'block';
     setTimeout(() => { window.print(); printArea.style.display = 'none'; }, 100);
 }
-

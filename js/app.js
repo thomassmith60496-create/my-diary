@@ -270,11 +270,10 @@ function resetAllData() {
         migrateCategoryColors();
     }
     
+    // Render home page immediately (doesn't require auth)
     renderHomePage();
-    if (!currentUser) {
-        renderNutritionAll();
-        renderFinanceDashboard();
-        updateFinanceStats();
-        isInitialLoad = false;
-    }
+    
+    // Other tabs will be rendered when user switches to them
+    // or after authentication in loadDataForUser()
+    isInitialLoad = false;
 })();
