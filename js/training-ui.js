@@ -634,8 +634,8 @@ window.renderSetSummary = function(sets, variant) {
     switch (mt) {
         case 'reps_weight':
             return sets.map(s => s.warmup
-                ? (s.weight ? s.weight + 'кг' : '') + '×' + (s.reps || '—') + ' (разм)'
-                : (s.weight ? s.weight + 'кг' : '') + '×' + (s.reps || '—')).join(', ');
+                ? (s.weight ? Math.round(s.weight) + 'кг' : '') + '×' + (s.reps || '—') + ' (разм)'
+                : (s.weight ? Math.round(s.weight) + 'кг' : '') + '×' + (s.reps || '—')).join(', ');
         case 'reps':
             return sets.map(s => (s.reps || '—') + ' повт').join(', ');
         case 'time':
@@ -1470,7 +1470,7 @@ window.renderTrainingProgress = function() {
     html += '</div>';
 
     if (uniqueVariants.size > 0 && totalSets > 0) {
-        var svgSize = 200, cx = svgSize / 2, cy = svgSize / 2, r = 75, innerR = 44;
+        var svgSize = 160, cx = svgSize / 2, cy = svgSize / 2, r = 60, innerR = 34;
         var segments = [];
         var cumulativeAngle = -Math.PI / 2;
 
@@ -1494,21 +1494,40 @@ window.renderTrainingProgress = function() {
             donutSvg += '<path d="M' + cx + ',' + cy + ' L' + x1 + ',' + y1 + ' A' + r + ',' + r + ' 0 ' + largeArc + ' 1 ' + x2 + ',' + y2 + ' Z" fill="' + seg.color + '" style="cursor:pointer;" title="' + seg.name + ': ' + seg.value + '"/>';
         });
         donutSvg += '<circle cx="' + cx + '" cy="' + cy + '" r="' + innerR + '" fill="white"/>';
-        donutSvg += '<text x="' + cx + '" y="' + (cy - 6) + '" text-anchor="middle" font-size="26" font-weight="700" fill="#1e293b">' + totalSets + '</text>';
-        donutSvg += '<text x="' + cx + '" y="' + (cy + 16) + '" text-anchor="middle" font-size="12" fill="#64748b">подходов</text>';
+        donutSvg += '<text x="' + cx + '" y="' + (cy - 5) + '" text-anchor="middle" font-size="20" font-weight="700" fill="#1e293b">' + totalSets + '</text>';
+        donutSvg += '<text x="' + cx + '" y="' + (cy + 14) + '" text-anchor="middle" font-size="10" fill="#64748b">подходов</text>';
         donutSvg += '</svg>';
 
-        html += '<div class="train-progress-card" style="display:flex;align-items:center;gap:16px;text-align:left;padding:14px;">';
+        html += '<div class="train-progress-card" style="display:flex;align-items:center;gap:12px;text-align:left;padding:10px;">';
         html += donutSvg;
-        html += '<div style="font-size:14px;line-height:1.6;">';
-        html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:3px 16px;">';
-        segments.forEach(function(seg) {
+        html += '<div style="font-size:13px;line-height:1.5;">';
+        html += '<div style="display:flex;gap:16px;align-items:flex-start;">';
+        // Left column: first 4 items
+        var leftSegs = segments.slice(0, 4);
+        var rightSegs = segments.slice(4);
+        html += '<div style="display:flex;flex-direction:column;gap:4px;">';
+        leftSegs.forEach(function(seg) {
             var pct = totalSets > 0 ? ((seg.value / totalSets) * 100).toFixed(1) : 0;
-            html += '<div style="display:flex;align-items:center;gap:5px;font-size:13px;">' +
-                '<span style="width:10px;height:10px;background:' + seg.color + ';border-radius:50%;display:inline-block;flex-shrink:0;"></span>' +
-                '<span style="font-weight:600;color:#1e293b;">' + seg.name + '</span></div>';
-            html += '<div style="text-align:right;font-size:13px;font-weight:600;color:#1e293b;">' + seg.value + ' (' + pct + '%)</div>';
+            html += '<div style="display:flex;align-items:center;gap:5px;font-size:12px;white-space:nowrap;">' +
+                '<span style="width:8px;height:8px;background:' + seg.color + ';border-radius:50%;display:inline-block;flex-shrink:0;"></span>' +
+                '<span style="font-weight:600;color:#1e293b;">' + seg.name + '</span>' +
+                '<span style="font-size:12px;font-weight:600;color:#1e293b;margin-left:auto;">' + seg.value + ' (' + pct + '%)</span>' +
+                '</div>';
         });
+        html += '</div>';
+        // Right column: remaining items
+        if (rightSegs.length > 0) {
+            html += '<div style="display:flex;flex-direction:column;gap:4px;">';
+            rightSegs.forEach(function(seg) {
+                var pct = totalSets > 0 ? ((seg.value / totalSets) * 100).toFixed(1) : 0;
+                html += '<div style="display:flex;align-items:center;gap:5px;font-size:12px;white-space:nowrap;">' +
+                    '<span style="width:8px;height:8px;background:' + seg.color + ';border-radius:50%;display:inline-block;flex-shrink:0;"></span>' +
+                    '<span style="font-weight:600;color:#1e293b;">' + seg.name + '</span>' +
+                    '<span style="font-size:12px;font-weight:600;color:#1e293b;margin-left:auto;">' + seg.value + ' (' + pct + '%)</span>' +
+                    '</div>';
+            });
+            html += '</div>';
+        }
         html += '</div>';
         html += '</div>';
         html += '</div>';
@@ -1621,6 +1640,9 @@ window.renderTrainingProgress = function() {
                 var maxVal = allValues.length > 0 ? Math.max.apply(null, allValues) : 1;
                 var minVal = allValues.length > 0 ? Math.min.apply(null, allValues) : 0;
                 var yRange = maxVal - minVal || 1;
+                var yMin = Math.max(0, minVal - yRange * 0.1);
+                var yMax = maxVal + yRange * 0.1;
+                var yScaleRange = yMax - yMin;
 
                 var xStep = plotW / Math.max(entries.length - 1, 1);
                 var chartPoints = entries.map(function(e, i) {
@@ -1631,7 +1653,7 @@ window.renderTrainingProgress = function() {
                     else if (mt === 'distance') val = e.bestDistance || 0;
                     else if (mt === 'weight_only') val = e.bestWeight || 0;
                     var x = padLeft + i * xStep;
-                    var y = padTop + plotH - ((val - minVal) / yRange) * plotH;
+                    var y = padTop + plotH - ((val - yMin) / yScaleRange) * plotH;
                     return { x: x, y: y, val: val, date: e.date };
                 });
 
