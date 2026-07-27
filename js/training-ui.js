@@ -1405,26 +1405,10 @@ window.renderTrainingProgress = function() {
         });
     });
     const dateRange = totalWorkouts > 0
-        ? filteredWorkouts[filteredWorkouts.length - 1].date + ' — ' + filteredWorkouts[0].date
+        ? filteredWorkouts[0].date + ' — ' + filteredWorkouts[filteredWorkouts.length - 1].date
         : '';
 
-    html += '<div class="train-progress-summary">';
-    html += '<div class="train-progress-card">';
-    html += '<div class="train-progress-card-icon">🏋️</div>';
-    html += '<div class="train-progress-card-value">' + totalWorkouts + '</div>';
-    html += '<div class="train-progress-card-label">Тренировок</div>';
-    html += '</div>';
-    html += '<div class="train-progress-card">';
-    html += '<div class="train-progress-card-icon">💪</div>';
-    html += '<div class="train-progress-card-value">' + uniqueVariants.size + '</div>';
-    html += '<div class="train-progress-card-label">Упражнений</div>';
-    html += '</div>';
-    html += '<div class="train-progress-card">';
-    html += '<div class="train-progress-card-icon">📅</div>';
-    html += '<div class="train-progress-card-value" style="font-size:11px;">' + (dateRange || '—') + '</div>';
-    html += '<div class="train-progress-card-label">Период</div>';
-    html += '</div>';
-    html += '</div>';
+    html += '<div class="train-period-label" style="margin-bottom:12px; font-size:13px; color:#64748b;">' + (dateRange || '') + '</div>';
 
     if (uniqueVariants.size > 0) {
         var muscleStats = {};
@@ -1448,56 +1432,60 @@ window.renderTrainingProgress = function() {
             var colorPalette = ['#7e22ce', '#2563eb', '#16a34a', '#ea580c', '#dc2626', '#0891b2', '#7c3aed', '#d97706', '#059669', '#4f46e5'];
             var activeGroups = MUSCLE_CATEGORIES.filter(function(c) { return muscleStats[c] > 0; });
             var otherMuscle = muscleStats['Другое'] || 0;
+    }
 
-        html += '<div class="train-progress-chart-section">';
-        html += '<h3 class="train-progress-section-title">🧩 Распределение по мышечным группам</h3>';
+    html += '<div class="train-progress-summary">';
+    html += '<div class="train-progress-card">';
+    html += '<div class="train-progress-card-icon">🏋️</div>';
+    html += '<div class="train-progress-card-value">' + totalWorkouts + '</div>';
+    html += '<div class="train-progress-card-label">Тренировок</div>';
+    html += '</div>';
+    html += '<div class="train-progress-card">';
+    html += '<div class="train-progress-card-icon">💪</div>';
+    html += '<div class="train-progress-card-value">' + uniqueVariants.size + '</div>';
+    html += '<div class="train-progress-card-label">Упражнений</div>';
+    html += '</div>';
 
-        if (totalSets > 0) {
-            var svgSize = 180, cx = svgSize / 2, cy = svgSize / 2, r = 60, innerR = 38;
-            var cumulativeAngle = -Math.PI / 2;
-            var sectors = [];
+    if (uniqueVariants.size > 0 && totalSets > 0) {
+        var svgSize = 80, cx = svgSize / 2, cy = svgSize / 2, r = 30, innerR = 20;
+        var segments = [];
+        var cumulativeAngle = -Math.PI / 2;
 
-            activeGroups.forEach(function(cat, i) {
-                var value = muscleStats[cat];
-                var angle = (value / totalSets) * Math.PI * 2;
-                sectors.push({ name: cat, value: value, angle: angle, startAngle: cumulativeAngle, color: colorPalette[i % colorPalette.length] });
-                cumulativeAngle += angle;
-            });
-            if (otherMuscle > 0) {
-                sectors.push({ name: 'Другое', value: otherMuscle, angle: (otherMuscle / totalSets) * Math.PI * 2, startAngle: cumulativeAngle, color: '#94a3b8' });
-            }
-
-            var svg = '<svg width="' + svgSize + '" height="' + svgSize + '" viewBox="0 0 ' + svgSize + ' ' + svgSize + '" class="train-donut-chart">';
-            sectors.forEach(function(seg) {
-                var x1 = cx + r * Math.cos(seg.startAngle);
-                var y1 = cy + r * Math.sin(seg.startAngle);
-                var x2 = cx + r * Math.cos(seg.startAngle + seg.angle);
-                var y2 = cy + r * Math.sin(seg.startAngle + seg.angle);
-                var largeArc = seg.angle > Math.PI ? 1 : 0;
-                svg += '<path d="M' + cx + ',' + cy + ' L' + x1 + ',' + y1 + ' A' + r + ',' + r + ' 0 ' + largeArc + ' 1 ' + x2 + ',' + y2 + ' Z" fill="' + seg.color + '" style="cursor:pointer;" title="' + seg.name + ': ' + seg.value + '"/>';
-            });
-            svg += '<circle cx="' + cx + '" cy="' + cy + '" r="' + innerR + '" fill="white"/>';
-            svg += '<text x="' + cx + '" y="' + (cy - 4) + '" text-anchor="middle" font-size="20" font-weight="700" fill="#1e293b">' + totalSets + '</text>';
-            svg += '<text x="' + cx + '" y="' + (cy + 14) + '" text-anchor="middle" font-size="10" fill="#64748b">подходов</text>';
-            svg += '</svg>';
-
-            html += '<div class="train-chart-row">';
-            html += '<div class="train-donut-wrap">' + svg + '</div>';
-            html += '<div class="train-legend">';
-            sectors.forEach(function(seg) {
-                html += '<div class="train-legend-item">';
-                html += '<span class="train-legend-dot" style="background:' + seg.color + '"></span>';
-                html += '<span class="train-legend-name">' + seg.name + '</span>';
-                html += '<span class="train-legend-val">' + seg.value + '</span>';
-                html += '</div>';
-            });
-            html += '</div>';
-            html += '</div>';
-        } else {
-            html += '<div class="empty-state" style="margin:16px 0;"><div class="empty-state-text">Нет данных за выбранный период</div></div>';
+        activeGroups.forEach(function(cat, i) {
+            var value = muscleStats[cat];
+            var angle = (value / totalSets) * Math.PI * 2;
+            segments.push({ name: cat, value: value, angle: angle, startAngle: cumulativeAngle, color: colorPalette[i % colorPalette.length] });
+            cumulativeAngle += angle;
+        });
+        if (otherMuscle > 0) {
+            segments.push({ name: 'Другое', value: otherMuscle, angle: (otherMuscle / totalSets) * Math.PI * 2, startAngle: cumulativeAngle, color: '#94a3b8' });
         }
+
+        var donutSvg = '<svg width="' + svgSize + '" height="' + svgSize + '" viewBox="0 0 ' + svgSize + ' ' + svgSize + '" class="train-donut-chart">';
+        segments.forEach(function(seg) {
+            var x1 = cx + r * Math.cos(seg.startAngle);
+            var y1 = cy + r * Math.sin(seg.startAngle);
+            var x2 = cx + r * Math.cos(seg.startAngle + seg.angle);
+            var y2 = cy + r * Math.sin(seg.startAngle + seg.angle);
+            var largeArc = seg.angle > Math.PI ? 1 : 0;
+            donutSvg += '<path d="M' + cx + ',' + cy + ' L' + x1 + ',' + y1 + ' A' + r + ',' + r + ' 0 ' + largeArc + ' 1 ' + x2 + ',' + y2 + ' Z" fill="' + seg.color + '" style="cursor:pointer;" title="' + seg.name + ': ' + seg.value + '"/>';
+        });
+        donutSvg += '<circle cx="' + cx + '" cy="' + cy + '" r="' + innerR + '" fill="white"/>';
+        donutSvg += '<text x="' + cx + '" y="' + (cy - 3) + '" text-anchor="middle" font-size="12" font-weight="700" fill="#1e293b">' + totalSets + '</text>';
+        donutSvg += '<text x="' + cx + '" y="' + (cy + 10) + '" text-anchor="middle" font-size="7" fill="#64748b">подх.</text>';
+        donutSvg += '</svg>';
+
+        html += '<div class="train-progress-card" style="display:flex;align-items:center;gap:8px;text-align:left;padding:8px 12px;">';
+        html += donutSvg;
+        html += '<div style="font-size:11px;">';
+        segments.forEach(function(seg) {
+            html += '<div style="display:flex;align-items:center;gap:4px;margin-bottom:2px;"><span style="width:8px;height:8px;background:' + seg.color + ';border-radius:50%;display:inline-block;"></span><span>' + seg.name + ': ' + seg.value + '</span></div>';
+        });
+        html += '</div>';
         html += '</div>';
     }
+
+    html += '</div>';
 
     // Селектор мышечной группы
     var selectedMuscle = progressUIState.muscleGroup || 'all';
