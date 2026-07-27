@@ -1435,19 +1435,19 @@ window.renderTrainingProgress = function() {
     }
 
     html += '<div class="train-progress-summary">';
-    html += '<div class="train-progress-card">';
+    html += '<div class="train-progress-card" style="flex:0 0 auto;width:70px;">';
     html += '<div class="train-progress-card-icon">🏋️</div>';
     html += '<div class="train-progress-card-value">' + totalWorkouts + '</div>';
     html += '<div class="train-progress-card-label">Тренировок</div>';
     html += '</div>';
-    html += '<div class="train-progress-card">';
+    html += '<div class="train-progress-card" style="flex:0 0 auto;width:70px;">';
     html += '<div class="train-progress-card-icon">💪</div>';
     html += '<div class="train-progress-card-value">' + uniqueVariants.size + '</div>';
     html += '<div class="train-progress-card-label">Упражнений</div>';
     html += '</div>';
 
     if (uniqueVariants.size > 0 && totalSets > 0) {
-        var svgSize = 80, cx = svgSize / 2, cy = svgSize / 2, r = 30, innerR = 20;
+        var svgSize = 160, cx = svgSize / 2, cy = svgSize / 2, r = 60, innerR = 38;
         var segments = [];
         var cumulativeAngle = -Math.PI / 2;
 
@@ -1471,15 +1471,15 @@ window.renderTrainingProgress = function() {
             donutSvg += '<path d="M' + cx + ',' + cy + ' L' + x1 + ',' + y1 + ' A' + r + ',' + r + ' 0 ' + largeArc + ' 1 ' + x2 + ',' + y2 + ' Z" fill="' + seg.color + '" style="cursor:pointer;" title="' + seg.name + ': ' + seg.value + '"/>';
         });
         donutSvg += '<circle cx="' + cx + '" cy="' + cy + '" r="' + innerR + '" fill="white"/>';
-        donutSvg += '<text x="' + cx + '" y="' + (cy - 3) + '" text-anchor="middle" font-size="12" font-weight="700" fill="#1e293b">' + totalSets + '</text>';
-        donutSvg += '<text x="' + cx + '" y="' + (cy + 10) + '" text-anchor="middle" font-size="7" fill="#64748b">подх.</text>';
+        donutSvg += '<text x="' + cx + '" y="' + (cy - 4) + '" text-anchor="middle" font-size="22" font-weight="700" fill="#1e293b">' + totalSets + '</text>';
+        donutSvg += '<text x="' + cx + '" y="' + (cy + 14) + '" text-anchor="middle" font-size="10" fill="#64748b">подходов</text>';
         donutSvg += '</svg>';
 
-        html += '<div class="train-progress-card" style="display:flex;align-items:center;gap:8px;text-align:left;padding:8px 12px;">';
+        html += '<div class="train-progress-card" style="display:flex;align-items:center;gap:12px;text-align:left;padding:12px;">';
         html += donutSvg;
-        html += '<div style="font-size:11px;">';
+        html += '<div style="font-size:12px;">';
         segments.forEach(function(seg) {
-            html += '<div style="display:flex;align-items:center;gap:4px;margin-bottom:2px;"><span style="width:8px;height:8px;background:' + seg.color + ';border-radius:50%;display:inline-block;"></span><span>' + seg.name + ': ' + seg.value + '</span></div>';
+            html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;"><span style="width:10px;height:10px;background:' + seg.color + ';border-radius:50%;display:inline-block;flex-shrink:0;"></span><span>' + seg.name + ': ' + seg.value + '</span></div>';
         });
         html += '</div>';
         html += '</div>';
