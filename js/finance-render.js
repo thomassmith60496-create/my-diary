@@ -54,6 +54,8 @@ window.renderFinanceDashboard = function() {
 
     const staticSelect = document.getElementById('fin-month-select');
 
+    const previouslySelected = staticSelect.value || financeSelectedMonth || '';
+
     // Обновляем опции статичного селектора месяцев в тулбаре
     let monthOptions = '<option value="all">📊 Все месяцы (накопительно)</option>' +
         sortedMonths.map(m => {
@@ -63,8 +65,6 @@ window.renderFinanceDashboard = function() {
             return '<option value="' + m + '">' + label + '</option>';
         }).join('');
     staticSelect.innerHTML = monthOptions;
-
-    const previouslySelected = staticSelect.value || financeSelectedMonth || '';
 
     // Определяем какой месяц выбрать
     const today = new Date();
@@ -115,7 +115,7 @@ window.renderFinanceDashboard = function() {
     const catNames = Object.keys(catTotals).sort((a, b) => catTotals[b] - catTotals[a]);
     const totalExpense = Object.values(catTotals).reduce((s, v) => s + v, 0);
     
-    html = '';
+    let html = '';
     
     // Charts container: both charts side by side
     const hasMonths = months.length > 0;
