@@ -2,6 +2,8 @@
 // 💰 FINANCE RENDER FUNCTIONS
 // ============================================
 
+let financeSelectedMonth = '';
+
 window.updateFinanceStats = function() {
     const totalIncome = financeData.transactions
         .filter(t => t.type === 'income')
@@ -166,14 +168,16 @@ window.renderFinanceDashboard = function() {
     }
     
     if(hasCats) {
-        const colors = ['#7e22ce', '#a855f7', '#c084fc', '#d8b4fe', '#e9d5ff', '#f3e8ff', '#faf5ff'];
+        const catColorMap = {};
+        financeData.categories.forEach(cat => { catColorMap[cat.name] = cat.color || '#7e22ce'; });
+        const defaultColors = ['#7e22ce', '#a855f7', '#c084fc', '#d8b4fe', '#e9d5ff', '#f3e8ff', '#faf5ff'];
         let cumulativeAngle = 0;
         const sectors = catNames.slice(0, 7).map((name, i) => {
             const value = catTotals[name];
             const angle = (value / totalExpense) * 360;
             const startAngle = cumulativeAngle;
             cumulativeAngle += angle;
-            return { name, value, angle, startAngle, color: colors[i % colors.length] };
+            return { name, value, angle, startAngle, color: catColorMap[name] || defaultColors[i % defaultColors.length] };
         });
         
         html += `<h3 class="finance-section-title">🥧 Расходы по категориям</h3>
@@ -192,8 +196,11 @@ window.renderFinanceDashboard = function() {
             const spent = filteredTransactions
                 .filter(t => t.type === 'expense' && t.category === c.id)
                 .reduce((s, t) => s + Math.abs(t.amount), 0);
-            const pct = Math.min(100, (spent / c.limit) * 100);
-            const barColor = pct >= 100 ? '#b91c1c' : (pct > 80 ? '#dc2626' : (pct > 50 ? '#d97706' : '#16a34a'));
+            const catColor = c.color || '#7e22ce';
+            const barColor = pct >= 100 ? '#b91c1c' : (pct > 80 ? '#dc2626' : (pct > 50 ? '#d97706' : catColor));
+            
+            const catColor = c.color || '#7e22ce';
+            const barColor = pct >= 100 ? '#b91c1c' : (pct > 80 ? '#dc2626' : (pct > 50 ? '#d97706' : catColor));
             
             let subcatsHtml = '';
             if(c.subcategories && c.subcategories.length > 0) {
@@ -207,7 +214,7 @@ window.renderFinanceDashboard = function() {
                 
                 subcatsHtml = subcatsWithSpending.map(sc => {
                     const scPct = sc.limit > 0 ? Math.min(100, (sc.spent / sc.limit) * 100) : 0;
-                    const scBarColor = scPct >= 100 ? '#b91c1c' : (scPct > 80 ? '#dc2626' : (scPct > 50 ? '#d97706' : '#16a34a'));
+                    const scBarColor = scPct >= 100 ? '#b91c1c' : (scPct > 80 ? '#dc2626' : (scPct > 50 ? '#d97706' : catColor));
                     const limitDisplay = sc.limit > 0 ? `${Math.round(sc.spent).toLocaleString('ru-RU')} / ${sc.limit.toLocaleString('ru-RU')} ₽` : `${Math.round(sc.spent).toLocaleString('ru-RU')} ₽`;
                     const barHtml = sc.limit > 0 ? `<div class="finance-progress-sub"><div class="finance-progress-sub-fill" style="width:${scPct}%;background:${scBarColor};"></div></div>` : '';
                     return `<div class="finance-subcat-item">
