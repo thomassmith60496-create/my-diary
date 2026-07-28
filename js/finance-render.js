@@ -2,8 +2,6 @@
 // 💰 FINANCE RENDER FUNCTIONS
 // ============================================
 
-let financeSelectedMonth = '';
-
 window.updateFinanceStats = function() {
     const totalIncome = financeData.transactions
         .filter(t => t.type === 'income')
