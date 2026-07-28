@@ -1391,20 +1391,23 @@ window.renderTrainingProgress = function() {
     var period = progressUIState.period || 'all';
     const now = new Date();
     let cutoffDate = null;
+    let cutoffStr = null;
     if (period === 'week') {
         cutoffDate = new Date(now);
         cutoffDate.setDate(cutoffDate.getDate() - 7);
+        cutoffStr = cutoffDate.toISOString().slice(0, 10);
     } else if (period === 'month') {
         cutoffDate = new Date(now);
         cutoffDate.setMonth(cutoffDate.getMonth() - 1);
+        cutoffStr = cutoffDate.toISOString().slice(0, 10);
     } else if (period === '3months') {
         cutoffDate = new Date(now);
         cutoffDate.setMonth(cutoffDate.getMonth() - 3);
+        cutoffStr = cutoffDate.toISOString().slice(0, 10);
     }
 
     let filteredWorkouts = workouts;
     if (cutoffDate) {
-        const cutoffStr = cutoffDate.toISOString().slice(0, 10);
         filteredWorkouts = workouts.filter(w => w.date >= cutoffStr);
     }
 
@@ -1568,7 +1571,13 @@ window.renderTrainingProgress = function() {
             var hasData = false;
             ex.variants.forEach(function(v) {
                 var h = TrainingWorkoutAPI.getVariantHistory(v.id);
-                if (h && h.entries && h.entries.length > 0) hasData = true;
+                if (h && h.entries) {
+                    var hEntries = h.entries;
+                    if (cutoffStr) {
+                        hEntries = hEntries.filter(function(e) { return e.date >= cutoffStr; });
+                    }
+                    if (hEntries.length > 0) hasData = true;
+                }
             });
             if (!hasData) return;
 
@@ -1583,9 +1592,13 @@ window.renderTrainingProgress = function() {
             ex.variants.forEach(function(v) {
                 var hist = TrainingWorkoutAPI.getVariantHistory(v.id);
                 var entries = hist ? hist.entries : [];
+                // Фильтрация по выбранному периоду
+                if (cutoffStr) {
+                    entries = entries.filter(function(e) { return e.date >= cutoffStr; });
+                }
                 if (!entries || entries.length === 0) return;
 
-                var mt = hist.measurementType;
+                var mt = hist.measurementType || 'reps_weight';
                 var mtLabel = getMeasurementTypeLabel(mt);
                 var overall = hist.overall || {};
 
