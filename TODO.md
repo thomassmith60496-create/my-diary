@@ -7,5 +7,5 @@
   - [x] 2.2 Добавить фильтрацию `hist.entries` по выбранному периоду
   - [x] 2.3 Добавить функцию `getVariantBestValue(overall, mt)`
   - [x] 2.4 Добавить функцию `renderVariantSparklineCustom()` для sparkline по отфильтрованным данным
-- [ ] 3. Закоммитить и запушить на GitHub
+- [x] 3. Закоммитить и запушить на GitHub
 

@@ -196,9 +196,7 @@ window.renderFinanceDashboard = function() {
             const spent = filteredTransactions
                 .filter(t => t.type === 'expense' && t.category === c.id)
                 .reduce((s, t) => s + Math.abs(t.amount), 0);
-            const catColor = c.color || '#7e22ce';
-            const barColor = pct >= 100 ? '#b91c1c' : (pct > 80 ? '#dc2626' : (pct > 50 ? '#d97706' : catColor));
-            
+            const pct = Math.min(100, (spent / c.limit) * 100);
             const catColor = c.color || '#7e22ce';
             const barColor = pct >= 100 ? '#b91c1c' : (pct > 80 ? '#dc2626' : (pct > 50 ? '#d97706' : catColor));
             
