@@ -213,7 +213,7 @@ window.renderFinanceDashboard = function() {
                     const scBarColor = scPct >= 100 ? '#b91c1c' : (scPct > 80 ? '#dc2626' : (scPct > 50 ? '#d97706' : catColor));
                     const limitDisplay = sc.limit > 0 ? `${Math.round(sc.spent).toLocaleString('ru-RU')} / ${sc.limit.toLocaleString('ru-RU')} ₽` : `${Math.round(sc.spent).toLocaleString('ru-RU')} ₽`;
                     return `<div class="finance-subcat-item">
-                        <div style="flex:1;min-width:0;">
+                        <div class="finance-subcat-header">
                             <span class="finance-subcat-name">📂 ${sc.name}</span>
                             <span class="finance-subcat-value">${limitDisplay}</span>
                         </div>

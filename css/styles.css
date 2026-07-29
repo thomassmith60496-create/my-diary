@@ -582,9 +582,15 @@ header .macro-badge {
 .finance-progress-fill {
     height: 100%; border-radius: 4px; transition: width 0.3s;
 }
+.finance-subcat-item {
+    padding: 4px 0 2px 12px; font-size: 11px;
+}
+.finance-subcat-header {
+    display: flex; justify-content: space-between;
+}
 .finance-progress-sub {
     height: 5px; background: #f3e8ff; border-radius: 3px;
-    overflow: hidden; margin-top: 2px; max-width: 120px; min-width: 80px;
+    overflow: hidden; margin-top: 2px; width: 100%;
 }
 .finance-progress-sub-fill {
     height: 100%; border-radius: 3px; transition: width 0.3s;
@@ -605,19 +611,8 @@ header .macro-badge {
 .finance-limit-fill {
     height: 100%; border-radius: 4px; transition: width 0.3s;
 }
-.finance-subcat-item {
-    padding: 4px 0 2px 12px; font-size: 11px;
-    display: flex; justify-content: space-between;
-}
 .finance-subcat-name { color: #a855f7; }
 .finance-subcat-value { color: #64748b; font-weight: 600; }
-.finance-subcat-bar {
-    height: 6px; background: #f3e8ff; border-radius: 3px;
-    overflow: hidden; margin-top: 2px;
-}
-.finance-subcat-fill {
-    height: 100%; border-radius: 3px; transition: width 0.3s;
-}
 .finance-goal-item {
     margin-bottom: 8px; display: flex; justify-content: space-between;
     align-items: center; padding: 8px 12px; background: white;
