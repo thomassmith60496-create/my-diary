@@ -1776,7 +1776,12 @@ header .macro-badge {
 }
 .finance-section-title {
     font-size: 15px; font-weight: 700; color: #7e22ce;
-    margin: 0 0 10px 0;
+    margin: 20px 0 10px 0;
+}
+.finance-charts-row .finance-section-title,
+.finance-limits-container .finance-section-title,
+.finance-savings-container .finance-section-title {
+    margin-top: 0;
 }
 .finance-donut-container {
     background: #f8fafc; border-radius: 10px;
@@ -1969,6 +1974,18 @@ header .macro-badge {
     font-size: 13px;
 }
 
+.finance-mandatory-header .fm-col-name,
+.finance-mandatory-header .fm-col-amount,
+.finance-mandatory-header .fm-col-date,
+.finance-mandatory-header .fm-col-cat,
+.finance-mandatory-header .fm-col-status {
+    color: white;
+}
+
+.finance-section-title-mt {
+    margin-top: 20px;
+}
+
 .finance-mandatory-row {
     display: grid;
     grid-template-columns: 2fr 1fr 1fr 1.5fr 1.5fr;
@@ -2103,3 +2120,4 @@ header .macro-badge {
     padding-top: 4px;
     border-top: 1px solid #f3e8ff;
 }
+
