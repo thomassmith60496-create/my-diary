@@ -1889,7 +1889,14 @@ header .macro-badge {
 .train-exercise-block-header:hover { background: #eef2ff; }
 .train-exercise-block-name { font-weight: 700; color: #1e293b; font-size: 14px; }
 .train-exercise-block-toggle { font-size: 12px; color: #94a3b8; transition: transform 0.2s; }
-.train-exercise-block-body { padding: 8px 16px 12px 16px; border-top: 1px solid #f1f5f9; }
+.train-exercise-block-body { 
+    padding: 8px 16px 12px 16px; 
+    border-top: 1px solid #f1f5f9; 
+    display: grid; 
+    grid-template-columns: 1fr 1fr; 
+    gap: 10px; 
+}
+.train-exercise-block-body .train-variant-card { margin-bottom: 0; }
 .train-variant-row-progress {
     display: flex; align-items: center; justify-content: space-between; padding: 8px 0;
     border-bottom: 1px solid #f1f5f9; cursor: pointer; transition: background 0.15s;

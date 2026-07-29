@@ -181,18 +181,18 @@
             <div class="subtitle">Управление базой упражнений</div>
         </header>
         <div class="train-sub-tabs">
-            <button class="train-sub-tab-btn active" onclick="switchTrainingSubTab('exercises', event)">🏋️ Упражнения</button>
+            <button class="train-sub-tab-btn active" onclick="switchTrainingSubTab('progress', event)">📊 Прогресс</button>
+            <button class="train-sub-tab-btn" onclick="switchTrainingSubTab('exercises', event)">🏋️ Упражнения</button>
             <button class="train-sub-tab-btn" onclick="switchTrainingSubTab('workouts', event)">📋 Тренировки</button>
-            <button class="train-sub-tab-btn" onclick="switchTrainingSubTab('progress', event)">📊 Прогресс</button>
         </div>
-        <div class="train-sub-tab-content active" id="train-sub-exercises">
+        <div class="train-sub-tab-content active" id="train-sub-progress">
+            <div id="training-progress-content"></div>
+        </div>
+        <div class="train-sub-tab-content" id="train-sub-exercises">
             <div id="training-exercises-content"></div>
         </div>
         <div class="train-sub-tab-content" id="train-sub-workouts">
             <div id="training-workouts-content"></div>
-        </div>
-        <div class="train-sub-tab-content" id="train-sub-progress">
-            <div id="training-progress-content"></div>
         </div>
 </div>
 </div>
@@ -607,4 +607,3 @@
     <script src="js/app.js?v=3"></script>
 </body>
 </html>
-
