@@ -1968,7 +1968,7 @@ function toggleExerciseBlock(safeName) {
     var toggle = document.getElementById('tog-' + safeName);
     if (!body) return;
     var isHidden = body.style.display === 'none';
-    body.style.display = isHidden ? 'block' : 'none';
+    body.style.display = isHidden ? 'grid' : 'none';
     if (toggle) toggle.textContent = isHidden ? '▼' : '▶';
 }
 
