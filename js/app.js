@@ -61,6 +61,7 @@ window.switchFinanceSubTab = function(tab, event) {
     if(tab === 'transactions') renderFinanceTransactions();
     if(tab === 'savings') renderFinanceSavings();
     if(tab === 'planned') renderFinancePlanned();
+    if(tab === 'mandatory') renderFinanceMandatory();
     if(tab === 'categories') renderFinanceCategories();
     setTimeout(() => applyReadOnlyState(), 50);
 }
@@ -249,6 +250,12 @@ function importAllData(input) {
                         if(p && p.id && !existingIds.has(p.id)) financeData.planned.push(p);
                     });
                 }
+                if(parsed.financeData.mandatoryPayments && Array.isArray(parsed.financeData.mandatoryPayments)) {
+                    const existingIds = new Set(financeData.mandatoryPayments.map(p => p.id));
+                    parsed.financeData.mandatoryPayments.forEach(p => {
+                        if(p && p.id && !existingIds.has(p.id)) financeData.mandatoryPayments.push(p);
+                    });
+                }
                 if(parsed.financeData.categories && Array.isArray(parsed.financeData.categories)) {
                     const existingIds = new Set(financeData.categories.map(c => c.id));
                     parsed.financeData.categories.forEach(c => {
@@ -308,7 +315,7 @@ function resetAllData() {
             db.ref(`lera_finance_v1/${targetUid}`).remove();
             db.ref(`lera_training_v1/${targetUid}`).remove();
             nutritionData = { weeks: [], currentWeekId: null };
-            financeData = { transactions: [], savings: [], planned: [], categories: [] };
+            financeData = { transactions: [], savings: [], planned: [], mandatoryPayments: [], categories: [] };
             // Сброс тренировок
             if (typeof TrainingExerciseAPI !== 'undefined' && TrainingExerciseAPI.loadFromFirebase) {
                 TrainingExerciseAPI.loadFromFirebase({ version: 2, exercises: [], workouts: [] });

@@ -212,6 +212,7 @@
            <button class="sub-tab-btn" onclick="switchFinanceSubTab('transactions', event)">💸 Операции</button>
            <button class="sub-tab-btn" onclick="switchFinanceSubTab('savings', event)">🏦 Накопления</button>
            <button class="sub-tab-btn" onclick="switchFinanceSubTab('planned', event)">📅 Планируемые</button>
+           <button class="sub-tab-btn" onclick="switchFinanceSubTab('mandatory', event)">🔄 Обязательные</button>
            <button class="sub-tab-btn" onclick="switchFinanceSubTab('categories', event)">🏷 Категории</button>
        </div>
        
@@ -279,6 +280,20 @@
                    <div class="empty-state-icon">📅</div>
                    <div class="empty-state-title">Нет планируемых расходов</div>
                    <div class="empty-state-text">Запланируйте будущие траты</div>
+               </div>
+           </div>
+       </div>
+       
+       <!-- Подвкладка: Обязательные платежи -->
+       <div class="sub-tab-content" id="fin-sub-mandatory">
+           <div class="toolbar">
+               <button class="btn primary btn-finance-primary" onclick="openMandatoryModal()">➕ Добавить обязательный платёж</button>
+           </div>
+           <div id="finance-mandatory-list">
+               <div class="empty-state">
+                   <div class="empty-state-icon">🔄</div>
+                   <div class="empty-state-title">Нет обязательных платежей</div>
+                   <div class="empty-state-text">Настройте регулярные платежи (аренда, подписки, связь и т.д.)</div>
                </div>
            </div>
        </div>
@@ -503,6 +518,63 @@
         <div class="modal-footer finance">
             <button class="btn" onclick="closeAllModals()">Отмена</button>
             <button class="btn primary btn-finance-primary" onclick="saveCategory()">💾 Сохранить</button>
+        </div>
+    </div>
+</div>
+
+<!-- Модалка 1.5: Добавить/редактировать обязательный платёж -->
+<div class="modal-overlay" id="mandatory-modal" onclick="if(event.target===this)closeAllModals()">
+    <div class="modal">
+        <div class="modal-header finance">
+            <h3 class="modal-title" id="mandatory-modal-title">🔄 Добавить обязательный платёж</h3>
+            <button class="modal-close" onclick="closeAllModals()">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-grid">
+                <div class="form-field finance">
+                    <label>📛 Название</label>
+                    <input type="text" id="f-mp-name" placeholder="Например: Аренда квартиры">
+                </div>
+                <div class="form-field finance">
+                    <label>💰 Сумма</label>
+                    <input type="number" id="f-mp-amount" placeholder="0" step="0.01">
+                </div>
+                <div class="form-field finance">
+                    <label>🏷 Категория</label>
+                    <select id="f-mp-category" onchange="updateMandatorySubcategoryOptions()">
+                        <option value="">— выбрать —</option>
+                    </select>
+                </div>
+                <div class="form-field finance">
+                    <label>📂 Подкатегория</label>
+                    <select id="f-mp-subcategory">
+                        <option value="">— выбрать —</option>
+                    </select>
+                </div>
+                <div class="form-field finance">
+                    <label>🔄 Тип расписания</label>
+                    <select id="f-mp-schedule-type" onchange="toggleMandatoryScheduleFields()">
+                        <option value="monthly">📅 Ежемесячно</option>
+                        <option value="interval">🔄 Каждые X дней</option>
+                    </select>
+                </div>
+                <div class="form-field finance" id="f-mp-day-wrap">
+                    <label>📅 День месяца</label>
+                    <input type="number" id="f-mp-day" placeholder="1" min="1" max="31">
+                </div>
+                <div class="form-field finance" id="f-mp-interval-wrap" style="display:none;">
+                    <label>🔄 Каждые X дней</label>
+                    <input type="number" id="f-mp-interval" placeholder="30" min="1">
+                </div>
+                <div class="form-field finance">
+                    <label>📅 Дата начала</label>
+                    <input type="date" id="f-mp-start-date">
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer finance">
+            <button class="btn" onclick="closeAllModals()">Отмена</button>
+            <button class="btn primary btn-finance-primary" onclick="saveMandatoryPayment()">💾 Сохранить</button>
         </div>
     </div>
 </div>

@@ -52,6 +52,26 @@ window.updatePlanCategoryOptions = function() {
     updatePlanSubcategoryOptions();
 }
 
+window.updateMandatoryCategoryOptions = function() {
+    const catSelect = document.getElementById('f-mp-category');
+    const expenseCats = financeData.categories.filter(c => c.type === 'expense');
+    catSelect.innerHTML = '<option value="">— выбрать —</option>' +
+        expenseCats.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+    updateMandatorySubcategoryOptions();
+}
+
+window.updateMandatorySubcategoryOptions = function() {
+    const catId = document.getElementById('f-mp-category').value;
+    const subSelect = document.getElementById('f-mp-subcategory');
+    const cat = financeData.categories.find(c => c.id === catId);
+    if(cat && cat.subcategories && cat.subcategories.length > 0) {
+        subSelect.innerHTML = '<option value="">— выбрать —</option>' +
+            cat.subcategories.map(sc => `<option value="${sc}">${sc}</option>`).join('');
+    } else {
+        subSelect.innerHTML = '<option value="">— (нет подкатегорий) —</option>';
+    }
+}
+
 window.updatePlanSubcategoryOptions = function() {
     const catId = document.getElementById('f-plan-category').value;
     const subSelect = document.getElementById('f-plan-subcategory');

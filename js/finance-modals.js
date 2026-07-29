@@ -22,6 +22,19 @@ window.openSavingsModal = function() {
     document.getElementById('savings-modal').classList.add('visible');
 }
 
+window.openMandatoryModal = function() {
+    document.getElementById('f-mp-name').value = '';
+    document.getElementById('f-mp-amount').value = '';
+    document.getElementById('f-mp-schedule-type').value = 'monthly';
+    document.getElementById('f-mp-day').value = '1';
+    document.getElementById('f-mp-interval').value = '30';
+    document.getElementById('f-mp-start-date').value = new Date().toISOString().slice(0,10);
+    document.getElementById('mandatory-modal-title').textContent = '🔄 Добавить обязательный платёж';
+    window._editingMandatoryId = null;
+    updateMandatoryCategoryOptions();
+    document.getElementById('mandatory-modal').classList.add('visible');
+}
+
 window.openPlannedModal = function() {
     document.getElementById('f-plan-date').value = new Date().toISOString().slice(0,10);
     document.getElementById('f-plan-amount').value = '';
@@ -57,6 +70,12 @@ window.openCategoryModal = function(catId) {
     }
     renderSubcategoryTags();
     document.getElementById('category-modal').classList.add('visible');
+}
+
+window.toggleMandatoryScheduleFields = function() {
+    const type = document.getElementById('f-mp-schedule-type').value;
+    document.getElementById('f-mp-day-wrap').style.display = type === 'monthly' ? 'block' : 'none';
+    document.getElementById('f-mp-interval-wrap').style.display = type === 'interval' ? 'block' : 'none';
 }
 
 // Bind the goal select to show/hide custom field

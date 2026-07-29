@@ -344,6 +344,7 @@ window.loadDataForUser = function(uid) {
             if (financeDataSnap.transactions) financeData.transactions = financeDataSnap.transactions;
             if (financeDataSnap.savings) financeData.savings = financeDataSnap.savings;
             if (financeDataSnap.planned) financeData.planned = financeDataSnap.planned;
+            if (financeDataSnap.mandatoryPayments) financeData.mandatoryPayments = financeDataSnap.mandatoryPayments;
             if (financeDataSnap.categories) financeData.categories = financeDataSnap.categories;
         }
         

@@ -43,6 +43,7 @@ window.saveFinance = function() {
         transactions: financeData.transactions,
         savings: financeData.savings,
         planned: financeData.planned,
+        mandatoryPayments: financeData.mandatoryPayments,
         categories: financeData.categories,
         lastUpdated: Date.now()
     };
@@ -227,6 +228,88 @@ window.saveCategory = function() {
     customAlert('✅ Категория сохранена', 'Успех');
 }
 
+window.saveMandatoryPayment = function() {
+    const name = document.getElementById('f-mp-name').value.trim();
+    const amount = parseFloat(document.getElementById('f-mp-amount').value);
+    const catId = document.getElementById('f-mp-category').value;
+    const subcat = document.getElementById('f-mp-subcategory').value;
+    const scheduleType = document.getElementById('f-mp-schedule-type').value;
+    const dayOfMonth = parseInt(document.getElementById('f-mp-day').value) || 1;
+    const intervalDays = parseInt(document.getElementById('f-mp-interval').value) || 30;
+    const startDate = document.getElementById('f-mp-start-date').value;
+
+    if(!name) { customAlert('Введите название платежа', 'Ошибка'); return; }
+    if(!amount || amount <= 0) { customAlert('Укажите сумму', 'Ошибка'); return; }
+    if(!catId) { customAlert('Укажите категорию', 'Ошибка'); return; }
+    if(!startDate) { customAlert('Укажите дату начала', 'Ошибка'); return; }
+
+    if(window._editingMandatoryId) {
+        const mp = financeData.mandatoryPayments.find(p => p.id === window._editingMandatoryId);
+        if(mp) {
+            mp.name = name;
+            mp.amount = amount;
+            mp.category = catId;
+            mp.subcategory = subcat;
+            mp.scheduleType = scheduleType;
+            mp.dayOfMonth = dayOfMonth;
+            mp.intervalDays = intervalDays;
+            mp.startDate = startDate;
+            window._editingMandatoryId = null;
+            saveFinance();
+            closeAllModals();
+            renderCurrentFinanceTab();
+            customAlert('✅ Обязательный платёж обновлён', 'Успех');
+            return;
+        }
+    }
+
+    const newMp = {
+        id: 'mp-' + Date.now(),
+        name,
+        amount,
+        category: catId,
+        subcategory: subcat,
+        scheduleType,
+        dayOfMonth,
+        intervalDays,
+        startDate,
+        active: true,
+        createdAt: Date.now()
+    };
+
+    financeData.mandatoryPayments.push(newMp);
+    saveFinance();
+    closeAllModals();
+    renderCurrentFinanceTab();
+    customAlert('✅ Обязательный платёж сохранён', 'Успех');
+}
+
+window.editMandatoryPayment = function(id) {
+    const mp = financeData.mandatoryPayments.find(p => p.id === id);
+    if(!mp) return;
+
+    document.getElementById('f-mp-name').value = mp.name;
+    document.getElementById('f-mp-amount').value = mp.amount;
+    document.getElementById('f-mp-schedule-type').value = mp.scheduleType || 'monthly';
+    document.getElementById('f-mp-day').value = mp.dayOfMonth || 1;
+    document.getElementById('f-mp-interval').value = mp.intervalDays || 30;
+    document.getElementById('f-mp-start-date').value = mp.startDate;
+
+    document.getElementById('mandatory-modal-title').textContent = '✏️ Редактировать обязательный платёж';
+    window._editingMandatoryId = id;
+
+    updateMandatoryCategoryOptions();
+    requestAnimationFrame(function() {
+        document.getElementById('f-mp-category').value = mp.category || '';
+        updateMandatorySubcategoryOptions();
+        requestAnimationFrame(function() {
+            document.getElementById('f-mp-subcategory').value = mp.subcategory || '';
+        });
+    });
+
+    document.getElementById('mandatory-modal').classList.add('visible');
+}
+
 window.deleteFinanceItem = function(type, id) {
     if (isReadOnlyActive()) { customAlert('❌ Удаление недоступно в режиме просмотра', 'Ошибка'); return; }
     customConfirm('Удалить эту запись?', 'Подтверждение удаления')
@@ -238,9 +321,12 @@ window.deleteFinanceItem = function(type, id) {
                 financeData.savings = financeData.savings.filter(s => s.id !== id);
             } else if(type === 'planned') {
                 financeData.planned = financeData.planned.filter(p => p.id !== id);
+            } else if(type === 'mandatory') {
+                financeData.mandatoryPayments = financeData.mandatoryPayments.filter(p => p.id !== id);
             } else if(type === 'category') {
                 financeData.transactions.forEach(t => { if(t.category === id) t.category = ''; });
                 financeData.planned.forEach(p => { if(p.category === id) p.category = ''; });
+                financeData.mandatoryPayments.forEach(p => { if(p.category === id) p.category = ''; });
                 financeData.categories = financeData.categories.filter(c => c.id !== id);
             }
             saveFinance();

@@ -13,6 +13,7 @@ let financeData = {
     transactions: [],
     savings: [],
     planned: [],
+    mandatoryPayments: [],
     categories: [
         { id: 'cat-food', name: 'Еда', type: 'expense', limit: 20000, subcategories: ['Продукты', 'Доставка', 'Фастфуд', 'Кафе'], subcategoryLimits: {}, color: '#7e22ce' },
         { id: 'cat-transport', name: 'Транспорт', type: 'expense', limit: 3000, subcategories: ['Такси', 'Общественный транспорт', 'Бензин'], subcategoryLimits: {}, color: '#a855f7' },
