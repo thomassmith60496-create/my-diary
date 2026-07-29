@@ -166,16 +166,16 @@ window.renderFinanceDashboard = function() {
     }
     
     if(hasCats) {
-        const catColorMap = {};
-        financeData.categories.forEach(cat => { catColorMap[cat.name] = cat.color || '#7e22ce'; });
-        const defaultColors = ['#7e22ce', '#a855f7', '#c084fc', '#d8b4fe', '#e9d5ff', '#f3e8ff', '#faf5ff'];
+        const defaultColors = ['#7e22ce', '#a855f7', '#c084fc', '#d8b4fe', '#9333ea', '#6366f1', '#3b82f6', '#06b6d4', '#14b8a6', '#22c55e'];
         let cumulativeAngle = 0;
         const sectors = catNames.slice(0, 7).map((name, i) => {
             const value = catTotals[name];
             const angle = (value / totalExpense) * 360;
             const startAngle = cumulativeAngle;
             cumulativeAngle += angle;
-            return { name, value, angle, startAngle, color: catColorMap[name] || defaultColors[i % defaultColors.length] };
+            const cat = financeData.categories.find(c => c.name === name);
+            const color = (cat && cat.color) ? cat.color : defaultColors[i % defaultColors.length];
+            return { name, value, angle, startAngle, color };
         });
         
         html += `<h3 class="finance-section-title">🥧 Расходы по категориям</h3>
