@@ -583,8 +583,8 @@ header .macro-badge {
     height: 100%; border-radius: 4px; transition: width 0.3s;
 }
 .finance-progress-sub {
-    height: 6px; background: #f3e8ff; border-radius: 3px;
-    overflow: hidden; margin-top: 2px;
+    height: 5px; background: #f3e8ff; border-radius: 3px;
+    overflow: hidden; margin-top: 2px; max-width: 120px;
 }
 .finance-progress-sub-fill {
     height: 100%; border-radius: 3px; transition: width 0.3s;

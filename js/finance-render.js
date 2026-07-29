@@ -209,16 +209,15 @@ window.renderFinanceDashboard = function() {
                 });
                 
                 subcatsHtml = subcatsWithSpending.map(sc => {
-                    const scPct = sc.limit > 0 ? Math.min(100, (sc.spent / sc.limit) * 100) : 0;
+                    const scPct = sc.limit > 0 ? Math.min(100, (sc.spent / sc.limit) * 100) : Math.min(100, (sc.spent / c.limit) * 100);
                     const scBarColor = scPct >= 100 ? '#b91c1c' : (scPct > 80 ? '#dc2626' : (scPct > 50 ? '#d97706' : catColor));
                     const limitDisplay = sc.limit > 0 ? `${Math.round(sc.spent).toLocaleString('ru-RU')} / ${sc.limit.toLocaleString('ru-RU')} ₽` : `${Math.round(sc.spent).toLocaleString('ru-RU')} ₽`;
-                    const barHtml = sc.limit > 0 ? `<div class="finance-progress-sub"><div class="finance-progress-sub-fill" style="width:${scPct}%;background:${scBarColor};"></div></div>` : '';
                     return `<div class="finance-subcat-item">
                         <div style="flex:1;min-width:0;">
                             <span class="finance-subcat-name">📂 ${sc.name}</span>
                             <span class="finance-subcat-value">${limitDisplay}</span>
                         </div>
-                        ${barHtml}
+                        <div class="finance-progress-sub"><div class="finance-progress-sub-fill" style="width:${scPct}%;background:${scBarColor};"></div></div>
                     </div>`;
                 }).join('');
             }
