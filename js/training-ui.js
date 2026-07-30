@@ -1501,37 +1501,35 @@ window.renderTrainingProgress = function() {
         donutSvg += '<text x="' + cx + '" y="' + (cy + 14) + '" text-anchor="middle" font-size="10" fill="#64748b">подходов</text>';
         donutSvg += '</svg>';
 
-        html += '<div class="train-progress-card" style="display:flex;align-items:center;gap:12px;text-align:left;padding:10px;">';
+        html += '<div class="train-progress-card train-progress-chart-card">';
         html += donutSvg;
-        html += '<div style="font-size:13px;line-height:1.5;">';
-        html += '<div style="display:flex;gap:16px;align-items:flex-start;">';
+        html += '<div class="train-progress-legend">';
         // Left column: first 4 items
         var leftSegs = segments.slice(0, 4);
         var rightSegs = segments.slice(4);
-        html += '<div style="display:flex;flex-direction:column;gap:4px;">';
+        html += '<div class="train-legend-column">';
         leftSegs.forEach(function(seg) {
             var pct = totalSets > 0 ? ((seg.value / totalSets) * 100).toFixed(1) : 0;
-            html += '<div style="display:flex;align-items:center;gap:5px;font-size:12px;white-space:nowrap;">' +
-                '<span style="width:8px;height:8px;background:' + seg.color + ';border-radius:50%;display:inline-block;flex-shrink:0;"></span>' +
-                '<span style="font-weight:600;color:#1e293b;">' + seg.name + '</span>' +
-                '<span style="font-size:12px;font-weight:600;color:#1e293b;margin-left:auto;">' + seg.value + ' (' + pct + '%)</span>' +
+            html += '<div class="train-legend-item">' +
+                '<span class="train-legend-dot" style="background:' + seg.color + ';"></span>' +
+                '<span class="train-legend-name">' + seg.name + '</span>' +
+                '<span class="train-legend-val">' + seg.value + ' (' + pct + '%)</span>' +
                 '</div>';
         });
         html += '</div>';
         // Right column: remaining items
         if (rightSegs.length > 0) {
-            html += '<div style="display:flex;flex-direction:column;gap:4px;">';
+            html += '<div class="train-legend-column">';
             rightSegs.forEach(function(seg) {
                 var pct = totalSets > 0 ? ((seg.value / totalSets) * 100).toFixed(1) : 0;
-                html += '<div style="display:flex;align-items:center;gap:5px;font-size:12px;white-space:nowrap;">' +
-                    '<span style="width:8px;height:8px;background:' + seg.color + ';border-radius:50%;display:inline-block;flex-shrink:0;"></span>' +
-                    '<span style="font-weight:600;color:#1e293b;">' + seg.name + '</span>' +
-                    '<span style="font-size:12px;font-weight:600;color:#1e293b;margin-left:auto;">' + seg.value + ' (' + pct + '%)</span>' +
+                html += '<div class="train-legend-item">' +
+                    '<span class="train-legend-dot" style="background:' + seg.color + ';"></span>' +
+                    '<span class="train-legend-name">' + seg.name + '</span>' +
+                    '<span class="train-legend-val">' + seg.value + ' (' + pct + '%)</span>' +
                     '</div>';
             });
             html += '</div>';
         }
-        html += '</div>';
         html += '</div>';
         html += '</div>';
     }

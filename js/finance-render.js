@@ -339,7 +339,7 @@ window.renderFinanceTransactions = function() {
             📉 Расходы: <span class="finance-summary-value">${totalExp.toLocaleString('ru-RU')} ₽</span>
         </div>
         <div class="finance-summary-box finance-summary-income">
-            💵 Баланс: <span class="finance-summary-value" style="color:${totalInc - totalExp >= 0 ? '#16a34a' : '#dc2626'};">${(totalInc - totalExp).toLocaleString('ru-RU')} ₽</span>
+            💵 Баланс: <span class="finance-summary-value ${totalInc - totalExp >= 0 ? 'positive' : 'negative'}">${(totalInc - totalExp).toLocaleString('ru-RU')} ₽</span>
         </div>
     </div>`;
     

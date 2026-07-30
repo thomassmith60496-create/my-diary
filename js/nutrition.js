@@ -340,34 +340,33 @@ window.renderMeal = function(m, di, mi, weekId) {
         }
         
         if (itemsList.length > 0) {
-            content = `<div class="meal-items-list" style="margin-bottom:8px;">`;
+            content = `<div class="meal-items-list">`;
             itemsList.forEach((item, idx) => {
                 const eatenVal = getWeekData(weekId, `eaten-${di}-${mi}-${idx}`);
                 const eaten = eatenVal !== '0';
                 const note = getWeekData(weekId, `note-${di}-${mi}-${idx}`) || '';
                 
                 content += `
-                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px; padding:6px 10px; background:${eaten ? '#f0fdf4' : '#fef2f2'}; border-radius:6px; border:1px solid ${eaten ? '#bbf7d0' : '#fecaca'};">
+                    <div class="meal-item-row ${eaten ? 'eaten' : 'not-eaten'}">
                         <input type="checkbox" 
                                data-week="${weekId}" 
                                data-idx="${idx}"
                                ${eaten ? 'checked' : ''}
-                               onchange="toggleMealItem(this, '${weekId}', ${di}, ${mi})"
-                               style="width:18px; height:18px; cursor:pointer; accent-color:${eaten ? '#16a34a' : '#dc2626'}; flex-shrink:0;">
-                        <span style="flex:1; font-size:13px; ${!eaten ? 'text-decoration:line-through; color:#94a3b8;' : 'color:#1e293b;'}">${item}</span>
+                               onchange="toggleMealItem(this, '${weekId}', ${di}, ${mi})">
+                        <span class="meal-item-text">${item}</span>
                         ${!eaten ? `<input type="text" 
                             data-week="${weekId}" 
                             data-key="note-${di}-${mi}-${idx}"
                             value="${note.replace(/"/g, '"')}"
                             oninput="debouncedSaveNutrition()"
                             placeholder="что вместо?" 
-                            style="flex:1; min-width:120px; padding:4px 8px; border:1px solid #cbd5e1; border-radius:4px; font-size:12px; background:white;">` : ''}
+                            class="meal-item-note">` : ''}
                     </div>
                 `;
             });
             content += `</div>`;
         } else {
-            content = `<div style="color:#94a3b8; font-size:13px; font-style:italic; padding:4px 10px;">Список продуктов не указан</div>`;
+            content = `<div class="meal-items-empty">Список продуктов не указан</div>`;
         }
     } else {
         if(m.items) content=`<ul>${m.items.map(i=>`<li>${i}</li>`).join('')}</ul>`;
@@ -436,24 +435,24 @@ window.toggleMealItem = function(checkbox, weekId, di, mi) {
     week.data[`eaten-${di}-${mi}-${idx}`] = checkbox.checked ? '1' : '0';
     
     // Update only the visual state of this item without re-rendering all days
-    const itemDiv = checkbox.closest('div[style]');
+    const itemDiv = checkbox.closest('.meal-item-row');
     if (itemDiv) {
-        const span = itemDiv.querySelector('span');
-        const noteInput = itemDiv.querySelector('input[type="text"]');
+        const span = itemDiv.querySelector('.meal-item-text');
+        const noteInput = itemDiv.querySelector('.meal-item-note');
         if (checkbox.checked) {
-            itemDiv.style.background = '#f0fdf4';
-            itemDiv.style.borderColor = '#bbf7d0';
+            itemDiv.classList.remove('not-eaten');
+            itemDiv.classList.add('eaten');
             if (span) {
                 span.style.textDecoration = 'none';
-                span.style.color = '#1e293b';
+                span.style.color = '';
             }
             if (noteInput) noteInput.remove();
         } else {
-            itemDiv.style.background = '#fef2f2';
-            itemDiv.style.borderColor = '#fecaca';
+            itemDiv.classList.remove('eaten');
+            itemDiv.classList.add('not-eaten');
             if (span) {
                 span.style.textDecoration = 'line-through';
-                span.style.color = '#94a3b8';
+                span.style.color = '';
             }
             // Add note input if it doesn't exist
             if (!noteInput) {
@@ -463,7 +462,7 @@ window.toggleMealItem = function(checkbox, weekId, di, mi) {
                 newNote.dataset.key = `note-${di}-${mi}-${idx}`;
                 newNote.value = week.data[`note-${di}-${mi}-${idx}`] || '';
                 newNote.placeholder = 'что вместо?';
-                newNote.style.cssText = 'flex:1; min-width:120px; padding:4px 8px; border:1px solid #cbd5e1; border-radius:4px; font-size:12px; background:white;';
+                newNote.className = 'meal-item-note';
                 newNote.oninput = function() { debouncedSaveNutrition(); };
                 itemDiv.appendChild(newNote);
             }
@@ -565,23 +564,22 @@ window.printMenu = function() {
     if(!week) return;
     document.querySelectorAll('.day-card').forEach(c => c.classList.remove('collapsed'));
     const printArea = document.getElementById('print-area');
-    let html = `<h1 style="text-align:center;color:#1e3a8a;margin-bottom:20px;">МЕНЮ: ${week.title}</h1>`;
-    html += `<p style="text-align:center;color:#64748b;margin-bottom:30px;">Цель: 1250-1300 ккал | Б: 100-110г | Ж: 50-55г | У: 80-100г</p>`;
+    let html = `<h1 class="print-title">МЕНЮ: ${week.title}</h1>`;
+    html += `<p class="print-subtitle">Цель: 1250-1300 ккал | Б: 100-110г | Ж: 50-55г | У: 80-100г</p>`;
     week.menu.forEach(day => {
-        html += `<div style="margin-bottom:25px;page-break-inside:avoid;">`;
-        html += `<h2 style="background:#1e40af;color:white;padding:10px 15px;border-radius:8px;margin:0 0 10px;">${day.day} • ${day.date}${day.training?' 💪':''}</h2>`;
+        html += `<div class="print-day">`;
+        html += `<h2 class="print-day-header">${day.day} • ${day.date}${day.training?' 💪':''}</h2>`;
         day.meals.forEach(meal => {
             const isPrep = ['prep','preworkout','postworkout'].includes(meal.type);
-            const bg = isPrep ? 'background:#fefce8;border:2px dashed #fbbf24;padding:10px;border-radius:8px;margin:10px 0;' : '';
-            html += `<div style="${bg}margin-bottom:10px;"><strong style="color:#1e3a8a;">${meal.name}</strong><br>`;
+            html += `<div class="print-meal ${isPrep ? 'print-meal-prep' : ''}"><strong>${meal.name}</strong><br>`;
             if(meal.items) {
-                html += `<ul style="margin:5px 0;padding-left:20px;">`;
+                html += `<ul>`;
                 meal.items.forEach(item => { html += `<li>${item}</li>`; });
                 html += `</ul>`;
             } else if(meal.choices) {
                 meal.choices.forEach(c => {
-                    html += `<div style="background:#eff6ff;border-left:3px solid #3b82f6;padding:5px 10px;margin:3px 0;border-radius:4px;">`;
-                    html += `<strong style="background:#3b82f6;color:white;padding:2px 6px;border-radius:3px;font-size:11px;margin-right:6px;">${c.label}</strong>${c.items.join(', ')}</div>`;
+                    html += `<div class="print-choice">`;
+                    html += `<span class="print-choice-label">${c.label}</span>${c.items.join(', ')}</div>`;
                 });
             }
             html += `</div>`;
