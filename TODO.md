@@ -1,11 +1,12 @@
-# TODO: Исправление вкладки "Прогресс" (тренировки)
+# TODO: Улучшение менеджера GIF упражнений
 
-## Шаги:
-- [x] 1. Проанализировать код, найти ошибки
-- [x] 2. Исправить `renderTrainingProgress()` в `js/training-ui.js`:
-  - [x] 2.1 Обернуть блок вариантов в `ex.variants.forEach(function(v) { var hist = ... })`
-  - [x] 2.2 Добавить фильтрацию `hist.entries` по выбранному периоду
-  - [x] 2.3 Добавить функцию `getVariantBestValue(overall, mt)`
-  - [x] 2.4 Добавить функцию `renderVariantSparklineCustom()` для sparkline по отфильтрованным данным
-- [x] 3. Закоммитить и запушить на GitHub
+## Шаги реализации:
+
+- [x] 1. Сгенерировать `js/exercise-gif-names.js` с маппингом всех 1324 GIF → названия упражнений
+- [x] 2. **index.html**: добавить подключение `js/exercise-gif-names.js`
+- [x] 3. **exercise-gif-manager.js**: заменить `getAvailableGifs()` на динамический вызов из `ExerciseGifNames`
+- [x] 4. **exercise-gif-manager.js**: улучшить отображение в селекте — показывать название упражнения + имя файла
+- [x] 5. **exercise-gif-manager.js**: добавить функцию `getExerciseNameByGifFromManager` для отображения названий
+- [x] 6. **exercise-images.js**: добавить fallback поиск через `ExerciseGifNames`
+- [x] 7. Удалить `generate_gif_names.py`
 

@@ -131,6 +131,23 @@ function getExerciseGif(variantName) {
         }
     }
     
+    // Fallback: поиск через ExerciseGifNames по полному датасету (1324 упражнения)
+    // Транслитерация названия для поиска
+    if (window.ExerciseGifNames && window.ExerciseGifNames.searchGifsByExerciseName) {
+        // Пробуем разные варианты поиска
+        const searchTerms = [
+            baseName,
+            variantName.split('·')[1] ? variantName.split('·')[1].trim() : '',
+        ].filter(Boolean);
+        
+        for (const term of searchTerms) {
+            const results = window.ExerciseGifNames.searchGifsByExerciseName(term);
+            if (results.length > 0) {
+                return results[0];
+            }
+        }
+    }
+    
     return null;
 }
 
