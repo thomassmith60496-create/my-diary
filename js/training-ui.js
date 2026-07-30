@@ -1415,6 +1415,7 @@ window.renderTrainingProgress = function() {
 
     html += '<div class="train-period-selector">';
     html += '<span class="train-period-label">📅 Период:</span>';
+    html += '<button class="btn" onclick="openGifManager()">🎬 Управление GIF упражнений</button>';
     html += '<button class="train-period-btn' + (period === 'all' ? ' active' : '') + '" onclick="setProgressPeriod(\'all\')">Все время</button>';
     html += '<button class="train-period-btn' + (period === 'week' ? ' active' : '') + '" onclick="setProgressPeriod(\'week\')">Последняя неделя</button>';
     html += '<button class="train-period-btn' + (period === 'month' ? ' active' : '') + '" onclick="setProgressPeriod(\'month\')">Последний месяц</button>';
