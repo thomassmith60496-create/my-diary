@@ -49,7 +49,8 @@ window.openGifManager = function() {
             const categories = v.categories || [];
             const primaryCategory = categories[0] || 'Другое';
             
-const currentGifName = currentGif ? getExerciseNameByGifFromManager(currentGif) || '' : '';
+            const currentGifName = currentGif ? getExerciseNameByGifFromManager(currentGif) || '' : '';
+            const variantId = 'gif-variant-' + escapeHtml(v.name).replace(/\s+/g, '_');
             html += '<div class="gif-manager-item" data-name="' + escapeHtml(v.name) + '" data-category="' + primaryCategory + '" data-gif-name="' + escapeHtml(currentGifName) + '">';
             html += '<div class="gif-manager-item-header">';
             html += '<div class="gif-manager-item-name">' + escapeHtml(v.name) + '</div>';
@@ -62,15 +63,20 @@ const currentGifName = currentGif ? getExerciseNameByGifFromManager(currentGif) 
             html += '</div>';
             html += '<div class="gif-manager-select">';
             html += '<div class="gif-manager-label">Выбрать новый:</div>';
-            html += '<select class="gif-manager-select-input" onchange="updateVariantGif(\'' + escapeHtml(v.name) + '\', this.value)">';
-            html += '<option value="">— без GIF —</option>';
-allGifs.forEach(gif => {
-                const selected = currentGif === gif ? 'selected' : '';
+            // Searchable combobox вместо обычного select
+            html += '<div class="gif-combobox" data-variant="' + escapeHtml(v.name) + '">';
+            html += '<input type="text" class="gif-combobox-input" placeholder="🔍 Начните ввод..." value="' + (currentGif ? escapeHtml(currentGifName ? currentGifName + ' (' + currentGif + ')' : currentGif) : '') + '" autocomplete="off" data-variant="' + escapeHtml(v.name) + '">';
+            html += '<input type="hidden" class="gif-combobox-value" value="' + (currentGif || '') + '" data-variant="' + escapeHtml(v.name) + '">';
+            html += '<div class="gif-combobox-dropdown" style="display:none;">';
+            html += '<div class="gif-combobox-option" data-value="" data-variant="' + escapeHtml(v.name) + '">— без GIF —</div>';
+            allGifs.forEach(gif => {
                 const gifName = getExerciseNameByGifFromManager(gif);
                 const displayText = gifName ? gifName + ' (' + gif + ')' : gif;
-                html += '<option value="' + gif + '" ' + selected + '>' + escapeHtml(displayText) + '</option>';
+                const sel = currentGif === gif ? ' selected' : '';
+                html += '<div class="gif-combobox-option' + sel + '" data-value="' + gif + '" data-variant="' + escapeHtml(v.name) + '">' + escapeHtml(displayText) + '</div>';
             });
-            html += '</select>';
+            html += '</div>';
+            html += '</div>';
             html += '</div>';
             html += '</div>';
             html += '</div>';
@@ -87,7 +93,82 @@ allGifs.forEach(gif => {
 
     modal.innerHTML = html;
     document.body.appendChild(modal);
+    
+    // Инициализируем combobox обработчики
+    initGifComboboxes();
 };
+
+// === ИНИЦИАЛИЗАЦИЯ COMBOBOX ===
+
+function initGifComboboxes() {
+    document.querySelectorAll('.gif-combobox-input').forEach(input => {
+        // Показываем/скрываем дропдаун
+        input.addEventListener('focus', function() {
+            const dropdown = this.parentElement.querySelector('.gif-combobox-dropdown');
+            filterComboboxOptions(this, dropdown);
+            dropdown.style.display = 'block';
+        });
+        
+        input.addEventListener('input', function() {
+            const dropdown = this.parentElement.querySelector('.gif-combobox-dropdown');
+            filterComboboxOptions(this, dropdown);
+            dropdown.style.display = 'block';
+        });
+        
+        // Клик вне закрывает дропдаун
+        input.addEventListener('blur', function() {
+            // Задержка, чтобы успел сработать click на опции
+            setTimeout(() => {
+                const dropdown = this.parentElement.querySelector('.gif-combobox-dropdown');
+                dropdown.style.display = 'none';
+            }, 200);
+        });
+    });
+    
+    // Клик по опции
+    document.querySelectorAll('.gif-combobox-option').forEach(opt => {
+        opt.addEventListener('click', function() {
+            const variantName = this.dataset.variant;
+            const value = this.dataset.value || '';
+            const text = this.textContent;
+            
+            const combo = this.closest('.gif-combobox');
+            const input = combo.querySelector('.gif-combobox-input');
+            const hidden = combo.querySelector('.gif-combobox-value');
+            const dropdown = combo.querySelector('.gif-combobox-dropdown');
+            
+            input.value = text;
+            hidden.value = value;
+            dropdown.style.display = 'none';
+            
+            // Убираем выделение со всех опций в этом дропдауне
+            combo.querySelectorAll('.gif-combobox-option').forEach(o => o.classList.remove('selected'));
+            this.classList.add('selected');
+            
+            // Сохраняем
+            updateVariantGif(variantName, value);
+        });
+    });
+}
+
+function filterComboboxOptions(input, dropdown) {
+    const query = input.value.toLowerCase().trim();
+    const options = dropdown.querySelectorAll('.gif-combobox-option');
+    
+    options.forEach(opt => {
+        const text = opt.textContent.toLowerCase();
+        // Пустая опция "— без GIF —" показывается всегда, если нет поиска
+        if (!opt.dataset.value && !query) {
+            opt.style.display = 'block';
+        } else if (!opt.dataset.value && query) {
+            opt.style.display = 'none';
+        } else if (!query || text.includes(query)) {
+            opt.style.display = 'block';
+        } else {
+            opt.style.display = 'none';
+        }
+    });
+}
 
 // === ЗАКРЫТИЕ ===
 
@@ -211,14 +292,19 @@ window.resetAllGifs = function() {
             items.forEach(item => {
                 const variantName = item.dataset.name;
                 const currentGif = getCurrentGifForVariant(variantName);
+                const currentGifName = currentGif ? getExerciseNameByGifFromManager(currentGif) || '' : '';
                 const preview = item.querySelector('.gif-manager-preview');
-                const select = item.querySelector('.gif-manager-select-input');
+                const comboInput = item.querySelector('.gif-combobox-input');
+                const comboHidden = item.querySelector('.gif-combobox-value');
                 
                 if (preview) {
                     preview.src = currentGif ? 'exercise-gifs/' + currentGif : '';
                 }
-                if (select) {
-                    select.value = currentGif || '';
+                if (comboInput) {
+                    comboInput.value = currentGif ? (currentGifName ? currentGifName + ' (' + currentGif + ')' : currentGif) : '';
+                }
+                if (comboHidden) {
+                    comboHidden.value = currentGif || '';
                 }
             });
             

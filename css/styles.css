@@ -4959,6 +4959,84 @@ header .macro-badge {
     border-color: var(--color-orange);
 }
 
+/* === GIF COMBOBOX === */
+.gif-combobox {
+    position: relative;
+    width: 100%;
+}
+
+.gif-combobox-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 2px solid var(--color-gray-200);
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-sm);
+    font-family: inherit;
+    background: white;
+    cursor: text;
+    transition: border-color var(--transition-base);
+    box-sizing: border-box;
+}
+
+.gif-combobox-input:focus {
+    outline: none;
+    border-color: var(--color-orange);
+    box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.1);
+}
+
+.gif-combobox-input::placeholder {
+    color: var(--color-gray-400);
+}
+
+.gif-combobox-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    max-height: 260px;
+    overflow-y: auto;
+    background: white;
+    border: 2px solid var(--color-orange);
+    border-top: none;
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
+    z-index: 100;
+    box-shadow: var(--shadow-lg);
+}
+
+.gif-combobox-option {
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: var(--font-size-sm);
+    color: var(--color-gray-800);
+    transition: background var(--transition-fast);
+    border-bottom: 1px solid var(--color-gray-100);
+}
+
+.gif-combobox-option:last-child {
+    border-bottom: none;
+}
+
+.gif-combobox-option:hover {
+    background: #fff7ed;
+}
+
+.gif-combobox-option.selected {
+    background: #fef3c7;
+    font-weight: 600;
+}
+
+/* Scrollbar для выпадающего списка */
+.gif-combobox-dropdown::-webkit-scrollbar {
+    width: 6px;
+}
+.gif-combobox-dropdown::-webkit-scrollbar-track {
+    background: var(--color-gray-100);
+}
+.gif-combobox-dropdown::-webkit-scrollbar-thumb {
+    background: var(--color-gray-300);
+    border-radius: 3px;
+}
+
 .gif-manager-footer {
     padding: var(--spacing-xl) var(--spacing-2xl);
     border-top: 1px solid var(--color-gray-200);
