@@ -4838,11 +4838,18 @@ header .macro-badge {
     font-size: var(--font-size-md);
     font-family: inherit;
     background: #fff7ed;
+    color: var(--color-gray-800);
+}
+
+.gif-manager-search::placeholder {
+    color: var(--color-gray-400);
 }
 
 .gif-manager-search:focus {
     outline: none;
     border-color: var(--color-orange);
+    background: white;
+    color: var(--color-gray-800);
 }
 
 .gif-manager-filter {

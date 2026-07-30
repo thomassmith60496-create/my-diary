@@ -152,7 +152,8 @@ function getExerciseGif(variantName) {
 }
 
 function getExerciseGifUrl(variantName) {
-    const gifFile = getExerciseGif(variantName);
+    // Используем ExerciseImageAPI.getGif, чтобы учитывались пользовательские настройки из exercise-gif-manager.js
+    const gifFile = window.ExerciseImageAPI.getGif(variantName);
     if (gifFile) {
         return 'exercise-gifs/' + gifFile;
     }
