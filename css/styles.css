@@ -3129,6 +3129,10 @@ header .macro-badge {
     border: 1px solid var(--color-gray-200);
 }
 
+.train-progress-card.train-progress-chart-card {
+    flex: 2;
+}
+
 .train-progress-card-icon {
     font-size: 28px;
     margin-bottom: var(--spacing-xs);
