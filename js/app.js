@@ -18,6 +18,7 @@ window.switchMainTab = function(tab) {
     }
     if(tab === 'train') {
         renderTrainingExercises();
+        renderTrainingProgress();
     }
     setTimeout(() => applyReadOnlyState(), 50);
 }
