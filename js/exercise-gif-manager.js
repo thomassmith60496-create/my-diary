@@ -49,7 +49,8 @@ window.openGifManager = function() {
             const categories = v.categories || [];
             const primaryCategory = categories[0] || 'Другое';
             
-            html += '<div class="gif-manager-item" data-name="' + escapeHtml(v.name) + '" data-category="' + primaryCategory + '">';
+const currentGifName = currentGif ? getExerciseNameByGifFromManager(currentGif) || '' : '';
+            html += '<div class="gif-manager-item" data-name="' + escapeHtml(v.name) + '" data-category="' + primaryCategory + '" data-gif-name="' + escapeHtml(currentGifName) + '">';
             html += '<div class="gif-manager-item-header">';
             html += '<div class="gif-manager-item-name">' + escapeHtml(v.name) + '</div>';
             html += '<div class="gif-manager-item-category">' + primaryCategory + '</div>';
@@ -111,12 +112,14 @@ window.filterGifManagerCategory = function(category) {
 
 function applyGifManagerFilters() {
     const items = document.querySelectorAll('.gif-manager-item');
+    const query = gifManagerState.searchQuery;
     
     items.forEach(item => {
-        const name = item.dataset.name.toLowerCase();
+        const name = item.dataset.name ? item.dataset.name.toLowerCase() : '';
+        const gifName = item.dataset.gifName ? item.dataset.gifName.toLowerCase() : '';
         const category = item.dataset.category;
         
-        const matchesSearch = name.includes(gifManagerState.searchQuery);
+        const matchesSearch = !query || name.includes(query) || gifName.includes(query);
         const matchesCategory = gifManagerState.categoryFilter === 'all' || category === gifManagerState.categoryFilter;
         
         item.style.display = (matchesSearch && matchesCategory) ? 'block' : 'none';
