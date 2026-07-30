@@ -1672,6 +1672,7 @@ window.renderTrainingProgress = function() {
                     html += '<div class="train-variant-card">';
                     html += '<div class="train-variant-card-header">';
                     html += '<div class="train-variant-card-title">';
+                    html += '<img class="train-variant-gif" src="' + (ExerciseImageAPI.getGifUrl(v.name) || '') + '" alt="" loading="lazy">';
                     html += '<span class="train-variant-name">' + escapeHtml(v.name) + '</span>';
                     html += '<span class="train-variant-mt-badge">' + mtLabel + '</span>';
                     html += '</div>';
@@ -1718,6 +1719,7 @@ window.renderTrainingProgress = function() {
                     html += '<div class="train-variant-card">';
                     html += '<div class="train-variant-card-header">';
                     html += '<div class="train-variant-card-title">';
+                    html += '<img class="train-variant-gif" src="' + (ExerciseImageAPI.getGifUrl(v.name) || '') + '" alt="" loading="lazy">';
                     html += '<span class="train-variant-name">' + escapeHtml(v.name) + '</span>';
                     html += '<span class="train-variant-mt-badge">' + mtLabel + '</span>';
                     html += '</div>';

@@ -3402,6 +3402,16 @@ header .macro-badge {
     letter-spacing: 0.3px;
 }
 
+.train-variant-gif {
+    width: 48px;
+    height: 48px;
+    object-fit: cover;
+    border-radius: var(--radius-md);
+    border: 2px solid var(--color-gray-200);
+    flex-shrink: 0;
+    background: var(--color-gray-100);
+}
+
 .train-variant-card-stats {
     display: flex;
     gap: var(--spacing-xl);
