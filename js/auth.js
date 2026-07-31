@@ -314,8 +314,12 @@ window.loadDataForUser = function(uid) {
     var financePath = 'lera_finance_v1/' + uid;
     var trainingPath = 'lera_training_v1/' + uid;
     
-    var diaryLoad = db.ref(diaryPath).once('value');
-    var financeLoad = db.ref(financePath).once('value');
+    var diaryLoad = db.ref(diaryPath).once('value').catch(function() {
+        return null; // ошибка дневника не фатальна
+    });
+    var financeLoad = db.ref(financePath).once('value').catch(function() {
+        return null; // ошибка финансов не фатальна
+    });
     // Тренировки загружаем отдельно — их ошибка не должна блокировать питание и финансы
     var trainingLoad = db.ref(trainingPath).once('value').catch(function() {
         return null; // ошибка тренировок не фатальна
@@ -325,8 +329,8 @@ window.loadDataForUser = function(uid) {
         var diarySnap = results[0];
         var financeSnap = results[1];
         var trainingSnap = results[2];
-        var diaryData = diarySnap.val();
-        var financeDataSnap = financeSnap.val();
+        var diaryData = diarySnap ? diarySnap.val() : null;
+        var financeDataSnap = financeSnap ? financeSnap.val() : null;
         var trainingDataSnap = trainingSnap ? trainingSnap.val() : null;
         
         if (diaryData) {
