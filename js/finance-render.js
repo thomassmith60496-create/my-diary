@@ -684,8 +684,9 @@ window.renderFinanceCategories = function() {
         const typeLabel = c.type === 'expense' ? '📉 Расход' : '📈 Доход';
         const limitDisplay = c.limit > 0 ? `${c.limit.toLocaleString('ru-RU')} ₽` : 'Без лимита';
         const catColor = c.color || '#7e22ce';
-        const subcatsHtml = c.subcategories.length > 0 
-            ? c.subcategories.map(sc => `<span class="subcat-tag" style="margin:2px;">${sc}</span>`).join('')
+        const subcats = c.subcategories || [];
+        const subcatsHtml = subcats.length > 0 
+            ? subcats.map(sc => `<span class="subcat-tag" style="margin:2px;">${sc}</span>`).join('')
             : '<span style="color:#94a3b8;font-size:11px;">Нет подкатегорий</span>';
         return `<div class="finance-category-card" style="border-left:4px solid ${catColor};">
             <div class="finance-category-header">
