@@ -241,20 +241,21 @@
            </div>
        </div>
        
-       <!-- Подвкладка: Операции -->
-       <div class="sub-tab-content" id="fin-sub-transactions">
-           <div class="toolbar">
-               <button class="btn primary btn-finance-primary" onclick="openFinanceModal()">➕ Добавить операцию</button>
-               <button class="btn danger" onclick="deleteAllFinanceTransactions()">🗑 Очистить все</button>
-           </div>
-           <div id="finance-transactions-list">
-               <div class="empty-state">
-                   <div class="empty-state-icon">💸</div>
-                   <div class="empty-state-title">Нет операций</div>
-                   <div class="empty-state-text">Нажмите «➕ Добавить операцию» чтобы начать</div>
-               </div>
-           </div>
-       </div>
+        <!-- Подвкладка: Операции -->
+        <div class="sub-tab-content" id="fin-sub-transactions">
+            <div class="toolbar">
+                <button class="btn primary btn-finance-primary" onclick="openFinanceModal()">➕ Добавить операцию</button>
+                <button class="btn" onclick="openFinanceExportModal()">📤 Экспорт операций</button>
+                <button class="btn danger" onclick="deleteAllFinanceTransactions()">🗑 Очистить все</button>
+            </div>
+            <div id="finance-transactions-list">
+                <div class="empty-state">
+                    <div class="empty-state-icon">💸</div>
+                    <div class="empty-state-title">Нет операций</div>
+                    <div class="empty-state-text">Нажмите «➕ Добавить операцию» чтобы начать</div>
+                </div>
+            </div>
+        </div>
        
        <!-- Подвкладка: Накопления -->
        <div class="sub-tab-content" id="fin-sub-savings">
@@ -579,6 +580,33 @@
     </div>
 </div>
 
+<!-- Модалка: Экспорт операций -->
+<div class="modal-overlay" id="finance-export-modal" onclick="if(event.target===this)closeAllModals()">
+    <div class="modal">
+        <div class="modal-header finance">
+            <h3 class="modal-title">📤 Экспорт операций</h3>
+            <button class="modal-close" onclick="closeAllModals()">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-grid">
+                <div class="form-field finance">
+                    <label>📅 Дата начала</label>
+                    <input type="date" id="f-export-start">
+                </div>
+                <div class="form-field finance">
+                    <label>📅 Дата окончания</label>
+                    <input type="date" id="f-export-end">
+                </div>
+            </div>
+            <div class="finance-hint">Будут экспортированы операции за выбранный период с колонками: Дата, Тип, Сумма, Категория, Подкатегория, Комментарий.</div>
+        </div>
+        <div class="modal-footer finance">
+            <button class="btn" onclick="closeAllModals()">Отмена</button>
+            <button class="btn primary btn-finance-primary" onclick="exportFinanceOperations()">📤 Экспортировать</button>
+        </div>
+    </div>
+</div>
+
 <div id="print-area" style="display:none;"></div>
 
 <!-- Fixed Scroll to Top Button -->
@@ -597,6 +625,7 @@
 <script src="js/finance-save.js?v=3"></script>
 <script src="js/finance-render.js?v=3"></script>
     <script src="js/finance-import.js?v=3"></script>
+    <script src="js/finance-export.js?v=3"></script>
     <script src="js/dashboard.js?v=3"></script>
     <script src="js/training-seed.js?v=3"></script>
     <script src="js/training-storage.js?v=3"></script>
