@@ -24,7 +24,6 @@ window.renderHomePage = function() {
     // Получаем данные
     const todayNutrition = getTodayNutrition(dateStr);
     const todayFinance = getTodayFinance(dateStr);
-    const recentActivity = getRecentActivity();
     const todayTodo = getTodayTodo(dateStr);
     
     let html = '';
@@ -83,9 +82,6 @@ window.renderHomePage = function() {
                 <div id="home-heatmap"></div>
             </div>
         </div>`;
-    
-    // Последняя активность
-    html += renderRecentActivity(recentActivity);
     
     html += `</div>`;
     
@@ -582,105 +578,6 @@ function getRecentSleepDays(sleepData, n) {
         }
     }
     return days;
-}
-
-// === ПОСЛЕДНЯЯ АКТИВНОСТЬ ===
-
-window.renderRecentActivity = function(activity) {
-    const hasAnyActivity = activity.lastMeal || activity.lastFinance;
-    
-    let bodyHtml;
-    if(!hasAnyActivity) {
-        bodyHtml = `
-            <div class="empty-state-mini">
-                <div class="empty-state-mini-icon">📋</div>
-                <div class="empty-state-mini-text">Пока нет активности</div>
-            </div>`;
-    } else {
-        let itemsHtml = '<div class="activity-list">';
-        
-        if(activity.lastMeal) {
-            itemsHtml += `
-                <div class="activity-item">
-                    <div class="activity-icon">📘</div>
-                    <div class="activity-content">
-                        <div class="activity-title">Последний приём пищи</div>
-                        <div class="activity-details">${activity.lastMeal.name} • ${formatDateShortRussian(activity.lastMeal.date)}</div>
-                        ${activity.lastMeal.calories > 0 ? `<div class="activity-meta">🔥 ${activity.lastMeal.calories} ккал</div>` : ''}
-                    </div>
-                </div>`;
-        }
-        
-        if(activity.lastFinance) {
-            const isExpense = activity.lastFinance.type === 'expense';
-            itemsHtml += `
-                <div class="activity-item">
-                    <div class="activity-icon">${isExpense ? '📉' : '📈'}</div>
-                    <div class="activity-content">
-                        <div class="activity-title">Последняя операция</div>
-                        <div class="activity-details">${isExpense ? 'Расход' : 'Доход'} • ${formatDateShortRussian(activity.lastFinance.date)}</div>
-                        <div class="activity-meta">${isExpense ? '−' : '+'}${Math.abs(activity.lastFinance.amount).toLocaleString('ru-RU')} ₽</div>
-                    </div>
-                </div>`;
-        }
-        
-        itemsHtml += '</div>';
-        bodyHtml = itemsHtml;
-    }
-    
-    return `
-        <div class="home-card activity-card">
-            <div class="home-card-header">
-                <h2 class="home-card-title">📋 Последняя активность</h2>
-            </div>
-            <div class="home-card-body">
-                ${bodyHtml}
-            </div>
-        </div>`;
-}
-
-window.getRecentActivity = function() {
-    let lastMeal = null;
-    let lastFinance = null;
-    
-    // Последний приём пищи
-    if(nutritionData.weeks && nutritionData.weeks.length > 0) {
-        const allMeals = [];
-        nutritionData.weeks.forEach(week => {
-            if(week.menu) {
-                week.menu.forEach((day, dayIndex) => {
-                    if(day.meals) {
-                        day.meals.forEach((meal, mealIndex) => {
-                            if(meal.name) {
-                                const calData = week.data ? week.data[`m-${dayIndex}-${mealIndex}-cal`] : undefined;
-                                const calVal = calData ? parseFloat(calData) : NaN;
-                                allMeals.push({
-                                    name: meal.name,
-                                    date: normalizeDate(day.date),
-                                    calories: !isNaN(calVal) ? calVal : 0
-                                });
-                            }
-                        });
-                    }
-                });
-            }
-        });
-        if(allMeals.length > 0) {
-            allMeals.sort((a, b) => b.date.localeCompare(a.date));
-            lastMeal = allMeals[0];
-        }
-    }
-    
-    // Последняя финансовая операция
-    if(financeData.transactions.length > 0) {
-        const sorted = [...financeData.transactions].sort((a, b) => {
-            if(a.date !== b.date) return b.date.localeCompare(a.date);
-            return (b.createdAt || 0) - (a.createdAt || 0);
-        });
-        lastFinance = sorted[0];
-    }
-    
-    return { lastMeal, lastFinance };
 }
 
 // === ДАШБОРД ПИТАНИЯ ===

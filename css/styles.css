@@ -6056,7 +6056,7 @@ header .macro-badge {
     border-radius: var(--radius-full);
     border: 2px solid rgba(255,255,255,0.15);
     background: transparent;
-    color: rgba(255,255,255,0.6);
+    color: rgba(255,255,255,0.6) !important;
     font-size: var(--font-size-xs);
     font-weight: 600;
     cursor: pointer;
@@ -6116,7 +6116,7 @@ header .macro-badge {
     border-radius: var(--radius-full);
     border: 2px solid rgba(255,255,255,0.15);
     background: transparent;
-    color: rgba(255,255,255,0.5);
+    color: rgba(255,255,255,0.5) !important;
     font-size: var(--font-size-xs);
     font-weight: 700;
     cursor: pointer;
