@@ -291,6 +291,18 @@ header .macro-badge {
 
 .dash-header {
     background: linear-gradient(135deg, var(--color-green-dark) 0%, var(--color-green) 100%);
+    box-shadow: var(--shadow-xl);
+    padding: var(--spacing-2xl) var(--spacing-3xl);
+}
+
+.dash-header h1 {
+    font-size: var(--font-size-2xl);
+    letter-spacing: 1px;
+}
+
+.dash-header .subtitle {
+    font-size: var(--font-size-sm);
+    margin: 0 0 var(--spacing-sm);
 }
 
 .finance-header {
@@ -1290,15 +1302,15 @@ header .macro-badge {
 .dashboard-section {
     background: white;
     border-radius: var(--radius-xl);
-    padding: var(--spacing-2xl);
-    margin-bottom: var(--spacing-xl);
+    padding: var(--spacing-lg) var(--spacing-xl);
+    margin-bottom: var(--spacing-lg);
     box-shadow: var(--shadow-md);
 }
 
 .dashboard-title {
-    font-size: var(--font-size-xl);
-    margin: 0 0 var(--spacing-lg);
-    color: var(--color-green-dark);
+    font-size: var(--font-size-lg);
+    margin: 0 0 var(--spacing-sm);
+    color: var(--color-gray-700);
 }
 
 .dashboard-controls {
@@ -1357,11 +1369,18 @@ header .macro-badge {
     display: flex;
     gap: var(--spacing-xl);
     flex-wrap: wrap;
+    margin-bottom: var(--spacing-xl);
 }
 
 .dashboard-grid-item {
-    flex: 1;
-    min-width: 350px;
+    flex: 0 0 50%;
+    max-width: 50%;
+    min-width: initial;
+    padding-right: var(--spacing-md);
+}
+
+.dashboard-grid-item:last-child {
+    padding-right: 0;
 }
 
 .dashboard-label {
@@ -1706,7 +1725,7 @@ header .macro-badge {
 }
 
 .nutrition-value {
-    font-size: 32px;
+    font-size: var(--font-size-2xl);
     font-weight: 800;
     color: var(--color-danger);
 }
