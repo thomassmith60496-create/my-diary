@@ -6452,55 +6452,6 @@ header .macro-badge {
     white-space: nowrap;
 }
 
-.review-comparison-bar {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--spacing-sm);
-    margin: var(--spacing-xl) 0 var(--spacing-lg);
-}
-
-.comparison-card {
-    flex: 1;
-    min-width: 160px;
-    background: white;
-    border-radius: var(--radius-md);
-    padding: var(--spacing-md);
-    box-shadow: var(--shadow-sm);
-    border: 1px solid var(--color-gray-200);
-    text-align: center;
-}
-
-.comparison-icon {
-    font-size: var(--font-size-xl);
-    display: block;
-    margin-bottom: 2px;
-}
-
-.comparison-label {
-    font-size: var(--font-size-xs);
-    color: var(--color-gray-500);
-    display: block;
-    margin-bottom: 4px;
-}
-
-.comparison-cur {
-    font-weight: 600;
-    display: block;
-}
-
-.comparison-prev {
-    font-size: var(--font-size-xs);
-    color: var(--color-gray-500);
-    display: block;
-}
-
-.comparison-trend {
-    font-size: var(--font-size-xs);
-    font-weight: 700;
-    display: block;
-    margin-top: 2px;
-}
-
 .review-facts-title {
     font-size: var(--font-size-xl);
     margin: var(--spacing-2xl) 0 var(--spacing-md);
@@ -6799,9 +6750,6 @@ header .macro-badge {
     }
     .home-sub-tab-btn {
         font-size: var(--font-size-sm);
-    }
-    .comparison-card {
-        min-width: 120px;
     }
     .review-hero {
         flex-direction: column;

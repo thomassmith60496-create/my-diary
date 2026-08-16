@@ -548,27 +548,6 @@ function collectDailySeries(start, end) {
 
 // ============ COMPARISON & FACTS ============
 
-function generateComparison(current, prev, periodType) {
-    const cards = [];
-
-    if (current.finance.expense.total > 0 || (prev && prev.finance.expense.total > 0)) {
-        const pct = pctChange(prev.finance.expense.total, current.finance.expense.total);
-        cards.push({ icon: '📉', label: 'Расходы', cur: fmtMoney(current.finance.expense.total), sub: fmtMoney(prev.finance.expense.total), pct: pct, unit: '', invert: true });
-    }
-    if (periodType !== 'week' && (current.finance.income.total > 0 || (prev && prev.finance.income.total > 0))) {
-        const pct = pctChange(prev.finance.income.total, current.finance.income.total);
-        cards.push({ icon: '📈', label: 'Доходы', cur: fmtMoney(current.finance.income.total), sub: fmtMoney(prev.finance.income.total), pct: pct, unit: '' });
-    }
-    const taskDelta = current.tasks.done - prev.tasks.done;
-    cards.push({ icon: '✅', label: 'Выполненные задачи', cur: current.tasks.done + ' шт', sub: prev.tasks.done + ' шт', pct: taskDelta, unit: 'abs' });
-    const trDelta = current.training.workouts - prev.training.workouts;
-    cards.push({ icon: '🏋️', label: 'Тренировки', cur: current.training.workouts + ' ' + plural(current.training.workouts, 'раз', 'раза', 'раз'), sub: prev.training.workouts + ' ' + plural(prev.training.workouts, 'раз', 'раза', 'раз'), pct: trDelta, unit: 'abs' });
-    const sdDelta = current.activeDays.count - prev.activeDays.count;
-    cards.push({ icon: '🔥', label: 'Активных дней', cur: current.activeDays.count + ' / ' + current.activeDays.total, sub: prev.activeDays.count + ' / ' + prev.activeDays.total, pct: sdDelta, unit: 'abs' });
-
-    return cards;
-}
-
 function pctLabel(pct) {
     if (pct === null) return 'впервые';
     if (pct === 0) return 'без изменений';
@@ -1098,14 +1077,14 @@ function renderCharts(series, current, periodType) {
     const sleepData = series.filter(d => d.sleepMin > 0).map(d => ({ date: d.date, sleep: d.sleepMin }));
     if (sleepData.length >= 2) {
         const total = current.sleep.days > 0 ? fmtDuration(current.sleep.avgDuration) + ' в сред.' : '';
-        push(chartCard('🌙', 'Сон по ночам', total, line(sleepData, 'sleep', 'мин', '#6366f1', 'review-grad-sleep'), true));
+        push(chartCard('🌙', 'Сон по ночам', total, line(sleepData, 'sleep', 'мин', '#6366f1', 'review-grad-sleep')));
     }
 
     // 4. Расходы по дням
     const expData = series.filter(d => d.expense > 0).map(d => ({ date: d.date, expense: d.expense }));
     if (expData.length >= 1) {
         const total = current.finance.expense.total > 0 ? fmtMoney(current.finance.expense.total) : '';
-        push(chartCard('📉', 'Расходы по дням', total, line(expData, 'expense', '₽', '#f43f5e', 'review-grad-exp'), true));
+        push(chartCard('📉', 'Расходы по дням', total, line(expData, 'expense', '₽', '#f43f5e', 'review-grad-exp')));
     }
 
     // 5. Расходы по категориям
@@ -1150,32 +1129,6 @@ function renderReviewHTML(periodType, current, prev) {
         ? getSelectedPeriod('week').label
         : getSelectedPeriod('month').label;
 
-    const comparison = prev ? generateComparison(current, prev, periodType) : null;
-    const comparisonHtml = comparison && comparison.length
-        ? '<div class="review-comparison-bar">' +
-            comparison.map(c => {
-                let trendTxt, trendCls;
-                if (c.unit === 'abs') {
-                    if (c.pct === 0) { trendTxt = 'без изменений'; trendCls = 'same'; }
-                    else { trendTxt = (c.pct > 0 ? '+' : '') + c.pct; trendCls = c.pct > 0 ? 'up' : 'down'; }
-                } else {
-                    trendTxt = pctLabel(c.pct);
-                    if (c.pct === null) trendCls = 'new';
-                    else if (c.pct === 0) trendCls = 'same';
-                    else if (c.invert) trendCls = c.pct > 0 ? 'down' : 'up';
-                    else trendCls = c.pct > 0 ? 'up' : 'down';
-                }
-                return '<div class="comparison-card">' +
-                    '<span class="comparison-icon">' + c.icon + '</span>' +
-                    '<span class="comparison-label">' + esc(c.label) + '</span>' +
-                    '<span class="comparison-cur">' + c.cur + '</span>' +
-                    '<span class="comparison-prev">' + c.sub + '</span>' +
-                    '<span class="comparison-trend trend-' + trendCls + '">' + trendTxt + '</span>' +
-                '</div>';
-            }).join('') +
-          '</div>'
-        : '';
-
     const facts = prev ? generateFacts(current, prev, periodType) : generateFacts(current, null, periodType);
     const factsHtml = '<h3 class="review-facts-title">🔍 Что изменилось?</h3>' +
         (facts.length ? '<div class="review-facts-list">' +
@@ -1208,7 +1161,6 @@ function renderReviewHTML(periodType, current, prev) {
         heroHtml +
         '<div class="review-stat-grid">' + renderStatGrid(current, prev) + '</div>' +
         chartsHtml +
-        comparisonHtml +
         '<div class="review-facts">' + factsHtml + '</div>';
 }
 
@@ -1372,19 +1324,9 @@ window.exportReview = function(periodType, format) {
 
     if (prev) {
         lines.push('');
-        lines.push('--- Сравнение с ' + (periodType === 'week' ? 'предыдущей неделей' : 'предыдущим месяцем') + ' ---');
-        const cmp = generateComparison(current, prev);
-        cmp.forEach(c => {
-            lines.push(c.icon + ' ' + c.label + ': ' + c.cur + ' (было ' + c.sub + ', ' + pctLabel(c.pct) + ')');
-        });
-        lines.push('');
         lines.push('--- Что изменилось? ---');
-        const facts = generateFacts(current, prev);
+        const facts = generateFacts(current, prev, periodType);
         facts.forEach(f => lines.push((f.icon || '•') + ' ' + f.text));
-    } else {
-        lines.push('');
-        lines.push('--- Сравнение ---');
-        lines.push('Данных за предыдущий период нет.');
     }
 
     const text = lines.join('\n');
@@ -1423,11 +1365,11 @@ function exportReviewPDF(periodType) {
             '@media print {' +
             '  body { margin: 0; }' +
             '  .review-toolbar, .review-header select, .review-toolbar .btn { display: none !important; }' +
-            '  .review-chart-card, .review-stat-card, .comparison-card, .review-fact { break-inside: avoid; }' +
+            '  .review-chart-card, .review-stat-card, .review-fact { break-inside: avoid; }' +
             '}' +
             '.review-print { max-width: 820px; margin: 0 auto; padding: 24px; font-family: -apple-system, Segoe UI, Roboto, sans-serif; color: #0f172a; }' +
             '.review-print .review-hero { box-shadow: none; border: 1px solid #e2e8f0; }' +
-            '.review-print .review-stat-card, .review-print .review-chart-card, .review-print .comparison-card, .review-print .review-fact { box-shadow: none; border: 1px solid #e2e8f0; }';
+            '.review-print .review-stat-card, .review-print .review-chart-card, .review-print .review-fact { box-shadow: none; border: 1px solid #e2e8f0; }';
 
         const win = window.open('', '_blank');
         if (!win) {
@@ -1454,7 +1396,6 @@ function exportReviewPDF(periodType) {
 window.__review = {
     collectPeriod: collectPeriod,
     collectDailySeries: collectDailySeries,
-    generateComparison: generateComparison,
     generateFacts: generateFacts,
     computePeriodScore: computePeriodScore,
     generateVerdict: generateVerdict,
