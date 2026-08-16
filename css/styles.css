@@ -5838,6 +5838,7 @@ header .macro-badge {
     margin-bottom: var(--spacing-lg);
     overflow: hidden;
     box-shadow: var(--shadow-md);
+    color-scheme: dark;
 }
 
 .sleep-collapsed {
@@ -5848,6 +5849,7 @@ header .macro-badge {
     cursor: pointer;
     user-select: none;
     transition: background var(--transition-base);
+    color: white;
 }
 
 .sleep-collapsed:hover {
