@@ -11,6 +11,26 @@ window.renderHomePage = function() {
     const container = document.getElementById('home-content');
     if(!container) return;
     
+    container.innerHTML = `
+        <div class="home-sub-tabs">
+            <button class="home-sub-tab-btn active" onclick="switchHomeSubTab('today', event)">📅 Сегодня</button>
+            <button class="home-sub-tab-btn" onclick="switchHomeSubTab('weekly', event)">📊 Недельный обзор</button>
+            <button class="home-sub-tab-btn" onclick="switchHomeSubTab('monthly', event)">📊 Месячный обзор</button>
+        </div>
+        <div class="home-sub-tab-content active" id="home-sub-today"></div>
+        <div class="home-sub-tab-content" id="home-sub-weekly"></div>
+        <div class="home-sub-tab-content" id="home-sub-monthly"></div>
+    `;
+    
+    window.reviewWeekStart = null;
+    window.reviewMonthKey = null;
+    renderHomeToday();
+}
+
+window.renderHomeToday = function() {
+    const container = document.getElementById('home-sub-today');
+    if(!container) return;
+    
     const today = new Date();
     const dateStr = today.toISOString().slice(0, 10);
     const dayNames = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];

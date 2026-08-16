@@ -5,12 +5,34 @@
 
 // === ВКЛАДКИ ===
 
+window.switchHomeSubTab = function(tab, event) {
+    const container = document.getElementById('home-content');
+    if(!container) return;
+    container.querySelectorAll('.home-sub-tab-btn').forEach(b => b.classList.remove('active'));
+    container.querySelectorAll('.home-sub-tab-content').forEach(c => c.classList.remove('active'));
+    if(event && event.target) event.target.classList.add('active');
+    const content = document.getElementById(`home-sub-${tab}`);
+    if(content) content.classList.add('active');
+    if(tab === 'today') {
+        if(typeof renderHomeToday === 'function') renderHomeToday();
+    }
+    if(tab === 'weekly') {
+        if(typeof renderWeeklyReview === 'function') renderWeeklyReview();
+    }
+    if(tab === 'monthly') {
+        if(typeof renderMonthlyReview === 'function') renderMonthlyReview();
+    }
+    setTimeout(() => applyReadOnlyState(), 50);
+};
+
 window.switchMainTab = function(tab) {
     document.querySelectorAll('.main-tab-btn').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.main-tab-content').forEach(c => c.classList.remove('active'));
     document.querySelector(`.main-tab-btn.${tab}`).classList.add('active');
     document.getElementById(`main-tab-${tab}`).classList.add('active');
-    if(tab === 'home') renderHomePage();
+    if(tab === 'home') {
+        renderHomePage();
+    }
     if(tab === 'finance') renderFinanceDashboard();
     if(tab === 'food') {
         renderNutritionAll();
