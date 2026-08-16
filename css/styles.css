@@ -1373,15 +1373,22 @@ header .macro-badge {
 }
 
 .dashboard-grid-item {
-    flex: 0 0 50%;
-    max-width: 50%;
-    min-width: 0;
-    padding-right: var(--spacing-md);
+    flex: 1 1 calc(50% - var(--spacing-xl) / 2);
+    min-width: 320px;
+    max-width: calc(50% - var(--spacing-xl) / 2);
     box-sizing: border-box;
 }
 
 .dashboard-grid-item:last-child {
     padding-right: 0;
+}
+
+@media (max-width: 768px) {
+    .dashboard-grid-item {
+        flex: 1 1 100%;
+        max-width: 100%;
+        min-width: 0;
+    }
 }
 
 .dashboard-label {

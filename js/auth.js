@@ -301,6 +301,10 @@ window.initUserSession = function(uid) {
         renderUserBar();
         applyReadOnlyState();
     });
+
+    if (typeof window.initTaskDeadlineNotifications === 'function') {
+        window.initTaskDeadlineNotifications();
+    }
 }
 
 window.switchDataContext = function(uid) {

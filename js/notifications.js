@@ -4,15 +4,18 @@
 
 "use strict";
 
-// Инициализация: один раз при загрузке страницы
-// Если пользователь уже разрешил — запускаем проверку.
-// Если нет — запрашиваемpermission (браузер покажет диалог).
+let deadlineCheckInterval = null;
+
+// Инициализация уведомлений после авторизации
 window.initTaskDeadlineNotifications = function() {
-  // Еслиpermission уже был получен ранее — сразу начинаем проверку
+  if (deadlineCheckInterval) {
+    clearInterval(deadlineCheckInterval);
+    deadlineCheckInterval = null;
+  }
+  
   if (Notification.permission === 'granted') {
     startDeadlineCheckLoop();
   } 
-  // Если пользователь ещё не решали — просим сейчас
   else if (Notification.permission !== 'denied') {
     Notification.requestPermission().then(permission => {
       if (permission === 'granted') {
@@ -20,12 +23,10 @@ window.initTaskDeadlineNotifications = function() {
       }
     });
   }
-  // Если пользователь previous отменил — ничего не делаем
 };
 
-// Запуск цикла проверки раз в 10 минут
 function startDeadlineCheckLoop() {
-  setInterval(checkAllDeadlines, 10 * 60 * 1000);
+  deadlineCheckInterval = setInterval(checkAllDeadlines, 10 * 60 * 1000);
 }
 
 // Главная функция: бежит по задачам и показывает уведомления при наступлении дедлайна
