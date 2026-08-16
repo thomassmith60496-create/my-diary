@@ -23,27 +23,17 @@ window.initTaskDeadlineNotifications = function() {
   notifyAddLog('info', 'Инициализация уведомлений');
 
   if (Notification.permission === 'granted') {
-    notifyAddLog('ok', 'Разрешение на уведомления: granted');
+    notifyAddLog('ok', 'Разрешение: granted — запуск проверки');
     checkAllDeadlines();
     startDeadlineCheckLoop();
-  }
-  else if (Notification.permission !== 'denied') {
-    notifyAddLog('warn', 'Разрешение не получено, запрашиваю...');
-    Notification.requestPermission().then(function(permission) {
-      if (permission === 'granted') {
-        notifyAddLog('ok', 'Разрешение получено');
-        checkAllDeadlines();
-        startDeadlineCheckLoop();
-      } else {
-        notifyAddLog('err', 'Разрешение отклонено: ' + permission);
-      }
-    });
-  } else {
+  } else if (Notification.permission === 'denied') {
     notifyAddLog('err', 'Уведомления заблокированы браузером');
+  } else {
+    notifyAddLog('warn', 'Разрешение не получено. Нажмите «🧪 Тест» для запроса.');
   }
 };
 
-function startDeadlineCheckLoop() {
+window.startDeadlineCheckLoop = function() {
   deadlineCheckInterval = setInterval(checkAllDeadlines, 10 * 60 * 1000);
   notifyAddLog('info', 'Запущена проверка каждые 10 минут');
 }
@@ -100,22 +90,29 @@ window.checkAllDeadlines = function() {
 }
 
 window.testDeadlineNotification = function() {
-  if (Notification.permission === 'granted') {
+  function sendTest() {
     new Notification('🧪 Тест уведомления', {
       body: 'Это тестовое уведомление системы дедлайнов',
       icon: 'favicon.png'
     });
     notifyAddLog('sent', 'Тестовое уведомление отправлено');
+    if (!deadlineCheckInterval) {
+      checkAllDeadlines();
+      startDeadlineCheckLoop();
+      notifyAddLog('ok', 'Авто-проверка запущена');
+    }
+  }
+
+  if (Notification.permission === 'granted') {
+    sendTest();
   } else if (Notification.permission === 'denied') {
     alert('Уведомления заблокированы браузером. Разрешите уведомления в настройках сайта.');
   } else {
     Notification.requestPermission().then(function(p) {
       if (p === 'granted') {
-        new Notification('🧪 Тест уведомления', {
-          body: 'Это тестовое уведомление системы дедлайнов',
-          icon: 'favicon.png'
-        });
-        notifyAddLog('sent', 'Тестовое уведомление отправлено (разрешение получено сейчас)');
+        sendTest();
+      } else {
+        notifyAddLog('err', 'Разрешение отклонено: ' + p);
       }
     });
   }
@@ -155,7 +152,10 @@ window.showNotifyLog = function() {
           '<div style="padding:6px 10px;border-radius:8px;background:#f8fafc;font-size:12px;">UID: <b>' + (currentUserId ? currentUserId.slice(0, 8) + '...' : 'нет') + '</b></div>' +
         '</div>' +
         '<div style="display:flex;gap:8px;margin-bottom:12px;">' +
-          '<button class="btn primary" onclick="checkAllDeadlines();showNotifyLog();" style="font-size:12px;">🔍 Проверить сейчас</button>' +
+          (isRunning
+            ? '<span style="font-size:12px;color:#16a34a;padding:6px;">✅ Авто-проверка активна</span>'
+            : '<button class="btn primary" onclick="startDeadlineCheckLoop();showNotifyLog();" style="font-size:12px;">▶️ Запустить авто-проверку</button>') +
+          '<button class="btn ghost" onclick="checkAllDeadlines();showNotifyLog();" style="font-size:12px;">🔍 Проверить сейчас</button>' +
           '<button class="btn ghost" onclick="clearNotifyLog();showNotifyLog();" style="font-size:12px;">🗑 Очистить лог</button>' +
           '<button class="btn ghost" onclick="testDeadlineNotification()" style="font-size:12px;">🧪 Тест</button>' +
         '</div>' +
