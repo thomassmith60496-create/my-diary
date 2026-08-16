@@ -452,6 +452,96 @@ function collectPeriod(start, end) {
     };
 }
 
+function collectDailySeries(start, end) {
+    const calByDay = {};
+    const weightByDay = {};
+    if (typeof nutritionData !== 'undefined' && nutritionData.weeks) {
+        nutritionData.weeks.forEach(week => {
+            if (!week || !week.menu) return;
+            week.menu.forEach((day, di) => {
+                if (!day || !day.date) return;
+                const dk = normalizeKey(day.date);
+                if (!dk || dk < start || dk > end) return;
+                if (!day.meals || !day.meals.length) return;
+                let dayCal = 0;
+                day.meals.forEach((meal, mi) => {
+                    const c = parseFloat(week.data && week.data['m-' + di + '-' + mi + '-cal']);
+                    if (!isNaN(c) && c > 0) dayCal += c;
+                });
+                if (dayCal > 0) calByDay[dk] = dayCal;
+                const w = parseFloat(week.data && week.data['weight-' + di]);
+                if (!isNaN(w) && w > 0) weightByDay[dk] = w;
+            });
+        });
+    }
+
+    const workoutByDay = {};
+    if (typeof TrainingWorkoutAPI !== 'undefined') {
+        try {
+            TrainingWorkoutAPI.getWorkouts().forEach(w => {
+                if (!w || !w.date) return;
+                const dk = normalizeKey(w.date);
+                if (!dk || dk < start || dk > end) return;
+                let vol = 0;
+                (w.exercises || []).forEach(ex => {
+                    (ex.sets || []).forEach(s => {
+                        if (s.warmup) return;
+                        const wt = parseFloat(s.weight) || 0;
+                        const rp = parseFloat(s.reps) || 0;
+                        if (wt > 0 && rp > 0) vol += wt * rp;
+                    });
+                });
+                const cur = workoutByDay[dk] || { count: 0, volume: 0 };
+                cur.count++;
+                cur.volume += vol;
+                workoutByDay[dk] = cur;
+            });
+        } catch (e) {}
+    }
+
+    const sleepAll = (typeof window.getTodoSleepAll === 'function') ? (window.getTodoSleepAll() || {}) : {};
+    const transactions = (typeof financeData !== 'undefined' && financeData.transactions) ? financeData.transactions : [];
+
+    const series = [];
+    let d = parseYMD(start);
+    let guard = 0;
+    while (keyOfDate(d) <= end && guard < 20000) {
+        const k = keyOfDate(d);
+        const entry = {
+            date: k,
+            calories: calByDay[k] || 0,
+            weight: weightByDay[k] || null,
+            sleepMin: 0,
+            expense: 0,
+            income: 0,
+            tasksDone: 0,
+            tasksTotal: 0,
+            workoutCount: 0,
+            workoutVolume: 0
+        };
+        const sl = sleepAll[k];
+        if (sl && sl.duration) entry.sleepMin = parseFloat(sl.duration) || 0;
+        transactions.forEach(t => {
+            if (!t || !t.date) return;
+            if (normalizeKey(t.date) !== k) return;
+            const amt = Math.abs(parseFloat(t.amount) || 0);
+            if (t.type === 'expense') entry.expense += amt;
+            else entry.income += amt;
+        });
+        if (typeof window.getTodoDayTasks === 'function') {
+            const dt = window.getTodoDayTasks(k) || [];
+            entry.tasksTotal = dt.length;
+            entry.tasksDone = dt.filter(t => t && t.completed).length;
+        }
+        const wb = workoutByDay[k];
+        if (wb) { entry.workoutCount = wb.count; entry.workoutVolume = Math.round(wb.volume); }
+        series.push(entry);
+        d = addDays(d, 1);
+        guard++;
+    }
+    return series;
+}
+
 // ============ COMPARISON & FACTS ============
 
 function generateComparison(current, prev) {
@@ -647,6 +737,147 @@ function generateFacts(current, prev) {
     return facts;
 }
 
+// ============ PERIOD SCORE & VERDICT ============
+
+const SCORE_NORMS = {
+    trainingWeek: 3,
+    trainingMonth: 12,
+    idealSleepMin: 450,
+    sleepToleranceMin: 90
+};
+
+function clampScore(v) {
+    return Math.max(0, Math.min(10, Math.round(v * 10) / 10));
+}
+
+function computePeriodScore(current, prev, periodType) {
+    const isWeek = periodType === 'week';
+    const parts = [];
+
+    const hasData = !!(current.tasks.total || current.training.workouts || current.sleep.days ||
+        current.nutrition.days || current.finance.expense.total || current.finance.income.total ||
+        current.finance.savings.total || current.activeDays.count);
+    if (!hasData) return { overall: null, parts: [] };
+
+    const taskPct = current.tasks.total > 0 ? current.tasks.done / current.tasks.total : null;
+    if (taskPct !== null) {
+        parts.push({ key: 'tasks', label: 'Задачи', icon: '✅', score: clampScore(taskPct * 10), weight: 2, note: current.tasks.done + ' из ' + current.tasks.total + ' выполнено' });
+    }
+
+    const trainNorm = isWeek ? SCORE_NORMS.trainingWeek : SCORE_NORMS.trainingMonth;
+    if (current.training.workouts > 0 || trainNorm > 0) {
+        const s = clampScore((current.training.workouts / trainNorm) * 10);
+        parts.push({ key: 'training', label: 'Тренировки', icon: '🏋️', score: s, weight: 2, note: current.training.workouts + ' из ' + trainNorm + ' (норма за ' + (isWeek ? 'нед' : 'мес') + ')' });
+    }
+
+    if (current.sleep.days > 0) {
+        const d = Math.abs(current.sleep.avgDuration - SCORE_NORMS.idealSleepMin);
+        const s = clampScore(10 - (d / SCORE_NORMS.sleepToleranceMin) * 10);
+        parts.push({ key: 'sleep', label: 'Сон', icon: '🌙', score: s, weight: 2, note: 'в сред. ' + fmtDuration(current.sleep.avgDuration) });
+    }
+
+    if (current.activeDays.total > 0) {
+        const s = clampScore((current.activeDays.count / current.activeDays.total) * 10);
+        parts.push({ key: 'active', label: 'Активность', icon: '🔥', score: s, weight: 1, note: current.activeDays.count + ' из ' + current.activeDays.total + ' дней' });
+    }
+
+    if (current.nutrition.avgCalories > 0 && current.activeDays.total > 0) {
+        const s = clampScore((current.nutrition.days / current.activeDays.total) * 10);
+        parts.push({ key: 'nutrition', label: 'Питание', icon: '📘', score: s, weight: 1, note: current.nutrition.days + ' дней записано' });
+    }
+
+    if (current.finance.planned.total > 0) {
+        const ratio = current.finance.expense.total / current.finance.planned.total;
+        const s = clampScore(ratio <= 1 ? 10 : 10 - (ratio - 1) * 10);
+        parts.push({ key: 'budget', label: 'Бюджет', icon: '💰', score: s, weight: 1, note: 'расход ' + fmtMoney(current.finance.expense.total) + ' / план ' + fmtMoney(current.finance.planned.total) });
+    }
+
+    if (parts.length === 0) return { overall: null, parts: [] };
+
+    let wSum = 0, wTotal = 0;
+    parts.forEach(p => { wSum += p.score * p.weight; wTotal += p.weight; });
+    const overall = clampScore(wSum / wTotal);
+    return { overall: overall, parts: parts };
+}
+
+function scoreWord(score) {
+    if (score >= 8.5) return 'Отлично';
+    if (score >= 7) return 'Хорошо';
+    if (score >= 5) return 'Средне';
+    if (score >= 3) return 'Слабо';
+    return 'Плохо';
+}
+
+function scoreAdverb(score) {
+    if (score >= 8.5) return 'отлично';
+    if (score >= 7) return 'хорошо';
+    if (score >= 5) return 'нормально';
+    if (score >= 3) return 'непросто';
+    return 'тяжело';
+}
+
+function formatScoreDelta(d) {
+    const abs = Math.abs(d.delta);
+    const sign = d.delta > 0 ? '+' : (d.delta < 0 ? '-' : '±');
+    return sign + (d.money ? fmtMoney(abs) : abs);
+}
+
+function generateVerdict(current, prev, score, periodType) {
+    if (!current || score === null) {
+        return 'За этот период недостаточно данных для сводки. Записывай задачи, тренировки, питание и финансы — и обзор станет содержательнее.';
+    }
+    const kind = periodType === 'week' ? 'Неделя' : 'Месяц';
+    const open = kind + ' прошла ' + scoreAdverb(score.overall) + ' — рейтинг ' + score.overall + '/10.';
+
+    const deltas = [];
+    if (prev) {
+        deltas.push({ label: 'выполнение задач', delta: current.tasks.done - prev.tasks.done, good: true, money: false });
+        deltas.push({ label: 'количество тренировок', delta: current.training.workouts - prev.training.workouts, good: true, money: false });
+        deltas.push({ label: 'активные дни', delta: current.activeDays.count - prev.activeDays.count, good: true, money: false });
+        deltas.push({ label: 'расходы', delta: current.finance.expense.total - prev.finance.expense.total, good: false, money: true });
+        deltas.push({ label: 'доходы', delta: current.finance.income.total - prev.finance.income.total, good: true, money: true });
+        deltas.push({ label: 'накопления', delta: current.finance.savings.total - prev.finance.savings.total, good: true, money: true });
+    }
+
+    let best = null, worst = null;
+    deltas.forEach(d => {
+        if (d.delta === 0) return;
+        if (d.good) {
+            if (!best || d.delta > best.delta) best = d;
+            if (d.delta < 0 && (!worst || d.delta < worst.delta)) worst = d;
+        } else {
+            if (d.delta > 0 && (!worst || d.delta > worst.delta)) worst = d;
+            if (d.delta < 0 && (!best || (-d.delta) > best.delta)) best = { label: d.label, delta: -d.delta, good: true, money: d.money };
+        }
+    });
+
+    let main = '';
+    if (best && prev) {
+        main += ' Главное улучшение — «' + best.label + '»: ' + formatScoreDelta(best) + ' к прошлому периоду.';
+    }
+    if (worst && prev) {
+        main += ' Обрати внимание на «' + worst.label + '»: ' + formatScoreDelta(worst) + '.';
+    }
+
+    const topPart = score.parts.slice().sort((a, b) => b.score - a.score)[0];
+    const weakPart = score.parts.slice().sort((a, b) => a.score - b.score)[0];
+    let advice = '';
+    if (topPart && weakPart && topPart.key !== weakPart.key && weakPart.score < 6) {
+        advice = ' Сильнее всего получился блок «' + topPart.label.toLowerCase() + '», а прокачать стоит «' + weakPart.label.toLowerCase() + '».';
+    }
+
+    return open + main + advice;
+}
+
+function scoreColor(score) {
+    if (score === null) return 'var(--color-gray-400)';
+    if (score >= 8.5) return '#10b981';
+    if (score >= 7) return '#14b8a6';
+    if (score >= 5) return '#f59e0b';
+    if (score >= 3) return '#f97316';
+    return '#ef4444';
+}
+
 // ============ RENDER ============
 
 function statCard(icon, title, value, sub, trend) {
@@ -762,12 +993,135 @@ function renderStatGrid(current, prev) {
     return cards.map(c => c).join('');
 }
 
+// ============ HERO SCORE ============
+
+function renderHeroScore(score, current, prev, periodType, firstFact) {
+    if (!score || score.overall === null) {
+        return '' +
+            '<div class="review-hero review-hero-empty">' +
+                '<div class="review-hero-verdict">За этот период пока нет данных для рейтинга. Начни записывать задачи, тренировки, питание, сон и финансы.</div>' +
+            '</div>';
+    }
+
+    const color = scoreColor(score.overall);
+    const pct = Math.round(score.overall * 10);
+    const badge = firstFact ? '🏆 ' + firstFact.text : '🏆 Главное за период';
+    const partsHtml = score.parts.map(p =>
+        '<div class="review-hero-part" title="' + esc(p.note) + '">' +
+            '<span class="review-hero-part-icon">' + p.icon + '</span>' +
+            '<span class="review-hero-part-label">' + esc(p.label) + '</span>' +
+            '<div class="review-hero-part-bar"><i style="width:' + Math.round(p.score * 10) + '%;background:' + scoreColor(p.score) + '"></i></div>' +
+            '<span class="review-hero-part-score">' + p.score.toFixed(1) + '</span>' +
+        '</div>').join('');
+
+    return '' +
+        '<div class="review-hero">' +
+            '<div class="review-hero-left">' +
+                '<div class="review-hero-num" style="color:' + color + '">' + score.overall.toFixed(1) + '<span class="review-hero-outof">/10</span></div>' +
+                '<div class="review-hero-scorebar"><i style="width:' + pct + '%;background:' + color + '"></i></div>' +
+                '<div class="review-hero-scoreword" style="color:' + color + '">' + scoreWord(score.overall) + '</div>' +
+            '</div>' +
+            '<div class="review-hero-right">' +
+                '<div class="review-hero-verdict">' + esc(generateVerdict(current, prev, score, periodType)) + '</div>' +
+                '<div class="review-hero-badge">' + esc(badge) + '</div>' +
+                '<div class="review-hero-parts">' + partsHtml + '</div>' +
+            '</div>' +
+        '</div>';
+}
+
+// ============ CHARTS ============
+
+const CHART_PALETTE = ['#f43f5e', '#f59e0b', '#10b981', '#6366f1', '#14b8a6', '#8b5cf6', '#ef4444', '#0ea5e9', '#84cc16', '#f97316'];
+const CHART_TEXT = { textColor: '#64748b', gridColor: '#e2e8f0', titleColor: '#0f172a' };
+
+function chartCard(icon, title, total, chartHtml) {
+    return '' +
+        '<div class="review-chart-card">' +
+            '<div class="review-chart-head">' +
+                '<span class="review-chart-icon">' + icon + '</span>' +
+                '<span class="review-chart-title">' + esc(title) + '</span>' +
+                '<span class="review-chart-total">' + esc(total) + '</span>' +
+            '</div>' +
+            '<div class="review-chart-body">' + (chartHtml || '<div class="chart-empty">Нет данных для графика</div>') + '</div>' +
+        '</div>';
+}
+
+function buildDonutSectors(byCategory) {
+    const entries = Object.keys(byCategory)
+        .map(name => ({ name: name, value: byCategory[name] }))
+        .sort((a, b) => b.value - a.value);
+    const total = entries.reduce((s, e) => s + e.value, 0);
+    let acc = 0;
+    return entries.map((e, i) => {
+        const angle = total > 0 ? (e.value / total) * 360 : 0;
+        const s = { name: e.name, value: e.value, color: CHART_PALETTE[i % CHART_PALETTE.length], startAngle: acc, angle: angle };
+        acc += angle;
+        return s;
+    });
+}
+
+function renderCharts(series, current) {
+    const cards = [];
+    const line = (data, field, unit, color, gid) =>
+        (typeof window.renderSVGLineChart === 'function') ? window.renderSVGLineChart(data, field, unit, color, gid, CHART_TEXT) : '';
+    const donut = (sectors, total, center, sub) =>
+        (typeof window.renderDonutChart === 'function') ? window.renderDonutChart(sectors, total, center, sub) : '';
+
+    const wData = series.filter(d => d.weight !== null).map(d => ({ date: d.date, weight: d.weight }));
+    if (wData.length >= 1) {
+        const total = current.nutrition.weightStart ? current.nutrition.weightStart + ' → ' + current.nutrition.weightEnd + ' кг' : '';
+        cards.push(chartCard('⚖️', 'Вес', total, line(wData, 'weight', 'кг', '#10b981', 'review-grad-weight')));
+    }
+
+    const calData = series.filter(d => d.calories > 0).map(d => ({ date: d.date, cal: d.calories }));
+    if (calData.length >= 2) {
+        const avg = Math.round(calData.reduce((s, d) => s + d.cal, 0) / calData.length);
+        cards.push(chartCard('📘', 'Калории по дням', avg + ' ккал в сред.', line(calData, 'cal', 'ккал', '#f59e0b', 'review-grad-cal')));
+    }
+
+    const sleepData = series.filter(d => d.sleepMin > 0).map(d => ({ date: d.date, sleep: d.sleepMin }));
+    if (sleepData.length >= 2) {
+        const total = current.sleep.days > 0 ? fmtDuration(current.sleep.avgDuration) + ' в сред.' : '';
+        cards.push(chartCard('🌙', 'Сон по ночам', total, line(sleepData, 'sleep', 'мин', '#6366f1', 'review-grad-sleep')));
+    }
+
+    const expData = series.filter(d => d.expense > 0).map(d => ({ date: d.date, expense: d.expense }));
+    if (expData.length >= 1) {
+        const total = current.finance.expense.total > 0 ? fmtMoney(current.finance.expense.total) : '';
+        cards.push(chartCard('📉', 'Расходы по дням', total, line(expData, 'expense', '₽', '#f43f5e', 'review-grad-exp')));
+    }
+
+    if (Object.keys(current.finance.expense.byCategory).length > 0) {
+        const sectors = buildDonutSectors(current.finance.expense.byCategory);
+        cards.push(chartCard('💸', 'Расходы по категориям', fmtMoney(current.finance.expense.total),
+            donut(sectors, current.finance.expense.total, fmtMoney(current.finance.expense.total), 'всего расходов')));
+    }
+
+    if (Object.keys(current.finance.income.byCategory).length > 0) {
+        const sectors = buildDonutSectors(current.finance.income.byCategory);
+        cards.push(chartCard('📈', 'Доходы по категориям', fmtMoney(current.finance.income.total),
+            donut(sectors, current.finance.income.total, fmtMoney(current.finance.income.total), 'всего доходов')));
+    }
+
+    const trData = series.filter(d => d.workoutVolume > 0).map(d => ({ date: d.date, volume: d.workoutVolume }));
+    if (trData.length >= 1) {
+        const total = current.training.workouts > 0
+            ? current.training.workouts + ' ' + plural(current.training.workouts, 'тренировка', 'тренировки', 'тренировок') + ' · ' + fmtMoney(current.training.volume)
+            : '';
+        cards.push(chartCard('🏋️', 'Объём тренировок', total, line(trData, 'volume', 'кг', '#14b8a6', 'review-grad-train')));
+    }
+
+    if (!cards.length) return '';
+    return '' +
+        '<h3 class="review-charts-title">📊 Графики за период</h3>' +
+        '<div class="review-charts-grid">' + cards.join('') + '</div>';
+}
+
 function renderReviewHTML(periodType, current, prev) {
     const selectId = periodType === 'week' ? 'review-week-select' : 'review-month-select';
     const enumFn = periodType === 'week' ? enumWeeks : enumMonths;
     const title = periodType === 'week' ? 'Недельный обзор' : 'Месячный обзор';
     const icon = periodType === 'week' ? '📅' : '📆';
-    const exportFn = 'exportReview(\'' + periodType + '\')';
     const options = enumFn().map(o => '<option value="' + esc(o.value) + '">' + esc(o.label) + '</option>').join('');
     const selectedVal = periodType === 'week'
         ? (window.reviewWeekStart || getWeekRange(new Date()).start)
@@ -809,6 +1163,11 @@ function renderReviewHTML(periodType, current, prev) {
             '</div>'
         : '<div class="review-empty-facts">Нет данных для анализа.</div>');
 
+    const series = (current && current.dateRange) ? collectDailySeries(current.dateRange.start, current.dateRange.end) : [];
+    const score = computePeriodScore(current, prev, periodType);
+    const heroHtml = renderHeroScore(score, current, prev, periodType, facts.length ? facts[0] : null);
+    const chartsHtml = renderCharts(series, current);
+
     return '' +
         '<header class="review-header">' +
             '<h1>' + icon + ' ' + title + '</h1>' +
@@ -819,9 +1178,12 @@ function renderReviewHTML(periodType, current, prev) {
             '<button class="btn" onclick="prevReviewPeriod(\'' + periodType + '\')">← Предыдущий</button>' +
             '<button class="btn" onclick="nextReviewPeriod(\'' + periodType + '\')">Следующий →</button>' +
             '<div class="review-toolbar-spacer"></div>' +
-            '<button class="btn primary" onclick="' + exportFn + '">📄 Экспорт</button>' +
+            '<button class="btn" onclick="exportReview(\'' + periodType + '\', \'txt\')">📄 TXT</button>' +
+            '<button class="btn primary" onclick="exportReview(\'' + periodType + '\', \'pdf\')">🖨 PDF</button>' +
         '</div>' +
+        heroHtml +
         '<div class="review-stat-grid">' + renderStatGrid(current, prev) + '</div>' +
+        chartsHtml +
         comparisonHtml +
         '<div class="review-facts">' + factsHtml + '</div>';
 }
@@ -917,16 +1279,43 @@ window.renderMonthlyReview = function() {
 
 // ============ EXPORT ============
 
-window.exportReview = function(periodType) {
+function hasAnyData(cp) {
+    return !!(cp.tasks.total || cp.training.workouts || cp.finance.expense.total || cp.finance.income.total ||
+        cp.finance.savings.total || cp.nutrition.days || cp.activeDays.count || cp.sleep.days);
+}
+
+function collectWithPrev(periodType) {
     const p = getSelectedPeriod(periodType);
     const current = collectPeriod(p.start, p.end);
-    const prev = (p.prev && p.prev) ? collectPeriod(p.prev.start, p.prev.end) : null;
+    let prev = null;
+    if (p.prev) {
+        const cp = collectPeriod(p.prev.start, p.prev.end);
+        if (hasAnyData(cp)) prev = cp;
+    }
+    return { p: p, current: current, prev: prev };
+}
+
+window.exportReview = function(periodType, format) {
+    format = format || 'txt';
+    if (format === 'pdf') {
+        exportReviewPDF(periodType);
+        return;
+    }
+    const { p, current, prev } = collectWithPrev(periodType);
 
     let lines = [];
     lines.push('========== ' + (periodType === 'week' ? 'НЕДЕЛЬНЫЙ ОБЗОР' : 'МЕСЯЧНЫЙ ОБЗОР') + ' ==========');
     lines.push('Период: ' + esc(p.label));
     lines.push('Даты: ' + fmtDateFull(p.start) + ' – ' + fmtDateFull(p.end));
     lines.push('');
+
+    const score = computePeriodScore(current, prev, periodType);
+    if (score && score.overall !== null) {
+        lines.push('Рейтинг периода: ' + score.overall.toFixed(1) + '/10 (' + scoreWord(score.overall) + ')');
+        lines.push('Вердикт: ' + generateVerdict(current, prev, score, periodType));
+        lines.push('');
+    }
+
     lines.push('--- Блоки статистики ---');
     lines.push('Задачи: ' + current.tasks.done + ' выполнено из ' + current.tasks.total);
     const taskPct = current.tasks.total > 0 ? Math.round(current.tasks.done / current.tasks.total * 100) : 0;
@@ -984,13 +1373,71 @@ window.exportReview = function(periodType) {
     URL.revokeObjectURL(url);
 };
 
+function exportReviewPDF(periodType) {
+    const { p, current, prev } = collectWithPrev(periodType);
+    const content = renderReviewHTML(periodType, current, prev);
+
+    const cssPromise = (function() {
+        if (typeof fetch === 'function') {
+            return fetch('css/styles.css').then(r => r.ok ? r.text() : '').catch(() => '');
+        }
+        return Promise.resolve('');
+    })();
+
+    cssPromise.then(externalCss => {
+        let css = externalCss || '';
+        if (!css) {
+            try {
+                css = Array.from(document.styleSheets || []).map(ss => {
+                    try { return Array.from(ss.cssRules).map(r => r.cssText).join('\n'); }
+                    catch (e) { return ''; }
+                }).join('\n');
+            } catch (e) {}
+        }
+
+        const printCss = '' +
+            '@media print {' +
+            '  body { margin: 0; }' +
+            '  .review-toolbar, .review-header select, .review-toolbar .btn { display: none !important; }' +
+            '  .review-chart-card, .review-stat-card, .comparison-card, .review-fact { break-inside: avoid; }' +
+            '}' +
+            '.review-print { max-width: 820px; margin: 0 auto; padding: 24px; font-family: -apple-system, Segoe UI, Roboto, sans-serif; color: #0f172a; }' +
+            '.review-print .review-hero { box-shadow: none; border: 1px solid #e2e8f0; }' +
+            '.review-print .review-stat-card, .review-print .review-chart-card, .review-print .comparison-card, .review-print .review-fact { box-shadow: none; border: 1px solid #e2e8f0; }';
+
+        const win = window.open('', '_blank');
+        if (!win) {
+            if (typeof customAlert === 'function') customAlert('Разрешите всплывающие окна, чтобы экспортировать в PDF.', 'Ошибка');
+            return;
+        }
+        win.document.open();
+        win.document.write('' +
+            '<!DOCTYPE html><html><head><meta charset="utf-8">' +
+            '<title>' + (periodType === 'week' ? 'Недельный обзор' : 'Месячный обзор') + ' — ' + esc(p.label) + '</title>' +
+            '<style>' + css + '</style>' +
+            '<style>' + printCss + '</style>' +
+            '</head><body>' +
+            '<div class="review-print">' + content + '</div>' +
+            '</body></html>');
+        win.document.close();
+        win.focus();
+        setTimeout(function() { win.print(); }, 400);
+    });
+}
+
 // ============ INTERNAL EXPORT (for tests / devtools) ============
 
 window.__review = {
     collectPeriod: collectPeriod,
+    collectDailySeries: collectDailySeries,
     generateComparison: generateComparison,
     generateFacts: generateFacts,
+    computePeriodScore: computePeriodScore,
+    generateVerdict: generateVerdict,
     renderReviewHTML: renderReviewHTML,
+    renderCharts: renderCharts,
+    renderHeroScore: renderHeroScore,
+    buildDonutSectors: buildDonutSectors,
     getSelectedPeriod: getSelectedPeriod,
     getWeekRange: getWeekRange,
     getMonthRange: getMonthRange,
