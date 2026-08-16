@@ -5,20 +5,23 @@
 "use strict";
 
 let deadlineCheckInterval = null;
+let notifiedTaskIds = new Set(); // защита от дублей в рамках сессии
 
-// Инициализация уведомлений после авторизации
 window.initTaskDeadlineNotifications = function() {
   if (deadlineCheckInterval) {
     clearInterval(deadlineCheckInterval);
     deadlineCheckInterval = null;
   }
-  
+  notifiedTaskIds.clear();
+
   if (Notification.permission === 'granted') {
+    checkAllDeadlines();
     startDeadlineCheckLoop();
-  } 
+  }
   else if (Notification.permission !== 'denied') {
-    Notification.requestPermission().then(permission => {
+    Notification.requestPermission().then(function(permission) {
       if (permission === 'granted') {
+        checkAllDeadlines();
         startDeadlineCheckLoop();
       }
     });
@@ -29,53 +32,40 @@ function startDeadlineCheckLoop() {
   deadlineCheckInterval = setInterval(checkAllDeadlines, 10 * 60 * 1000);
 }
 
-// Главная функция: бежит по задачам и показывает уведомления при наступлении дедлайна
 function checkAllDeadlines() {
-  // Берем текущий uid пользователя (устанавливается auth.js при входе)
   var uid = window.currentUserId;
-  if (!uid) return; // пользователь ещё не авторизован
+  if (!uid) return;
 
-  // Путь к задачам пользователя в Firebase: lera_todo_v1/{uid}
-  var tasksRef = db.ref('lera_todo_v1/' + uid);
+  var todoRef = db.ref('lera_todo_v1/' + uid);
 
-  tasksRef.get().then(function(snapshot) {
+  todoRef.get().then(function(snapshot) {
     if (!snapshot.exists()) return;
 
-    snapshot.forEach(function(doc) {
-      var data = doc.data();
+    var data = snapshot.val();
+    var tasks = Array.isArray(data.tasks) ? data.tasks : [];
+    var now = new Date();
 
-      // Есть ли дедлайн и не выполнена ли задача?
-      if (data.deadline && !data.done) {
-        var dlDate = new Date(data.deadline);
-        // Если текущее время >= дедлайна
-        if (new Date() >= dlDate) {
-          var title = data.title || 'Задача с дедлайном';
+    for (var i = 0; i < tasks.length; i++) {
+      var t = tasks[i];
+      if (!t.deadline || t.completed) continue;
 
-          // Показывам системное уведомление
-          var options = {
-            body: title,
-            icon: 'favicon.png'
-          };
+      var dlDate = new Date(t.deadline);
+      if (now < dlDate) continue;
 
-          // Чтобы не спамить одним и тем же дедлайном в один цикл — флаг
-          // (если задач с прошедшим дедлайном несколько, покажем каждое)
-          // Но safeguard: если уведомление уже показано — можно пропустить или показать все.
-          // Здесь покажем каждое, но с защитой от дублей в рамках одной итерации:
-          // (просто покажем, Notification будет показан для каждой задачи)
+      var taskId = t.id || ('task-' + i);
+      if (notifiedTaskIds.has(taskId)) continue;
+      notifiedTaskIds.add(taskId);
 
-          var notification = new Notification('⏰ Дедлайн задачи', options);
-        }
-      }
-    });
+      new Notification('⏰ Дедлайн задачи', {
+        body: t.title || 'Задача с дедлайном',
+        icon: 'favicon.png'
+      });
+    }
   }).catch(function(error) {
     console.error('Ошибка при проверке дедлайнов:', error);
   });
 }
 
-// === РУЧНОЙ ТЕСТ ===
-// Показывает тестовое уведомление сразу (не ждет дедлайн).
-// Используется для проверки работоспособности уведомлений.
-// После теста эту кнопку можно удалить.
 window.testDeadlineNotification = function() {
   if (Notification.permission === 'granted') {
     new Notification('🧪 Тест уведомления', {
