@@ -18,8 +18,8 @@
  */
 window.renderSVGLineChart = function(data, field, unit, color, gradientId, options) {
     options = options || {};
-    var width = 800, height = 300;
-    var padding = { top: 30, right: 30, bottom: 60, left: 60 };
+    var width = 640, height = 260;
+    var padding = { top: 26, right: 24, bottom: 50, left: 44 };
     var chartW = width - padding.left - padding.right;
     var chartH = height - padding.top - padding.bottom;
     var values = data.map(function(d) { return d[field]; });
@@ -57,7 +57,7 @@ window.renderSVGLineChart = function(data, field, unit, color, gradientId, optio
         var val = yMin + (yMax - yMin) * (i / 5);
         var y = padding.top + chartH - (i / 5) * chartH;
         gridLines.push('<line x1="' + padding.left + '" y1="' + y + '" x2="' + (padding.left + chartW) + '" y2="' + y + '" stroke="' + gridColor + '" stroke-width="1" stroke-dasharray="2,4"/>');
-        gridLines.push('<text x="' + (padding.left - 8) + '" y="' + (y + 4) + '" text-anchor="end" font-size="11" fill="' + textColor + '" font-weight="600">' + Math.round(val) + '</text>');
+        gridLines.push('<text x="' + (padding.left - 8) + '" y="' + (y + 4) + '" text-anchor="end" font-size="14" fill="' + textColor + '" font-weight="600">' + Math.round(val) + '</text>');
     }
     
     var pointsHtml = points.map(function(p, i) {
@@ -67,11 +67,11 @@ window.renderSVGLineChart = function(data, field, unit, color, gradientId, optio
         var dateParts = p.date.split('-');
         var shortDate = dateParts.length === 3 ? dateParts[2] + '.' + dateParts[1] + '.' + dateParts[0].slice(2) : p.date;
         return '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + (isFirst || isLast ? 6 : 4) + '" fill="' + pointColor + '" stroke="white" stroke-width="2"/>' +
-               '<text x="' + p.x + '" y="' + (p.y - 10) + '" text-anchor="middle" font-size="11" font-weight="700" fill="' + titleColor + '">' + p.value + '</text>' +
-               '<text x="' + p.x + '" y="' + (padding.top + chartH + 18) + '" text-anchor="middle" font-size="10" fill="' + textColor + '" font-weight="600">' + shortDate + '</text>';
+               '<text x="' + p.x + '" y="' + (p.y - 10) + '" text-anchor="middle" font-size="14" font-weight="700" fill="' + titleColor + '">' + p.value + '</text>' +
+               '<text x="' + p.x + '" y="' + (padding.top + chartH + 18) + '" text-anchor="middle" font-size="12" fill="' + textColor + '" font-weight="600">' + shortDate + '</text>';
     }).join('');
     
-    var titleHtml = options.title ? '<text x="' + (width / 2) + '" y="18" text-anchor="middle" font-size="13" font-weight="700" fill="' + titleColor + '">' + options.title + '</text>' : '';
+    var titleHtml = options.title ? '<text x="' + (width / 2) + '" y="18" text-anchor="middle" font-size="16" font-weight="700" fill="' + titleColor + '">' + options.title + '</text>' : '';
     
     return '<div class="dashboard-chart"><svg class="chart-svg" viewBox="0 0 ' + width + ' ' + height + '" preserveAspectRatio="xMidYMid meet">' +
         '<defs><linearGradient id="' + gradId + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="' + color + '" stop-opacity="0.3"/><stop offset="100%" stop-color="' + color + '" stop-opacity="0"/></linearGradient></defs>' +

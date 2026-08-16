@@ -573,6 +573,7 @@ header .macro-badge {
     align-items: center;
     justify-content: center;
     z-index: 2000;
+    overflow-y: auto;
 }
 
 .auth-overlay.hidden { display: none; }
@@ -584,6 +585,7 @@ header .macro-badge {
     max-width: 400px;
     width: 100%;
     box-shadow: var(--shadow-2xl);
+    margin: auto;
     animation: modalSlideIn var(--transition-base);
 }
 
@@ -2066,6 +2068,7 @@ header .macro-badge {
     justify-content: center;
     z-index: 3000;
     padding: var(--spacing-2xl);
+    overflow-y: auto;
 }
 
 .custom-modal-overlay.visible { display: flex; }
@@ -2076,7 +2079,9 @@ header .macro-badge {
     max-width: 500px;
     width: 100%;
     box-shadow: var(--shadow-2xl);
-    overflow: hidden;
+    margin: auto;
+    max-height: 92vh;
+    overflow-y: auto;
     animation: modalSlideIn var(--transition-base);
 }
 
@@ -5649,8 +5654,10 @@ header .macro-badge {
 .todo-app .shop-item-title { font-size:13.5px; color:var(--text); overflow-wrap:anywhere; flex:1; }
 .todo-app .shop-item.done .shop-item-title { text-decoration:line-through; opacity:.55; }
 .todo-app .shop-item-actions { display:flex; gap:2px; flex:none; }
-.todo-app .shop-item-actions { opacity:0; transition:opacity .15s; }
-.todo-app .shop-item:hover .shop-item-actions { opacity:1; }
+@media(hover:hover){
+    .todo-app .shop-item-actions { opacity:0; transition:opacity .15s; }
+    .todo-app .shop-item:hover .shop-item-actions, .todo-app .shop-item:focus-within .shop-item-actions { opacity:1; }
+}
 .todo-app .shop-item.editing { gap:6px; }
 .todo-app .shop-item.editing .shop-edit-input { flex:1; background:var(--bg-soft); border:1px solid var(--border); border-radius:7px; padding:5px 9px; color:var(--text); font-size:13px; outline:none; min-width:0; }
 .todo-app .shop-item.editing .shop-edit-input:focus { border-color:var(--accent-line); }
@@ -5658,3 +5665,128 @@ header .macro-badge {
 .todo-app .shop-add { display:flex; gap:8px; margin-top:12px; }
 .todo-app .shop-add .inp { flex:1; min-width:0; }
 .todo-app .shop-add-hint { margin-top:12px; font-size:12px; color:var(--text-3); text-align:center; }
+
+/* ============================================
+   📱 MOBILE ADAPTIVE (телефоны ≤ 768px)
+   ============================================ */
+@media (max-width: 768px) {
+    html, body { overflow-x: clip; }
+    body { padding: 12px; }
+
+    /* ---------- Навигация ---------- */
+    .main-tabs { flex-wrap: wrap; gap: 4px; }
+    .main-tab-btn {
+        flex: 1 1 44%;
+        min-width: 0;
+        padding: 12px 6px;
+        font-size: var(--font-size-md);
+        border-radius: var(--radius-lg);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .sub-tabs, .train-sub-tabs { flex-wrap: wrap; gap: 4px; }
+    .sub-tab-btn, .train-sub-tab-btn {
+        flex: 1 1 44%;
+        min-width: 0;
+        padding: 10px 6px;
+        font-size: var(--font-size-sm);
+        border-radius: var(--radius-lg);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* ---------- Toolbar: кнопки по 2 в ряд ---------- */
+    .toolbar { gap: var(--spacing-sm); }
+    .toolbar .btn { flex: 1 1 45%; justify-content: center; text-align: center; }
+    .toolbar input[type="file"] { max-width: 100%; }
+
+    /* ---------- Заголовки ---------- */
+    header { padding: var(--spacing-xl) var(--spacing-lg); }
+    header h1 { font-size: var(--font-size-2xl); letter-spacing: 1px; }
+    header .macro-badge { font-size: 10px; padding: var(--spacing-xs) var(--spacing-md); }
+
+    /* ---------- Питание ---------- */
+    .nutrition-macros { grid-template-columns: 1fr 1fr; gap: var(--spacing-md); }
+    .macro-value { font-size: var(--font-size-2xl); }
+    #weekly-avg-container { overflow-x: auto; }
+    .weekly-table { min-width: 480px; }
+    .day-title { flex-wrap: wrap; gap: var(--spacing-sm); }
+    .day-date { min-width: 0; }
+    .meal-item-row { flex-wrap: wrap; gap: var(--spacing-sm); }
+    .meal-item-note { min-width: 100%; }
+    .week-selector-row { flex-wrap: wrap; gap: var(--spacing-sm); }
+
+    /* ---------- Тренировки ---------- */
+    .train-sets-table,
+    .train-sets-table-header,
+    .train-set-row { overflow-x: visible; }
+    .train-sets-table { overflow-x: auto; }
+    .train-sets-table-header,
+    .train-set-row { min-width: 440px; }
+    .train-set-input { min-height: 40px; }
+    .train-set-edit-form .train-edit-field input[type="number"],
+    .train-set-edit-form .train-edit-field input[type="text"] { min-height: 40px; }
+    .train-progress-summary { flex-wrap: wrap; }
+    .train-progress-chart-card { flex-wrap: wrap; }
+    .train-action-btn { min-height: 40px; min-width: 40px; }
+
+    /* ---------- Финансы ---------- */
+    .finance-planned-item { flex-wrap: wrap; gap: var(--spacing-sm); }
+    .finance-planned-amount, .finance-planned-date { min-width: 0; }
+    .finance-donut-container { flex-wrap: wrap; }
+    .finance-donut-container svg { width: 100%; max-width: 240px; height: auto; }
+    .action-btn,
+    .finance-transaction-actions button {
+        min-height: 40px;
+        min-width: 40px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 8px 12px;
+    }
+    .finance-chart-container { min-width: 520px; }
+    .finance-chart-container text { font-size: 14px !important; }
+
+    /* ---------- To-Do ---------- */
+    .todo-app { padding: 12px 0 32px; }
+    .todo-app .topbar { flex-wrap: wrap; gap: 10px; }
+    .todo-app .topbar-actions { flex-wrap: wrap; }
+    .todo-app .icon-btn { width: 38px; height: 38px; }
+    .todo-app .btn.sm { padding: 8px 12px; }
+    .todo-app .edit-row .field { min-width: 100%; }
+
+    /* ---------- Модалки / формы / экран входа ---------- */
+    .custom-modal-overlay { overflow-y: auto; }
+    .custom-modal { margin: auto; max-height: 92vh; overflow-y: auto; }
+    .auth-overlay { overflow-y: auto; }
+    .auth-box { margin: auto; }
+    .modal-overlay { overflow-y: auto; }
+    .modal-overlay .modal { margin: auto; max-height: 92vh; overflow-y: auto; }
+    .modal-close, .gif-manager-close { width: 38px; height: 38px; }
+    .form-grid { gap: var(--spacing-md); }
+    .form-field { min-width: 0; }
+
+    /* ---------- Хитмапы ---------- */
+    .hm-cell { width: 16px; height: 16px; }
+    .hm-daylabels span { height: 16px; line-height: 16px; }
+    .hm-grid { gap: 4px; }
+    .hm-month { font-size: 9px; }
+
+    /* ---------- Графики / дашборд ---------- */
+    .dashboard-chart { padding: var(--spacing-md); }
+    .dashboard-chart svg { min-width: 520px; }
+    .dashboard-grid-item { min-width: 0; }
+    .dashboard-grid-row { gap: var(--spacing-md); }
+    .chart-svg { min-width: 0; }
+}
+
+/* Узкие телефоны (≤ 480px) */
+@media (max-width: 480px) {
+    body { padding: 8px; }
+    .nutrition-macros { grid-template-columns: 1fr; }
+    .toolbar .btn { flex-basis: 100%; }
+    .dashboard-grid-row { gap: var(--spacing-sm); }
+    .main-tab-btn { padding: 11px 4px; font-size: var(--font-size-sm); }
+}
