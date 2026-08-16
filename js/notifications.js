@@ -33,7 +33,7 @@ function startDeadlineCheckLoop() {
 }
 
 function checkAllDeadlines() {
-  var uid = window.currentUserId;
+  var uid = window.currentUserId || currentUserId;
   if (!uid) return;
 
   var todoRef = db.ref('lera_todo_v1/' + uid);
@@ -67,10 +67,23 @@ function checkAllDeadlines() {
 }
 
 window.testDeadlineNotification = function() {
+  console.log('[Notify] Permission:', Notification.permission);
+  console.log('[Notify] currentUserId:', currentUserId, 'window.currentUserId:', window.currentUserId);
   if (Notification.permission === 'granted') {
     new Notification('🧪 Тест уведомления', {
       body: 'Это тестовое уведомление системы дедлайнов',
       icon: 'favicon.png'
+    });
+  } else if (Notification.permission === 'denied') {
+    alert('Уведомления заблокированы браузером. Разрешите уведомления в настройках сайта.');
+  } else {
+    Notification.requestPermission().then(function(p) {
+      if (p === 'granted') {
+        new Notification('🧪 Тест уведомления', {
+          body: 'Это тестовое уведомление системы дедлайнов',
+          icon: 'favicon.png'
+        });
+      }
     });
   }
 };

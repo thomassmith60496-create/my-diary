@@ -20,8 +20,8 @@
 window.renderSVGLineChart = function(data, field, unit, color, gradientId, options) {
     options = options || {};
     var width = options.width || 640;
-    var height = 260;
-    var padding = { top: 26, right: 24, bottom: 50, left: 44 };
+    var height = 240;
+    var padding = { top: 24, right: 20, bottom: 44, left: 40 };
     var chartW = width - padding.left - padding.right;
     var chartH = height - padding.top - padding.bottom;
     var values = data.map(function(d) { return d[field]; });
@@ -37,7 +37,7 @@ window.renderSVGLineChart = function(data, field, unit, color, gradientId, optio
     var valRange = Math.max(maxVal - minVal, 0.01);
     var yMin = Math.max(0, minVal - Math.max(valRange * 0.1, 0.5));
     var yMax = maxVal + Math.max(valRange * 0.15, 0.5);
-    var xOffset = 15;
+    var xOffset = 12;
     var xStep = data.length > 1 ? (chartW - xOffset * 2) / (data.length - 1) : chartW / 2;
     
     var points = data.map(function(d, i) {
@@ -55,27 +55,28 @@ window.renderSVGLineChart = function(data, field, unit, color, gradientId, optio
     var gradId = gradientId || ('grad-' + field);
     
     var gridLines = [];
-    for (var i = 0; i <= 5; i++) {
-        var val = yMin + (yMax - yMin) * (i / 5);
-        var y = padding.top + chartH - (i / 5) * chartH;
+    for (var i = 0; i <= 4; i++) {
+        var val = yMin + (yMax - yMin) * (i / 4);
+        var y = padding.top + chartH - (i / 4) * chartH;
         gridLines.push('<line x1="' + padding.left + '" y1="' + y + '" x2="' + (padding.left + chartW) + '" y2="' + y + '" stroke="' + gridColor + '" stroke-width="1" stroke-dasharray="2,4"/>');
-        gridLines.push('<text x="' + (padding.left - 8) + '" y="' + (y + 4) + '" text-anchor="end" font-size="10" fill="' + textColor + '" font-weight="600">' + Math.round(val) + '</text>');
+        gridLines.push('<text x="' + (padding.left - 6) + '" y="' + (y + 3) + '" text-anchor="end" font-size="8" fill="' + textColor + '" font-weight="600">' + Math.round(val) + '</text>');
     }
     
-    var dateInterval = data.length > 14 ? Math.ceil(data.length / 10) : 1;
+    var maxLabels = 8;
+    var dateInterval = data.length > maxLabels ? Math.ceil(data.length / maxLabels) : 1;
     var pointsHtml = points.map(function(p, i) {
         var isFirst = i === 0, isLast = i === data.length - 1;
         var pointColor = isLast ? color : (isFirst ? '#2563eb' : color);
         var dateParts = p.date.split('-');
-        var shortDate = dateParts.length === 3 ? dateParts[2] + '.' + dateParts[1] + '.' + dateParts[0].slice(2) : p.date;
+        var shortDate = dateParts.length === 3 ? dateParts[2] + '.' + dateParts[1] : p.date;
         var showDate = isFirst || isLast || (i % dateInterval === 0);
-        var showValue = isFirst || isLast || data.length <= 14;
-        return '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + (isFirst || isLast ? 5 : 3) + '" fill="' + pointColor + '" stroke="white" stroke-width="1.5"/>' +
-               (showValue ? '<text x="' + p.x + '" y="' + (p.y - 8) + '" text-anchor="middle" font-size="9" font-weight="700" fill="' + titleColor + '">' + p.value + '</text>' : '') +
-               (showDate ? '<text x="' + p.x + '" y="' + (padding.top + chartH + 14) + '" text-anchor="middle" font-size="9" fill="' + textColor + '" font-weight="600">' + shortDate + '</text>' : '');
+        var showValue = isFirst || isLast || data.length <= 10;
+        return '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + (isFirst || isLast ? 4 : 2.5) + '" fill="' + pointColor + '" stroke="white" stroke-width="1"/>' +
+               (showValue ? '<text x="' + p.x + '" y="' + (p.y - 6) + '" text-anchor="middle" font-size="7" font-weight="700" fill="' + titleColor + '">' + p.value + '</text>' : '') +
+               (showDate ? '<text x="' + p.x + '" y="' + (padding.top + chartH + 12) + '" text-anchor="middle" font-size="7" fill="' + textColor + '" font-weight="600">' + shortDate + '</text>' : '');
     }).join('');
     
-    var titleHtml = options.title ? '<text x="' + (width / 2) + '" y="18" text-anchor="middle" font-size="16" font-weight="700" fill="' + titleColor + '">' + options.title + '</text>' : '';
+    var titleHtml = options.title ? '<text x="' + (width / 2) + '" y="16" text-anchor="middle" font-size="12" font-weight="700" fill="' + titleColor + '">' + options.title + '</text>' : '';
     
     return '<div class="dashboard-chart"><svg class="chart-svg" viewBox="0 0 ' + width + ' ' + height + '" preserveAspectRatio="xMidYMid meet">' +
         '<defs><linearGradient id="' + gradId + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="' + color + '" stop-opacity="0.3"/><stop offset="100%" stop-color="' + color + '" stop-opacity="0"/></linearGradient></defs>' +
@@ -83,7 +84,7 @@ window.renderSVGLineChart = function(data, field, unit, color, gradientId, optio
         '<line x1="' + padding.left + '" y1="' + padding.top + '" x2="' + padding.left + '" y2="' + (padding.top + chartH) + '" stroke="' + textColor + '" stroke-width="1.5"/>' +
         '<line x1="' + padding.left + '" y1="' + (padding.top + chartH) + '" x2="' + (padding.left + chartW) + '" y2="' + (padding.top + chartH) + '" stroke="' + textColor + '" stroke-width="1.5"/>' +
         '<path d="' + areaPath + '" fill="url(#' + gradId + ')"/>' +
-        '<path d="' + linePath + '" fill="none" stroke="' + color + '" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>' +
+        '<path d="' + linePath + '" fill="none" stroke="' + color + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>' +
         pointsHtml +
         titleHtml +
     '</svg></div>';
