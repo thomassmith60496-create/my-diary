@@ -52,6 +52,7 @@ function loadState(){
       title: String(t.title || ''),
       description: String(t.description || ''),
       completed: !!t.completed,
+      important: !!t.important,
       deadline: t.deadline || null,
       tags: Array.isArray(t.tags) ? t.tags : [],
       createdAt: t.createdAt || Date.now(),
@@ -64,6 +65,7 @@ function loadState(){
       title: String(r.title || ''),
       description: String(r.description || ''),
       deadline: r.deadline || null,
+      important: !!r.important,
       tags: Array.isArray(r.tags) ? r.tags : [],
       subtasks: Array.isArray(r.subtasks) ? r.subtasks.map(s => ({
         id: s.id || uid(), title: String(s.title || '')
@@ -117,6 +119,7 @@ let viewY = now0.getFullYear();
 let viewM = now0.getMonth();
 let selectedDate = todayKey();   // при запуске всегда сегодня
 let activeFilter = null;         // тег-фильтр или null = «Все»
+let overdueFilter = false;       // фильтр «Просроченные»
 
 const ui = {
   editingTask: null,
@@ -133,6 +136,7 @@ const ui = {
   seriesForm: null,      // буфер формы серии {title, description, deadline, tags, subtasks:[], freq, interval, byDay, byMonthDay, startDate, endDate}
   seriesListOpen: false,
   seriesSubs: [],        // [{id,title}]
+  moveTask: null,        // id задачи на перенос
 };
 
 /* ================= доступ к данным ================= */
@@ -241,6 +245,7 @@ function recurringInstance(tpl, k){
     title: tpl.title,
     description: tpl.description || '',
     completed: !!occ.completed,
+    important: !!tpl.important,
     deadline: tpl.deadline || null,
     tags: [...tpl.tags],
     createdAt: tpl.createdAt,
@@ -304,6 +309,7 @@ function detachOccurrence(recId, k){
     title: tpl.title,
     description: tpl.description || '',
     completed: !!(occ && occ.completed),
+    important: !!tpl.important,
     deadline: tpl.deadline || null,
     tags: [...tpl.tags],
     createdAt: tpl.createdAt,
@@ -363,6 +369,7 @@ function addTask(title, opts = {}){
     title,
     description: String(opts.description || '').trim(),
     completed: false,
+    important: !!opts.important,
     deadline: opts.deadline || null,
     tags: [...new Set(opts.tags || [])],
     createdAt: Date.now(),
@@ -419,6 +426,8 @@ function saveTaskEdit(id){
   t.deadline = dl ? dl.slice(0,16) : null;
   const descEl = root.querySelector('.edit-desc');
   t.description = descEl ? descEl.value.trim() : '';
+  const impEl = root.querySelector('.edit-important');
+  t.important = !!(impEl && impEl.checked);
   t.tags = [...ui.editTags].filter(tag => state.tags.includes(tag));
   ui.editingTask = null;
   commit();
@@ -453,21 +462,26 @@ function deleteSub(taskId, subId){
   commit();
 }
 
-function moveToday(id){
+function openMoveModal(id){
   const t = findTask(id); if(!t) return;
-  state.tasks.push({
-    id: uid(),
-    date: todayKey(),
-    title: t.title,
-    description: t.description || '',
-    completed: false,
-    deadline: null,
-    tags: [...t.tags],
-    createdAt: Date.now(),
-    subtasks: t.subtasks.map(s => ({id: uid(), title: s.title, completed: false})),
-  });
+  ui.moveTask = id;
+  $('#moveInput').value = t.date || todayKey();
+  $('#moveModal').hidden = false;
+}
+function closeMoveModal(){
+  ui.moveTask = null;
+  $('#moveModal').hidden = true;
+}
+function confirmMove(){
+  const id = ui.moveTask;
+  const t = id && findTask(id);
+  const k = $('#moveInput').value;
+  if(!t || !k){ closeMoveModal(); return; }
+  t.date = k;
   commit();
-  toast('Задача скопирована на сегодня');
+  closeMoveModal();
+  toast('Задача перенесена');
+  selectDate(k);
 }
 
 /* ================= теги ================= */
@@ -510,10 +524,12 @@ function renderCalendar(){
   $('#calYear').textContent = viewY;
 
   const stMap = {};
+  const overdueSet = new Set();
   for(const t of state.tasks){
     const s = stMap[t.date] || (stMap[t.date] = {total:0, done:0});
     s.total++;
     if(t.completed) s.done++;
+    if(isOverdue(t)) overdueSet.add(t.date);
   }
   // учитываем регулярные задачи в видимом месяце
   const firstDay = new Date(viewY, viewM, 1);
@@ -528,6 +544,7 @@ function renderCalendar(){
       const s = stMap[k] || (stMap[k] = {total:0, done:0});
       s.total++;
       if(occ.completed) s.done++;
+      if(!occ.completed && tpl.deadline && new Date(tpl.deadline) < new Date()) overdueSet.add(k);
     }
   }
 
@@ -545,13 +562,14 @@ function renderCalendar(){
     if(d.getMonth() !== viewM) cls += ' other';
     if(k === tk) cls += ' today';
     if(k === selectedDate) cls += ' selected';
+    if(overdueSet.has(k)) cls += ' overdue';
     let cntHtml = '', barHtml = '';
     if(s && s.total > 0){
       const pct = Math.round(s.done / s.total * 100);
       cntHtml = `<span class="cnt">${s.done}/${s.total}</span>`;
       barHtml = `<span class="bar${pct === 100 ? ' full' : ''}"><i style="width:${pct}%"></i></span>`;
     }
-    html += `<button type="button" class="${cls}" data-date="${k}"><span class="num">${d.getDate()}</span>${cntHtml}${barHtml}</button>`;
+    html += `<button type="button" class="${cls}" data-date="${k}"><span class="num">${d.getDate()}</span>${cntHtml}${barHtml}${overdueSet.has(k) ? '<span class="od-dot"></span>' : ''}</button>`;
   }
   $('#calGrid').innerHTML = html;
 }
@@ -595,11 +613,12 @@ function renderDayHeader(){
 /* ================= рендер: фильтр по тегам ================= */
 function renderFilterBar(){
   const bar = $('#filterBar');
-  if(!state.tags.length){ bar.innerHTML = ''; bar.hidden = true; return; }
   bar.hidden = false;
-  let html = `<button type="button" class="chip${activeFilter === null ? ' active' : ''}" data-tag="">Все</button>`;
+  let html = `<button type="button" class="chip${!overdueFilter && activeFilter === null ? ' active' : ''}" data-filt="">Все</button>`;
+  html += `<button type="button" class="chip overdue-chip${overdueFilter ? ' active' : ''}" data-filt="overdue">⚠ Просроченные</button>`;
   for(const tag of state.tags){
-    html += `<button type="button" class="chip${activeFilter === tag ? ' active' : ''}" data-tag="${esc(tag)}">#${esc(tag)}</button>`;
+    const count = state.tasks.filter(t => t.tags.includes(tag)).length;
+    html += `<button type="button" class="chip${!overdueFilter && activeFilter === tag ? ' active' : ''}" data-filt="tag" data-tag="${esc(tag)}">#${esc(tag)}${count ? `<span class="chip-count">${count}</span>` : ''}</button>`;
   }
   bar.innerHTML = html;
 }
@@ -608,12 +627,14 @@ function renderFilterBar(){
 function renderTaskList(){
   const wrap = $('#taskList');
   const all = tasksOf(selectedDate);
-  let list = activeFilter ? all.filter(t => t.tags.includes(activeFilter)) : all.slice();
-  // сначала невыполненные, затем выполненные; внутри групп — порядок создания
-  list.sort((a,b) => (a.completed - b.completed) || (a.createdAt - b.createdAt));
+  let list = overdueFilter ? all.filter(t => isOverdue(t)) : (activeFilter ? all.filter(t => t.tags.includes(activeFilter)) : all.slice());
+  // сначала невыполненные, затем выполненные; важные — выше в своей группе
+  list.sort((a,b) => (a.completed - b.completed) || ((b.important?1:0) - (a.important?1:0)) || (a.createdAt - b.createdAt));
 
   if(!list.length){
-    if(all.length && activeFilter){
+    if(overdueFilter){
+      wrap.innerHTML = `<div class="empty"><div class="empty-ico">🎉</div><div class="empty-title">Просроченных задач нет</div><button type="button" class="empty-link" data-act="clear-filter">Показать все задачи →</button></div>`;
+    } else if(all.length && activeFilter){
       wrap.innerHTML = `<div class="empty"><div class="empty-ico">◎</div><div class="empty-title">Нет задач с тегом <b>#${esc(activeFilter)}</b></div><button type="button" class="empty-link" data-act="clear-filter">Показать все задачи →</button></div>`;
     }else{
       wrap.innerHTML = `<div class="empty"><div class="empty-ico">○</div><div class="empty-title">На этот день пока нет задач</div><button type="button" class="empty-link" data-act="focus-quick">Добавить первую задачу →</button></div>`;
@@ -649,7 +670,7 @@ function taskHTML(t){
   }
   for(const tag of t.tags) meta.push(`<span class="tag-pill">#${esc(tag)}</span>`);
 
-  const canMove = !isRec && !t.completed && t.date < todayKey();
+  const canMove = !isRec;
   const subsHtml = t.subtasks.map(s => subHTML(t.id, s)).join('');
   const addingHere = ui.addingSubFor === t.id && !isRec;
   const subsBlock = (subsHtml || addingHere)
@@ -661,12 +682,12 @@ function taskHTML(t){
     <div class="task-main">
       <button type="button" class="cb${t.completed ? ' checked' : ''}" data-act="toggle-task" title="${t.completed ? 'Отменить выполнение' : 'Отметить выполненной'}">${ICON.check}</button>
       <div class="task-body">
-        <div class="task-title">${esc(t.title)}</div>
+        <div class="task-title">${t.important ? '<span class="imp-badge" title="Важно">!</span>' : ''}${esc(t.title)}</div>
         ${t.description ? `<div class="task-desc">${esc(t.description)}</div>` : ''}
         ${meta.length ? `<div class="task-meta">${meta.join('')}</div>` : ''}
       </div>
       <div class="task-actions">
-        ${canMove ? `<button type="button" class="icon-btn" data-act="move-today" title="Перенести на сегодня">${ICON.move}</button>` : ''}
+        ${canMove ? `<button type="button" class="icon-btn" data-act="move-task" title="Перенести на другую дату">${ICON.move}</button>` : ''}
         <button type="button" class="icon-btn" data-act="edit-task" title="${isRec ? 'Редактировать серию или этот день' : 'Редактировать'}">${ICON.pencil}</button>
         <button type="button" class="icon-btn danger" data-act="delete-task" title="${isRec ? 'Удалить серию или этот день' : 'Удалить'}">${ICON.trash}</button>
       </div>
@@ -706,6 +727,7 @@ function editFormHTML(t){
     <div class="edit-row">
       <label class="field"><span>Дедлайн</span><input type="datetime-local" class="inp edit-deadline" value="${esc(t.deadline || '')}"></label>
       ${t.deadline ? '<button type="button" class="link-btn" data-act="clear-edit-deadline">убрать дедлайн</button>' : ''}
+      <label class="series-check imp-check"><input type="checkbox" class="edit-important"${t.important ? ' checked' : ''}> ⭐ Важно</label>
     </div>
     <div class="tags-row">${chips}<input class="inp tiny new-tag-inp" placeholder="${state.tags.length ? 'новый тег…' : 'создать тег…'}"></div>
     <div class="edit-btns">
@@ -763,6 +785,7 @@ function closeRecurringChoice(){
 function defaultSeriesForm(){
   return {
     title:'', description:'', deadline:'', tags:new Set(),
+    important:false,
     freq:'day', interval:1, byDay:[], byMonthDay:1,
     startDate:todayKey(), endDate:''
   };
@@ -773,7 +796,7 @@ function openSeriesModal(recId){
   const tpl = recId ? state.recurring.find(r => r.id === recId) : null;
   const f = tpl ? {
     title:tpl.title, description:tpl.description || '', deadline:tpl.deadline || '',
-    tags:new Set(tpl.tags), freq:tpl.schedule.freq, interval:tpl.schedule.interval,
+    tags:new Set(tpl.tags), important:!!tpl.important, freq:tpl.schedule.freq, interval:tpl.schedule.interval,
     byDay:[...(tpl.schedule.byDay || [])], byMonthDay:typeof tpl.schedule.byMonthDay==='number' ? tpl.schedule.byMonthDay : 1,
     startDate:tpl.startDate, endDate:tpl.endDate || ''
   } : defaultSeriesForm();
@@ -801,6 +824,7 @@ function renderSeriesForm(){
   $('#seriesDeadline').value = f.deadline ? f.deadline.slice(0,16) : '';
   $('#seriesStart').value = f.startDate;
   $('#seriesEnd').value = f.endDate;
+  $('#seriesImportant').checked = !!f.important;
 
   const chips = state.tags.map(tag =>
     `<button type="button" class="chip tog${f.tags.has(tag) ? ' active' : ''}" data-sel-tag="${esc(tag)}">#${esc(tag)}</button>`
@@ -893,6 +917,7 @@ function saveSeriesForm(){
     title,
     description: $('#seriesDesc').value.trim(),
     deadline: $('#seriesDeadline').value ? $('#seriesDeadline').value.slice(0,16) : null,
+    important: $('#seriesImportant').checked,
     tags: [...f.tags].filter(tag => state.tags.includes(tag)),
     schedule: {freq: f.freq, interval, byDay, byMonthDay},
     startDate, endDate,
@@ -1049,13 +1074,37 @@ function closeTagModal(){
 /* ================= быстрый ввод ================= */
 function parseQuick(text){
   const tags = [], parts = [];
+  let important = false, deadline = null;
+  const m = String(text).match(/до\s+(\d{1,2})[.\/](\d{1,2})(?:[.\/](\d{2,4}))?(?:\s+(\d{1,2}):(\d{2}))?/i);
+  if(m){
+    const day = +m[1], month = +m[2];
+    const yearGiven = !!m[3];
+    let year = yearGiven ? +m[3] : new Date().getFullYear();
+    if(yearGiven && m[3].length === 2) year = 2000 + +m[3];
+    const date = new Date(year, month - 1, day);
+    const valid = day >= 1 && day <= 31 && month >= 1 && month <= 12
+      && date.getDate() === day && date.getMonth() === month - 1;
+    if(valid){
+      if(!yearGiven && keyOf(date) < todayKey()) date.setFullYear(date.getFullYear() + 1);
+      const hh = m[4] ? +m[4] : 0;
+      const mm = m[5] ? +m[5] : 0;
+      if(hh >= 0 && hh <= 23 && mm >= 0 && mm <= 59){
+        deadline = `${keyOf(date)}T${pad(hh)}:${pad(mm)}`;
+        text = text.replace(m[0], ' ');
+      }
+    }
+  }
   for(const w of String(text).split(/\s+/)){
     if(/^#[^\s#]/.test(w)){
       const t = normalizeTag(w);
       if(t) tags.push(t);
-    } else if(w) parts.push(w);
+    } else if(/^!/.test(w)){
+      important = true;
+    } else if(w){
+      parts.push(w);
+    }
   }
-  return {title: parts.join(' '), tags};
+  return {title: parts.join(' '), tags, important, deadline};
 }
 
 /* ================= тост ================= */
@@ -1105,7 +1154,7 @@ function onTaskClick(e){
     case 'save-sub': saveSubEdit(id, actEl.closest('.sub').dataset.subid); break;
     case 'cancel-sub-edit': ui.editingSub = null; renderAll(); break;
     case 'delete-sub': deleteSub(id, actEl.closest('.sub').dataset.subid); break;
-    case 'move-today': moveToday(id); break;
+    case 'move-task': openMoveModal(id); break;
     case 'toggle-edit-tag': {
       const tag = actEl.dataset.tag;
       ui.editTags.has(tag) ? ui.editTags.delete(tag) : ui.editTags.add(tag);
@@ -1120,6 +1169,7 @@ function onTaskClick(e){
     case 'focus-quick': $('#quickInput').focus(); break;
     case 'clear-filter':
       activeFilter = null;
+      overdueFilter = false;
       renderFilterBar();
       renderTaskList();
       break;
@@ -1181,8 +1231,17 @@ function init(){
   $('#newSeriesBtn').addEventListener('click', () => openSeriesModal(null));
 
   $('#recChoiceModal').addEventListener('mousedown', e => { if(e.target === e.currentTarget) closeRecurringChoice(); });
+  $('#moveModal').addEventListener('mousedown', e => { if(e.target === e.currentTarget) closeMoveModal(); });
   $('#seriesModal').addEventListener('mousedown', e => { if(e.target === e.currentTarget) closeSeriesModal(); });
   $('#seriesListModal').addEventListener('mousedown', e => { if(e.target === e.currentTarget) closeSeriesList(); });
+
+  $('#moveModal').addEventListener('click', e => {
+    const btn = e.target.closest('[data-act]');
+    if(!btn) return;
+    const act = btn.dataset.act;
+    if(act === 'move-close') closeMoveModal();
+    else if(act === 'move-confirm') confirmMove();
+  });
 
   $('#recChoiceModal').addEventListener('click', e => {
     const btn = e.target.closest('[data-act]');
@@ -1266,6 +1325,7 @@ function init(){
     if(e.target.checked){ $('#seriesMonthDay').value = ''; ui.seriesForm.byMonthDay = -1; }
     else { ui.seriesForm.byMonthDay = parseInt($('#seriesMonthDay').value, 10) || 1; }
   });
+  $('#seriesImportant').addEventListener('change', e => { if(ui.seriesForm) ui.seriesForm.important = e.target.checked; });
   $('#seriesTags').addEventListener('keydown', e => {
     if(e.key === 'Enter' && e.target.id === 'seriesNewTag'){
       e.preventDefault();
@@ -1340,6 +1400,7 @@ function init(){
     else if(ui.recChoice) closeRecurringChoice();
     else if(ui.seriesModal) closeSeriesModal();
     else if(ui.seriesListOpen) closeSeriesList();
+    else if(ui.moveTask) closeMoveModal();
   });
 
   /* быстрый ввод */
@@ -1348,11 +1409,11 @@ function init(){
     const inp = $('#quickInput');
     const text = inp.value.trim();
     if(!text) return;
-    const {title, tags} = parseQuick(text);
+    const {title, tags, important, deadline} = parseQuick(text);
     inp.value = '';
     if(!title){ inp.focus(); return; }
     tags.forEach(createTag);
-    addTask(title, {tags});
+    addTask(title, {tags, important, deadline});
     inp.focus();
   });
 
@@ -1366,6 +1427,7 @@ function init(){
     addTask(title, {
       description: $('#newDesc').value.trim(),
       deadline: $('#newDeadline').value ? $('#newDeadline').value.slice(0,16) : null,
+      important: $('#newImportant').checked,
       tags: [...ui.newFormTags],
     });
     closeNewForm();
@@ -1392,11 +1454,14 @@ function init(){
     }
   });
 
-  /* фильтр по тегам */
+  /* фильтр по тегам и просроченным */
   $('#filterBar').addEventListener('click', e => {
     const chip = e.target.closest('.chip');
     if(!chip) return;
-    activeFilter = chip.dataset.tag || null;
+    const f = chip.dataset.filt;
+    if(f === 'overdue'){ overdueFilter = true; activeFilter = null; }
+    else if(f === 'tag'){ overdueFilter = false; activeFilter = chip.dataset.tag; }
+    else { overdueFilter = false; activeFilter = null; }
     renderFilterBar();
     renderTaskList();
   });
@@ -1428,6 +1493,7 @@ window.loadTodoFromFirebase = function(data) {
             title: String(t.title || ''),
             description: String(t.description || ''),
             completed: !!t.completed,
+            important: !!t.important,
             deadline: t.deadline || null,
             tags: Array.isArray(t.tags) ? t.tags : [],
             createdAt: t.createdAt || Date.now(),
@@ -1445,6 +1511,7 @@ window.loadTodoFromFirebase = function(data) {
             title: String(r.title || ''),
             description: String(r.description || ''),
             deadline: r.deadline || null,
+            important: !!r.important,
             tags: Array.isArray(r.tags) ? r.tags : [],
             subtasks: Array.isArray(r.subtasks) ? r.subtasks.map(s => ({
                 id: s.id || uid(), title: String(s.title || '')

@@ -356,7 +356,7 @@
                         <span class="qa-plus">
                             <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M7 2.5v9M2.5 7h9"/></svg>
                         </span>
-                        <input id="quickInput" placeholder="Добавить задачу… (Enter — сохранить)">
+                        <input id="quickInput" placeholder="Добавить задачу… (до 15.08 — дедлайн, #тег, !важно)">
                     </form>
 
                     <div class="day-toolbar">
@@ -369,6 +369,7 @@
                         <textarea id="newDesc" class="inp" rows="2" placeholder="Описание (необязательно)"></textarea>
                         <div class="edit-row">
                             <label class="field"><span>Дедлайн (необязательно)</span><input type="datetime-local" id="newDeadline" class="inp"></label>
+                            <label class="series-check"><input type="checkbox" id="newImportant"> ⭐ Важно</label>
                         </div>
                         <div class="tags-row" id="newTagsRow"></div>
                         <div class="edit-btns">
@@ -418,6 +419,26 @@
             </div>
         </div>
 
+        <!-- ПЕРЕНОС ЗАДАЧИ НА ДРУГУЮ ДАТУ -->
+        <div id="moveModal" class="backdrop" hidden>
+            <div class="modal move-modal">
+                <div class="modal-head">
+                    <h3>📅 Перенести задачу</h3>
+                    <button class="icon-btn" type="button" data-act="move-close" title="Закрыть">
+                        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="m3.2 3.2 7.6 7.6M10.8 3.2l-7.6 7.6"/></svg>
+                    </button>
+                </div>
+                <div class="series-field">
+                    <label class="series-label">Дата</label>
+                    <input type="date" id="moveInput" class="inp">
+                </div>
+                <div class="edit-btns">
+                    <button class="btn primary" type="button" data-act="move-confirm">💾 Перенести</button>
+                    <button class="btn ghost" type="button" data-act="move-close">Отмена</button>
+                </div>
+            </div>
+        </div>
+
         <!-- МОДАЛКА СЕРИИ (создание/редактирование) -->
         <div id="seriesModal" class="backdrop" hidden>
             <div class="modal series-modal">
@@ -441,6 +462,11 @@
                 <div class="series-field">
                     <label class="series-label">Дедлайн (необязательно)</label>
                     <input type="datetime-local" id="seriesDeadline" class="inp">
+                </div>
+
+                <div class="series-field">
+                    <label class="series-label">Важность</label>
+                    <label class="series-check"><input type="checkbox" id="seriesImportant"> ⭐ Важно</label>
                 </div>
 
                 <div class="series-field">

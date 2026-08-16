@@ -5345,6 +5345,7 @@ header .macro-badge {
     --green-line:rgba(22,163,74,.35);
     --red:#dc2626;
     --red-soft:rgba(220,38,38,.1);
+    --red-line:rgba(220,38,38,.35);
     color-scheme: light;
     background: transparent;
     color: var(--text);
@@ -5561,6 +5562,15 @@ header .macro-badge {
 @keyframes rise { from{opacity:0; transform:translateY(6px)} }
 @keyframes pop { 0%{opacity:0; transform:scale(.8)} 100%{opacity:1; transform:scale(1)} }
 @keyframes breathe { 0%,100%{box-shadow:0 0 0 0 rgba(22,163,74,0)} 50%{box-shadow:0 0 10px 1px rgba(22,163,74,.3)} }
+
+/* ------- важное / просроченные / перенос ------- */
+.todo-app .imp-badge { display:inline-flex; align-items:center; justify-content:center; width:16px; height:16px; border-radius:50%; background:var(--red); color:#fff; font-size:11px; font-weight:800; margin-right:6px; vertical-align:1px; flex:none; }
+.todo-app .imp-check { padding-bottom:10px; }
+.todo-app .cell.overdue .num { color:var(--red); }
+.todo-app .cell .od-dot { position:absolute; top:6px; right:6px; width:6px; height:6px; border-radius:50%; background:var(--red); box-shadow:0 0 0 2px var(--surface); }
+.todo-app .chip.overdue-chip.active { background:var(--red-soft); border-color:var(--red-line); color:var(--red); }
+.todo-app .chip-count { margin-left:5px; font-size:10px; color:var(--text-3); background:var(--bg-soft); border-radius:99px; padding:1px 6px; }
+.todo-app .chip.active .chip-count { color:var(--accent); background:var(--surface); }
 
 @media(max-width:960px){
     .todo-app .main { grid-template-columns:1fr; }
