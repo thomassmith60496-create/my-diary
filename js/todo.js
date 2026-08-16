@@ -1226,6 +1226,14 @@ function init(){
   /* панель тегов */
   $('#tagsBtn').addEventListener('click', openTagModal);
 
+  /* статистика */
+  $('#statsBtn').addEventListener('click', openTodoStats);
+  $('#statsModal').addEventListener('mousedown', e => { if(e.target === e.currentTarget) closeTodoStats(); });
+  $('#statsModal').addEventListener('click', e => {
+    const btn = e.target.closest('[data-act]');
+    if(btn && btn.dataset.act === 'stats-close') closeTodoStats();
+  });
+
   /* регулярные задачи */
   $('#seriesBtn').addEventListener('click', openSeriesList);
   $('#newSeriesBtn').addEventListener('click', () => openSeriesModal(null));
@@ -1401,6 +1409,7 @@ function init(){
     else if(ui.seriesModal) closeSeriesModal();
     else if(ui.seriesListOpen) closeSeriesList();
     else if(ui.moveTask) closeMoveModal();
+    else if(!$('#statsModal').hidden) closeTodoStats();
   });
 
   /* быстрый ввод */
@@ -1474,6 +1483,28 @@ function init(){
   renderAll();
 }
 
+/* ================= статистика ================= */
+function renderTodoStats(){
+  const streaks = $('#statsStreaks');
+  if(streaks && typeof renderActivityStreaks === 'function') renderActivityStreaks(streaks, { only: ['todo'] });
+  const heatmap = $('#statsHeatmap');
+  if(heatmap && typeof renderActivityHeatmap === 'function'){
+    renderActivityHeatmap(heatmap, 'todo', {
+      onDayClick: function(date){
+        selectDate(date);
+        closeTodoStats();
+      }
+    });
+  }
+}
+function openTodoStats(){
+  $('#statsModal').hidden = false;
+  renderTodoStats();
+}
+function closeTodoStats(){
+  $('#statsModal').hidden = true;
+}
+
 /* ================= публичный API ================= */
 let initialized = false;
 window.getTodoState = function() {
@@ -1538,5 +1569,12 @@ window.initTodoApp = function() {
     initialized = true;
     init();
 };
+
+window.todoSelectDate = function(k) {
+    selectDate(k);
+};
+
+window.openTodoStats = openTodoStats;
+window.closeTodoStats = closeTodoStats;
 
 })();

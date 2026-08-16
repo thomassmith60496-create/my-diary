@@ -3,6 +3,8 @@
 // ============================================
 "use strict";
 
+let homeActivityModule = 'overall';
+
 // === ГЛАВНАЯ СТРАНИца ===
 
 window.renderHomePage = function() {
@@ -65,12 +67,27 @@ window.renderHomePage = function() {
     // Карточка финансов (на всю ширину)
     html += renderFinanceCard(todayFinance, dateStr);
     
+    // Карточка активности (стрики + хитмап)
+    html += `
+        <div class="home-card activity-card">
+            <div class="home-card-header">
+                <h2 class="home-card-title">🔥 Активность</h2>
+                <div class="home-card-badge">Стрики и хитмап</div>
+            </div>
+            <div class="home-card-body">
+                <div id="home-streaks"></div>
+                <div class="hm-module-switch" id="home-hm-switch"></div>
+                <div id="home-heatmap"></div>
+            </div>
+        </div>`;
+    
     // Последняя активность
     html += renderRecentActivity(recentActivity);
     
     html += `</div>`;
     
     container.innerHTML = html;
+    renderHomeActivity();
 }
 
 window.getGreeting = function(hour) {
@@ -549,6 +566,46 @@ window.renderDashboard = function() {
     renderWeightChart();
     renderKbjuChart();
     renderWeeklyAvg();
+    renderNutritionActivity();
+}
+
+// === АКТИВНОСТЬ ===
+
+window.renderHomeActivity = function() {
+    const streaks = document.getElementById('home-streaks');
+    if(streaks && typeof renderActivityStreaks === 'function') renderActivityStreaks(streaks);
+    
+    const switcher = document.getElementById('home-hm-switch');
+    if(switcher) {
+        const modules = [['overall','Все'],['nutrition','Питание'],['training','Тренировки'],['finance','Финансы'],['todo','Задачи']];
+        switcher.innerHTML = modules.map(m =>
+            `<button type="button" class="${homeActivityModule === m[0] ? 'active' : ''}" data-hm-module="${m[0]}" onclick="setHomeActivityModule('${m[0]}')">${m[1]}</button>`
+        ).join('');
+    }
+    
+    const heatmap = document.getElementById('home-heatmap');
+    if(heatmap && typeof renderActivityHeatmap === 'function') {
+        renderActivityHeatmap(heatmap, homeActivityModule, {
+            onDayClick: date => window.activityNavigate(homeActivityModule, date)
+        });
+    }
+}
+
+window.setHomeActivityModule = function(module) {
+    homeActivityModule = module;
+    renderHomeActivity();
+}
+
+window.renderNutritionActivity = function() {
+    const streaks = document.getElementById('nutrition-streaks');
+    if(streaks && typeof renderActivityStreaks === 'function') renderActivityStreaks(streaks, { only: ['nutrition'] });
+    
+    const heatmap = document.getElementById('nutrition-heatmap');
+    if(heatmap && typeof renderActivityHeatmap === 'function') {
+        renderActivityHeatmap(heatmap, 'nutrition', {
+            onDayClick: date => window.activityNavigate('nutrition', date)
+        });
+    }
 }
 
 window.setKbjuMetric = function(metric) {

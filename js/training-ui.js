@@ -530,7 +530,12 @@ window.renderTrainingWorkouts = function() {
         return;
     }
 
-    const workouts = TrainingWorkoutAPI.getWorkouts();
+    let workouts = TrainingWorkoutAPI.getWorkouts();
+    let filteredByDate = null;
+    if (window.trainingSelectedDate) {
+        workouts = workouts.filter(function(w) { return w.date === window.trainingSelectedDate; });
+        filteredByDate = window.trainingSelectedDate;
+    }
 
     let html = '';
 
@@ -541,6 +546,9 @@ window.renderTrainingWorkouts = function() {
     html += '<button class="btn" onclick="openImportTraining()" style="margin-left:8px;">📥 Импорт из GymKeeper</button>';
     html += '<button class="btn danger" onclick="deleteAllWorkoutsConfirm()" style="margin-left:8px;">🗑 Удалить все тренировки</button>';
     html += '</div>';
+    if (filteredByDate) {
+        html += '<div class="train-filter-chip" style="margin-top:8px;">📅 ' + filteredByDate + ' <button onclick="clearTrainingDateFilter()">✕</button></div>';
+    }
     html += '</div>';
 
     // === СПИСОК ТРЕНИРОВОК ===
@@ -561,7 +569,10 @@ window.renderTrainingWorkouts = function() {
     container.innerHTML = html;
 }
 
-// === РЕНДЕРИНГ КАРТОЧКИ ТРЕНИРОВКИ В СПИСКЕ ===
+window.clearTrainingDateFilter = function() {
+    window.trainingSelectedDate = null;
+    renderTrainingWorkouts();
+}
 
 window.renderWorkoutCard = function(workout) {
     const isEditing = workoutsUIState.editingWorkoutId === workout.id;
@@ -1790,6 +1801,20 @@ window.renderTrainingProgress = function() {
     }
 
     container.innerHTML = html;
+
+    window.renderTrainingActivity();
+}
+
+window.renderTrainingActivity = function() {
+    const streaks = document.getElementById('training-streaks');
+    if (streaks && typeof renderActivityStreaks === 'function') renderActivityStreaks(streaks, { only: ['training'] });
+
+    const heatmap = document.getElementById('training-heatmap');
+    if (heatmap && typeof renderActivityHeatmap === 'function') {
+        renderActivityHeatmap(heatmap, 'training', {
+            onDayClick: function(date) { window.activityNavigate('training', date); }
+        });
+    }
 }
 
 function getVariantBestValue(overall, mt) {

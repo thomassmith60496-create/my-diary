@@ -268,6 +268,25 @@ window.renderFinanceDashboard = function() {
     html += renderMandatoryDashboardTable(financeSelectedMonth);
     
     container.innerHTML = html;
+    
+    window.renderFinanceActivity();
+}
+
+window.renderFinanceActivity = function() {
+    const streaks = document.getElementById('finance-streaks');
+    if(streaks && typeof renderActivityStreaks === 'function') renderActivityStreaks(streaks, { only: ['finance'] });
+    
+    const heatmap = document.getElementById('finance-heatmap');
+    if(heatmap && typeof renderActivityHeatmap === 'function') {
+        renderActivityHeatmap(heatmap, 'finance', {
+            onDayClick: date => window.activityNavigate('finance', date)
+        });
+    }
+}
+
+window.clearFinanceDateFilter = function() {
+    window.financeSelectedDate = null;
+    renderFinanceTransactions();
 }
 
 window.renderFinanceTransactions = function() {
@@ -299,10 +318,21 @@ window.renderFinanceTransactions = function() {
                 <option value="income">📈 Доходы</option>
                 <option value="expense">📉 Расходы</option>
             </select>
-        </div>
-    </div>`;
+        </div>`;
+    
+    if(window.financeSelectedDate) {
+        html += `<div class="finance-filter-group">
+            <label class="finance-filter-label">Дата</label>
+            <span class="finance-filter-chip">📅 ${window.financeSelectedDate} <button onclick="clearFinanceDateFilter()">✕</button></span>
+        </div>`;
+    }
+    html += `</div>`;
     
     let filtered = [...financeData.transactions];
+    
+    if(window.financeSelectedDate) {
+        filtered = filtered.filter(t => t.date === window.financeSelectedDate);
+    }
     
     const period = document.getElementById('fin-filter-period')?.value || 'all';
     if(period === 'month') {

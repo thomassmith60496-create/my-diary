@@ -11,7 +11,7 @@
 <!-- SheetJS for Excel import -->
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <!-- Styles -->
-<link rel="stylesheet" href="css/styles.css?v=6">
+<link rel="stylesheet" href="css/styles.css?v=7">
 <!-- Favicon -->
 <link rel="icon" type="image/png" href="favicon.png">
 </head>
@@ -173,6 +173,12 @@
                 <h2 class="dashboard-title">📈 Среднее по неделям</h2>
                 <div id="weekly-avg-container"></div>
             </div>
+            <div class="dashboard-section">
+                <h2 class="dashboard-title">🔥 Хитмап активности питания</h2>
+                <div class="subtitle">Калории по дням. Клик по ячейке откроет день в дневнике.</div>
+                <div id="nutrition-streaks"></div>
+                <div id="nutrition-heatmap"></div>
+            </div>
         </div>
     </div>
 
@@ -188,6 +194,12 @@
         </div>
         <div class="train-sub-tab-content active" id="train-sub-progress">
             <div id="training-progress-content"></div>
+            <div class="dashboard-section training-heatmap-section">
+                <h2 class="dashboard-title">🔥 Хитмап тренировок</h2>
+                <div class="subtitle">Подходы по дням. Клик по ячейке откроет тренировки за день.</div>
+                <div id="training-streaks"></div>
+                <div id="training-heatmap"></div>
+            </div>
         </div>
         <div class="train-sub-tab-content" id="train-sub-exercises">
             <div id="training-exercises-content"></div>
@@ -233,13 +245,19 @@
                <button class="btn" onclick="renderFinanceDashboard()">🔄 Обновить</button>
     <input type="file" id="import-excel-file" accept=".xlsx,.xls,.csv" style="display:none;" onchange="importFinanceExcel(this)">
            </div>
-       <div id="finance-dashboard-content">
-               <div class="empty-state">
-                   <div class="empty-state-icon">💰</div>
-                   <div class="empty-state-title">Дашборд финансов</div>
-                   <div class="empty-state-text">Здесь будут графики расходов, категории и статус лимитов</div>
-               </div>
-           </div>
+<div id="finance-dashboard-content">
+                <div class="empty-state">
+                    <div class="empty-state-icon">💰</div>
+                    <div class="empty-state-title">Дашборд финансов</div>
+                    <div class="empty-state-text">Здесь будут графики расходов, категории и статус лимитов</div>
+                </div>
+            </div>
+            <div class="dashboard-section finance-heatmap-section">
+                <h2 class="dashboard-title">🔥 Хитмап расходов</h2>
+                <div class="subtitle">Потраченная сумма по дням. Клик по ячейке откроет операции за день.</div>
+                <div id="finance-streaks"></div>
+                <div id="finance-heatmap"></div>
+            </div>
        </div>
        
         <!-- Подвкладка: Операции -->
@@ -328,6 +346,10 @@
                     <button id="tagsBtn" class="btn ghost sm" type="button">
                         <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M2 3.5A1.5 1.5 0 0 1 3.5 2h4.1c.4 0 .78.16 1.06.44l5.4 5.4a1.5 1.5 0 0 1 0 2.12l-4.1 4.1a1.5 1.5 0 0 1-2.12 0l-5.4-5.4A1.5 1.5 0 0 1 2 7.6V3.5z"/><circle cx="5.3" cy="5.3" r="1" fill="currentColor" stroke="none"/></svg>
                         Теги
+                    </button>
+                    <button id="statsBtn" class="btn ghost sm" type="button" title="Статистика и стрики">
+                        <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13.5v-3.2M6.5 13.5V5.2M10 13.5V7.7M13.5 13.5V2.9"/></svg>
+                        Статистика
                     </button>
                 </div>
             </header>
@@ -535,6 +557,21 @@
         </div>
 
         <div id="toast" role="status"></div>
+
+        <!-- МОДАЛКА СТАТИСТИКИ -->
+        <div id="statsModal" class="backdrop" hidden>
+            <div class="modal stats-modal">
+                <div class="modal-head">
+                    <h3>📊 Статистика задач</h3>
+                    <button class="icon-btn" type="button" data-act="stats-close" title="Закрыть">
+                        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="m3.2 3.2 7.6 7.6M10.8 3.2l-7.6 7.6"/></svg>
+                    </button>
+                </div>
+                <div id="statsStreaks"></div>
+                <div id="statsHeatmap"></div>
+                <p class="hint">Клик по дню откроет его в календаре.</p>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -847,20 +884,21 @@
 <script src="js/finance-categories.js?v=3"></script>
 <script src="js/finance-modals.js?v=3"></script>
 <script src="js/finance-save.js?v=3"></script>
-<script src="js/finance-render.js?v=3"></script>
+<script src="js/finance-render.js?v=4"></script>
     <script src="js/finance-import.js?v=3"></script>
     <script src="js/finance-export.js?v=3"></script>
-    <script src="js/dashboard.js?v=3"></script>
+    <script src="js/dashboard.js?v=4"></script>
     <script src="js/training-seed.js?v=3"></script>
     <script src="js/training-storage.js?v=3"></script>
     <script src="js/training-data.js?v=3"></script>
     <script src="js/exercise-images.js?v=3"></script>
 <script src="js/exercise-gif-manager.js?v=3"></script>
     <script src="js/exercise-gif-names.js?v=3"></script>
-    <script src="js/training-ui.js?v=3"></script>
+    <script src="js/training-ui.js?v=4"></script>
     <script src="js/training-import.js?v=3"></script>
     <script src="js/custom-modals.js?v=3"></script>
-    <script src="js/todo.js?v=4"></script>
+    <script src="js/todo.js?v=5"></script>
+    <script src="js/activity.js?v=2"></script>
     <script src="js/app.js?v=4"></script>
 </body>
 </html>
