@@ -154,6 +154,10 @@ function fmtMoney(v) {
     return Math.round(v).toLocaleString('ru-RU') + ' ₽';
 }
 
+function fmtNum(v) {
+    return Math.round(v).toLocaleString('ru-RU');
+}
+
 function fmtDuration(min) {
     if (!min || min <= 0) return '—';
     const h = Math.floor(min / 60);
@@ -544,14 +548,14 @@ function collectDailySeries(start, end) {
 
 // ============ COMPARISON & FACTS ============
 
-function generateComparison(current, prev) {
+function generateComparison(current, prev, periodType) {
     const cards = [];
 
     if (current.finance.expense.total > 0 || (prev && prev.finance.expense.total > 0)) {
         const pct = pctChange(prev.finance.expense.total, current.finance.expense.total);
-        cards.push({ icon: '📉', label: 'Расходы', cur: fmtMoney(current.finance.expense.total), sub: fmtMoney(prev.finance.expense.total), pct: pct, unit: '' });
+        cards.push({ icon: '📉', label: 'Расходы', cur: fmtMoney(current.finance.expense.total), sub: fmtMoney(prev.finance.expense.total), pct: pct, unit: '', invert: true });
     }
-    if (current.finance.income.total > 0 || (prev && prev.finance.income.total > 0)) {
+    if (periodType !== 'week' && (current.finance.income.total > 0 || (prev && prev.finance.income.total > 0))) {
         const pct = pctChange(prev.finance.income.total, current.finance.income.total);
         cards.push({ icon: '📈', label: 'Доходы', cur: fmtMoney(current.finance.income.total), sub: fmtMoney(prev.finance.income.total), pct: pct, unit: '' });
     }
@@ -577,7 +581,7 @@ function pctDir(pct) {
     return pct > 0 ? 'up' : 'down';
 }
 
-function generateFacts(current, prev) {
+function generateFacts(current, prev, periodType) {
     const facts = [];
 
     if (!prev) {
@@ -653,7 +657,7 @@ function generateFacts(current, prev) {
         const pc = prev.finance.expense.byCategory[cat] || 0;
         if (cc === 0 && pc === 0) return;
         if (cc === 0) {
-            catFacts.push({ cat, pct: null, text: 'Расходы на категорию «' + cat + '» обнулились (было ' + fmtMoney(pc) + ').', type: 'decrease' });
+            catFacts.push({ cat, pct: null, text: 'Расходы на категорию «' + cat + '» обнулились (было ' + fmtMoney(pc) + ').', type: 'increase' });
             return;
         }
         if (pc === 0) {
@@ -662,7 +666,7 @@ function generateFacts(current, prev) {
         }
         const pct = Math.round((cc - pc) / pc * 100);
         if (Math.abs(pct) >= 5) {
-            catFacts.push({ cat, pct, text: 'Расходы на категорию «' + cat + '» ' + (pct > 0 ? 'выросли' : 'упали') + ' на ' + Math.abs(pct) + '%.', type: pct > 0 ? 'increase' : 'decrease' });
+            catFacts.push({ cat, pct, text: 'Расходы на категорию «' + cat + '» ' + (pct > 0 ? 'выросли' : 'упали') + ' на ' + Math.abs(pct) + '%.', type: pct > 0 ? 'decrease' : 'increase' });
         }
     });
     catFacts.sort((a, b) => Math.abs(b.pct === null ? 1000 : b.pct) - Math.abs(a.pct === null ? 1000 : a.pct));
@@ -674,16 +678,18 @@ function generateFacts(current, prev) {
         facts.push({
             icon: '📉',
             text: 'Общие расходы: ' + fmtMoney(current.finance.expense.total) + ' (' + pctLabel(expPct) + ').',
-            type: expPct > 0 ? 'increase' : (expPct < 0 ? 'decrease' : 'same')
+            type: expPct > 0 ? 'decrease' : (expPct < 0 ? 'increase' : 'same')
         });
     }
-    const incPct = pctChange(prev.finance.income.total, current.finance.income.total);
-    if (incPct !== 0) {
-        facts.push({
-            icon: '📈',
-            text: 'Общие доходы: ' + fmtMoney(current.finance.income.total) + ' (' + pctLabel(incPct) + ').',
-            type: incPct > 0 ? 'increase' : (incPct < 0 ? 'decrease' : 'same')
-        });
+    if (periodType !== 'week') {
+        const incPct = pctChange(prev.finance.income.total, current.finance.income.total);
+        if (incPct !== 0) {
+            facts.push({
+                icon: '📈',
+                text: 'Общие доходы: ' + fmtMoney(current.finance.income.total) + ' (' + pctLabel(incPct) + ').',
+                type: incPct > 0 ? 'increase' : (incPct < 0 ? 'decrease' : 'same')
+            });
+        }
     }
 
     // --- Накопления ---
@@ -834,9 +840,11 @@ function generateVerdict(current, prev, score, periodType) {
         deltas.push({ label: 'выполнение задач', delta: current.tasks.done - prev.tasks.done, good: true, money: false });
         deltas.push({ label: 'количество тренировок', delta: current.training.workouts - prev.training.workouts, good: true, money: false });
         deltas.push({ label: 'активные дни', delta: current.activeDays.count - prev.activeDays.count, good: true, money: false });
-        deltas.push({ label: 'расходы', delta: current.finance.expense.total - prev.finance.expense.total, good: false, money: true });
-        deltas.push({ label: 'доходы', delta: current.finance.income.total - prev.finance.income.total, good: true, money: true });
-        deltas.push({ label: 'накопления', delta: current.finance.savings.total - prev.finance.savings.total, good: true, money: true });
+        if (periodType !== 'week') {
+            deltas.push({ label: 'расходы', delta: current.finance.expense.total - prev.finance.expense.total, good: false, money: true });
+            deltas.push({ label: 'доходы', delta: current.finance.income.total - prev.finance.income.total, good: true, money: true });
+            deltas.push({ label: 'накопления', delta: current.finance.savings.total - prev.finance.savings.total, good: true, money: true });
+        }
     }
 
     let best = null, worst = null;
@@ -882,6 +890,9 @@ function scoreColor(score) {
 
 function statCard(icon, title, value, sub, trend) {
     const trendHtml = trend ? '<span class="review-trend trend-' + trend.dir + '">' + trend.label + '</span>' : '';
+    const subHtml = Array.isArray(sub)
+        ? '<div class="review-stat-sub">' + sub.map(s => '<span class="review-stat-chip">' + s + '</span>').join('') + '</div>'
+        : (sub ? '<div class="review-stat-sub">' + sub + '</div>' : '');
     return '' +
         '<div class="review-stat-card">' +
             '<div class="review-stat-header">' +
@@ -890,7 +901,7 @@ function statCard(icon, title, value, sub, trend) {
                 trendHtml +
             '</div>' +
             '<div class="review-stat-value">' + value + '</div>' +
-            sub ? '<div class="review-stat-sub">' + sub + '</div>' : '' +
+            subHtml +
         '</div>';
 }
 
@@ -907,7 +918,7 @@ function renderStatGrid(current, prev) {
     }
     cards.push(statCard('✅', 'Задачи',
         '<span class="rev-val">' + current.tasks.done + '</span><span class="rev-sep">/</span><span class="rev-val">' + current.tasks.total + '</span><span class="rev-unit"> выполнено</span>',
-        taskPct + '% выполнено',
+        [taskPct + '% выполнено'],
         taskTrend));
 
     // Тренировки
@@ -918,7 +929,7 @@ function renderStatGrid(current, prev) {
     }
     cards.push(statCard('🏋️', 'Тренировки',
         current.training.workouts > 0 ? (current.training.workouts + ' ' + plural(current.training.workouts, 'тренировка', 'тренировки', 'тренировок')) : '—',
-        current.training.sets > 0 ? current.training.sets + ' подходов · ' + fmtMoney(current.training.volume) + ' объёма' : '',
+        current.training.sets > 0 ? [current.training.sets + ' подходов', fmtNum(current.training.volume) + ' объёма'] : [],
         trainTrend));
 
     // Расходы
@@ -926,11 +937,11 @@ function renderStatGrid(current, prev) {
     let expTrend = null;
     if (prev) {
         const pct = pctChange(prev.finance.expense.total, current.finance.expense.total);
-        expTrend = { dir: pctDir(pct), label: pctLabel(pct) };
+        expTrend = { dir: pct === null ? 'new' : (pct > 0 ? 'down' : (pct < 0 ? 'up' : 'same')), label: pctLabel(pct) };
     }
     cards.push(statCard('📉', 'Расходы',
         current.finance.expense.total > 0 ? fmtMoney(current.finance.expense.total) : '—',
-        expCats.length ? expCats.slice(0, 3).map(c => c + ': ' + fmtMoney(current.finance.expense.byCategory[c])).join(' · ') : '',
+        expCats.length ? expCats.slice(0, 3).map(c => c + ': ' + fmtMoney(current.finance.expense.byCategory[c])) : [],
         expTrend));
 
     // Доходы
@@ -942,7 +953,7 @@ function renderStatGrid(current, prev) {
     }
     cards.push(statCard('📈', 'Доходы',
         current.finance.income.total > 0 ? fmtMoney(current.finance.income.total) : '—',
-        incCats.length ? incCats.slice(0, 2).map(c => c + ': ' + fmtMoney(current.finance.income.byCategory[c])).join(' · ') : '',
+        incCats.length ? incCats.slice(0, 2).map(c => c + ': ' + fmtMoney(current.finance.income.byCategory[c])) : [],
         incTrend));
 
     // Накопления
@@ -954,7 +965,7 @@ function renderStatGrid(current, prev) {
     }
     cards.push(statCard('🏦', 'Накопления',
         current.finance.savings.total > 0 ? fmtMoney(current.finance.savings.total) : '—',
-        goalCats.length ? goalCats.slice(0, 2).map(g => g + ': ' + fmtMoney(current.finance.savings.byGoal[g])).join(' · ') : '',
+        goalCats.length ? goalCats.slice(0, 2).map(g => g + ': ' + fmtMoney(current.finance.savings.byGoal[g])) : [],
         saveTrend));
 
     // Питание
@@ -965,7 +976,7 @@ function renderStatGrid(current, prev) {
     }
     cards.push(statCard('📘', 'Питание',
         current.nutrition.days > 0 ? (current.nutrition.avgCalories + ' ккал') : '—',
-        current.nutrition.days > 0 ? current.nutrition.days + ' дней · ' + (current.nutrition.weightStart ? (current.nutrition.weightStart + '→' + current.nutrition.weightEnd + ' кг') : 'вес не указан') : '',
+        current.nutrition.days > 0 ? [current.nutrition.days + ' дней', current.nutrition.weightStart ? (current.nutrition.weightStart + ' → ' + current.nutrition.weightEnd + ' кг') : 'вес не указан'] : [],
         nutTrend));
 
     // Активные дни
@@ -976,7 +987,7 @@ function renderStatGrid(current, prev) {
     }
     cards.push(statCard('🔥', 'Активных дней',
         current.activeDays.total > 0 ? (current.activeDays.count + ' / ' + current.activeDays.total) : '—',
-        current.activeDays.total > 0 ? Math.round(current.activeDays.count / current.activeDays.total * 100) + '% периода' : '',
+        current.activeDays.total > 0 ? [Math.round(current.activeDays.count / current.activeDays.total * 100) + '% периода'] : [],
         adTrend));
 
     // Сон
@@ -987,7 +998,7 @@ function renderStatGrid(current, prev) {
     }
     cards.push(statCard('🌙', 'Сон',
         current.sleep.days > 0 ? fmtDuration(current.sleep.avgDuration) : '—',
-        current.sleep.days > 0 ? current.sleep.days + ' дней · ' + fmtTimeOfDay(current.sleep.avgBedtime) + ' → ' + fmtTimeOfDay(current.sleep.avgWakeTime) : '',
+        current.sleep.days > 0 ? [current.sleep.days + ' дней', fmtTimeOfDay(current.sleep.avgBedtime) + ' → ' + fmtTimeOfDay(current.sleep.avgWakeTime)] : [],
         sleepTrend));
 
     return cards.map(c => c).join('');
@@ -1034,9 +1045,9 @@ function renderHeroScore(score, current, prev, periodType, firstFact) {
 const CHART_PALETTE = ['#f43f5e', '#f59e0b', '#10b981', '#6366f1', '#14b8a6', '#8b5cf6', '#ef4444', '#0ea5e9', '#84cc16', '#f97316'];
 const CHART_TEXT = { textColor: '#64748b', gridColor: '#e2e8f0', titleColor: '#0f172a' };
 
-function chartCard(icon, title, total, chartHtml) {
+function chartCard(icon, title, total, chartHtml, wide) {
     return '' +
-        '<div class="review-chart-card">' +
+        '<div class="review-chart-card' + (wide ? ' review-chart-card-wide' : '') + '">' +
             '<div class="review-chart-head">' +
                 '<span class="review-chart-icon">' + icon + '</span>' +
                 '<span class="review-chart-title">' + esc(title) + '</span>' +
@@ -1060,55 +1071,64 @@ function buildDonutSectors(byCategory) {
     });
 }
 
-function renderCharts(series, current) {
+function renderCharts(series, current, periodType) {
     const cards = [];
+    const MAX = 3;
+    const push = html => { if (cards.length < MAX) cards.push(html); };
     const line = (data, field, unit, color, gid) =>
         (typeof window.renderSVGLineChart === 'function') ? window.renderSVGLineChart(data, field, unit, color, gid, CHART_TEXT) : '';
     const donut = (sectors, total, center, sub) =>
         (typeof window.renderDonutChart === 'function') ? window.renderDonutChart(sectors, total, center, sub) : '';
 
+    // 1. Вес
     const wData = series.filter(d => d.weight !== null).map(d => ({ date: d.date, weight: d.weight }));
     if (wData.length >= 1) {
         const total = current.nutrition.weightStart ? current.nutrition.weightStart + ' → ' + current.nutrition.weightEnd + ' кг' : '';
-        cards.push(chartCard('⚖️', 'Вес', total, line(wData, 'weight', 'кг', '#10b981', 'review-grad-weight')));
+        push(chartCard('⚖️', 'Вес', total, line(wData, 'weight', 'кг', '#10b981', 'review-grad-weight'), true));
     }
 
+    // 2. Калории по дням
     const calData = series.filter(d => d.calories > 0).map(d => ({ date: d.date, cal: d.calories }));
     if (calData.length >= 2) {
         const avg = Math.round(calData.reduce((s, d) => s + d.cal, 0) / calData.length);
-        cards.push(chartCard('📘', 'Калории по дням', avg + ' ккал в сред.', line(calData, 'cal', 'ккал', '#f59e0b', 'review-grad-cal')));
+        push(chartCard('📘', 'Калории по дням', avg + ' ккал в сред.', line(calData, 'cal', 'ккал', '#f59e0b', 'review-grad-cal'), true));
     }
 
+    // 3. Сон по ночам
     const sleepData = series.filter(d => d.sleepMin > 0).map(d => ({ date: d.date, sleep: d.sleepMin }));
     if (sleepData.length >= 2) {
         const total = current.sleep.days > 0 ? fmtDuration(current.sleep.avgDuration) + ' в сред.' : '';
-        cards.push(chartCard('🌙', 'Сон по ночам', total, line(sleepData, 'sleep', 'мин', '#6366f1', 'review-grad-sleep')));
+        push(chartCard('🌙', 'Сон по ночам', total, line(sleepData, 'sleep', 'мин', '#6366f1', 'review-grad-sleep'), true));
     }
 
+    // 4. Расходы по дням
     const expData = series.filter(d => d.expense > 0).map(d => ({ date: d.date, expense: d.expense }));
     if (expData.length >= 1) {
         const total = current.finance.expense.total > 0 ? fmtMoney(current.finance.expense.total) : '';
-        cards.push(chartCard('📉', 'Расходы по дням', total, line(expData, 'expense', '₽', '#f43f5e', 'review-grad-exp')));
+        push(chartCard('📉', 'Расходы по дням', total, line(expData, 'expense', '₽', '#f43f5e', 'review-grad-exp'), true));
     }
 
+    // 5. Расходы по категориям
     if (Object.keys(current.finance.expense.byCategory).length > 0) {
         const sectors = buildDonutSectors(current.finance.expense.byCategory);
-        cards.push(chartCard('💸', 'Расходы по категориям', fmtMoney(current.finance.expense.total),
-            donut(sectors, current.finance.expense.total, fmtMoney(current.finance.expense.total), 'всего расходов')));
+        push(chartCard('💸', 'Расходы по категориям', fmtMoney(current.finance.expense.total),
+            donut(sectors, current.finance.expense.total, fmtMoney(current.finance.expense.total), 'всего расходов'), false));
     }
 
-    if (Object.keys(current.finance.income.byCategory).length > 0) {
-        const sectors = buildDonutSectors(current.finance.income.byCategory);
-        cards.push(chartCard('📈', 'Доходы по категориям', fmtMoney(current.finance.income.total),
-            donut(sectors, current.finance.income.total, fmtMoney(current.finance.income.total), 'всего доходов')));
-    }
-
+    // 6. Объём тренировок
     const trData = series.filter(d => d.workoutVolume > 0).map(d => ({ date: d.date, volume: d.workoutVolume }));
     if (trData.length >= 1) {
         const total = current.training.workouts > 0
-            ? current.training.workouts + ' ' + plural(current.training.workouts, 'тренировка', 'тренировки', 'тренировок') + ' · ' + fmtMoney(current.training.volume)
+            ? current.training.workouts + ' ' + plural(current.training.workouts, 'тренировка', 'тренировки', 'тренировок') + ' · ' + fmtNum(current.training.volume)
             : '';
-        cards.push(chartCard('🏋️', 'Объём тренировок', total, line(trData, 'volume', 'кг', '#14b8a6', 'review-grad-train')));
+        push(chartCard('🏋️', 'Объём тренировок', total, line(trData, 'volume', 'кг', '#14b8a6', 'review-grad-train'), true));
+    }
+
+    // 7. Доходы по категориям (только месяц — доходы не еженедельные)
+    if (periodType !== 'week' && Object.keys(current.finance.income.byCategory).length > 0) {
+        const sectors = buildDonutSectors(current.finance.income.byCategory);
+        push(chartCard('📈', 'Доходы по категориям', fmtMoney(current.finance.income.total),
+            donut(sectors, current.finance.income.total, fmtMoney(current.finance.income.total), 'всего доходов'), false));
     }
 
     if (!cards.length) return '';
@@ -1122,15 +1142,15 @@ function renderReviewHTML(periodType, current, prev) {
     const enumFn = periodType === 'week' ? enumWeeks : enumMonths;
     const title = periodType === 'week' ? 'Недельный обзор' : 'Месячный обзор';
     const icon = periodType === 'week' ? '📅' : '📆';
-    const options = enumFn().map(o => '<option value="' + esc(o.value) + '">' + esc(o.label) + '</option>').join('');
     const selectedVal = periodType === 'week'
         ? (window.reviewWeekStart || getWeekRange(new Date()).start)
         : (window.reviewMonthKey || getMonthRange(new Date()).start.slice(0, 7));
+    const options = enumFn().map(o => '<option value="' + esc(o.value) + '"' + (o.value === selectedVal ? ' selected' : '') + '>' + esc(o.label) + '</option>').join('');
     const periodLabel = periodType === 'week'
         ? getSelectedPeriod('week').label
         : getSelectedPeriod('month').label;
 
-    const comparison = prev ? generateComparison(current, prev) : null;
+    const comparison = prev ? generateComparison(current, prev, periodType) : null;
     const comparisonHtml = comparison && comparison.length
         ? '<div class="review-comparison-bar">' +
             comparison.map(c => {
@@ -1139,7 +1159,11 @@ function renderReviewHTML(periodType, current, prev) {
                     if (c.pct === 0) { trendTxt = 'без изменений'; trendCls = 'same'; }
                     else { trendTxt = (c.pct > 0 ? '+' : '') + c.pct; trendCls = c.pct > 0 ? 'up' : 'down'; }
                 } else {
-                    trendTxt = pctLabel(c.pct); trendCls = pctDir(c.pct);
+                    trendTxt = pctLabel(c.pct);
+                    if (c.pct === null) trendCls = 'new';
+                    else if (c.pct === 0) trendCls = 'same';
+                    else if (c.invert) trendCls = c.pct > 0 ? 'down' : 'up';
+                    else trendCls = c.pct > 0 ? 'up' : 'down';
                 }
                 return '<div class="comparison-card">' +
                     '<span class="comparison-icon">' + c.icon + '</span>' +
@@ -1152,7 +1176,7 @@ function renderReviewHTML(periodType, current, prev) {
           '</div>'
         : '';
 
-    const facts = prev ? generateFacts(current, prev) : generateFacts(current, null);
+    const facts = prev ? generateFacts(current, prev, periodType) : generateFacts(current, null, periodType);
     const factsHtml = '<h3 class="review-facts-title">🔍 Что изменилось?</h3>' +
         (facts.length ? '<div class="review-facts-list">' +
             facts.map(f =>
@@ -1166,7 +1190,7 @@ function renderReviewHTML(periodType, current, prev) {
     const series = (current && current.dateRange) ? collectDailySeries(current.dateRange.start, current.dateRange.end) : [];
     const score = computePeriodScore(current, prev, periodType);
     const heroHtml = renderHeroScore(score, current, prev, periodType, facts.length ? facts[0] : null);
-    const chartsHtml = renderCharts(series, current);
+    const chartsHtml = renderCharts(series, current, periodType);
 
     return '' +
         '<header class="review-header">' +
@@ -1174,7 +1198,7 @@ function renderReviewHTML(periodType, current, prev) {
             '<div class="subtitle">' + esc(periodLabel) + '</div>' +
         '</header>' +
         '<div class="review-toolbar">' +
-            '<select id="' + selectId + '" onchange="switchReviewPeriod(\'' + periodType + '\', this.value)">' + options + '</select>' +
+            '<select id="' + selectId + '" class="review-period-select" onchange="switchReviewPeriod(\'' + periodType + '\', this.value)">' + options + '</select>' +
             '<button class="btn" onclick="prevReviewPeriod(\'' + periodType + '\')">← Предыдущий</button>' +
             '<button class="btn" onclick="nextReviewPeriod(\'' + periodType + '\')">Следующий →</button>' +
             '<div class="review-toolbar-spacer"></div>' +
@@ -1328,7 +1352,7 @@ window.exportReview = function(periodType, format) {
         });
     }
     lines.push('Тренировки: ' + current.training.workouts + ' тренировок · ' + current.training.sets + ' подходов');
-    lines.push('  Объём: ' + fmtMoney(current.training.volume));
+    lines.push('  Объём: ' + fmtNum(current.training.volume));
     lines.push('Расходы: ' + fmtMoney(current.finance.expense.total));
     Object.keys(current.finance.expense.byCategory).forEach(c => {
         lines.push('  ' + c + ': ' + fmtMoney(current.finance.expense.byCategory[c]));
@@ -1445,6 +1469,7 @@ window.__review = {
     enumWeeks: enumWeeks,
     enumMonths: enumMonths,
     fmtMoney: fmtMoney,
+    fmtNum: fmtNum,
     fmtDuration: fmtDuration,
     pctChange: pctChange,
     pctLabel: pctLabel

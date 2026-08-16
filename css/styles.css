@@ -6321,13 +6321,32 @@ header .macro-badge {
 
 .review-period-select {
     flex: 1;
-    min-width: 160px;
-    padding: 8px 12px;
+    min-width: 200px;
+    max-width: 360px;
+    padding: 9px 36px 9px 14px;
     border: 2px solid var(--color-gray-300);
     border-radius: var(--radius-md);
-    background: white;
+    background-color: #fff;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2364748b' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    appearance: none;
+    -webkit-appearance: none;
     font-size: var(--font-size-base);
+    font-weight: 500;
+    color: var(--color-gray-800);
     cursor: pointer;
+    transition: border-color var(--transition-base), box-shadow var(--transition-base);
+}
+
+.review-period-select:hover {
+    border-color: var(--color-gray-400);
+}
+
+.review-period-select:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
 .review-stat-grid {
@@ -6418,9 +6437,19 @@ header .macro-badge {
 }
 
 .review-stat-sub {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.review-stat-chip {
+    display: inline-block;
+    background: var(--color-gray-100);
+    color: var(--color-gray-600);
     font-size: var(--font-size-sm);
-    color: var(--color-gray-500);
-    line-height: 1.4;
+    padding: 3px 10px;
+    border-radius: var(--radius-full);
+    white-space: nowrap;
 }
 
 .review-comparison-bar {
@@ -6695,9 +6724,13 @@ header .macro-badge {
 
 .review-charts-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: var(--spacing-md);
     margin-bottom: var(--spacing-xl);
+}
+
+.review-chart-card-wide {
+    grid-column: 1 / -1;
 }
 
 .review-chart-card {
