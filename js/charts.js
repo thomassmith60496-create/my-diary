@@ -49,17 +49,18 @@ window.renderSVGLineChart = function(data, field, unit, color, gradientId, optio
     var linePath = points.map(function(p, i) { return (i === 0 ? 'M' : 'L') + ' ' + p.x + ' ' + p.y; }).join(' ');
     var areaPath = linePath + ' L ' + points[points.length - 1].x + ' ' + (padding.top + chartH) + ' L ' + points[0].x + ' ' + (padding.top + chartH) + ' Z';
     
-    var gridColor = options.gridColor || '#a7f3d0';
+var gridColor = options.gridColor || '#a7f3d0';
     var textColor = options.textColor || '#065f46';
     var titleColor = options.titleColor || '#064e3b';
     var gradId = gradientId || ('grad-' + field);
-    
+    var formatValue = options.formatValue || function(v) { return Math.round(v); };
+
     var gridLines = [];
     for (var i = 0; i <= 4; i++) {
         var val = yMin + (yMax - yMin) * (i / 4);
         var y = padding.top + chartH - (i / 4) * chartH;
         gridLines.push('<line x1="' + padding.left + '" y1="' + y + '" x2="' + (padding.left + chartW) + '" y2="' + y + '" stroke="' + gridColor + '" stroke-width="1" stroke-dasharray="2,4"/>');
-        gridLines.push('<text x="' + (padding.left - 6) + '" y="' + (y + 3) + '" text-anchor="end" font-size="8" fill="' + textColor + '" font-weight="600">' + Math.round(val) + '</text>');
+        gridLines.push('<text x="' + (padding.left - 6) + '" y="' + (y + 3) + '" text-anchor="end" font-size="8" fill="' + textColor + '" font-weight="600">' + formatValue(val) + '</text>');
     }
     
     var maxLabels = 8;
@@ -72,7 +73,7 @@ window.renderSVGLineChart = function(data, field, unit, color, gradientId, optio
         var showDate = isFirst || isLast || (i % dateInterval === 0);
         var showValue = isFirst || isLast || data.length <= 10;
         return '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + (isFirst || isLast ? 4 : 2.5) + '" fill="' + pointColor + '" stroke="white" stroke-width="1"/>' +
-               (showValue ? '<text x="' + p.x + '" y="' + (p.y - 6) + '" text-anchor="middle" font-size="7" font-weight="700" fill="' + titleColor + '">' + p.value + '</text>' : '') +
+               (showValue ? '<text x="' + p.x + '" y="' + (p.y - 6) + '" text-anchor="middle" font-size="7" font-weight="700" fill="' + titleColor + '">' + formatValue(p.value) + '</text>' : '') +
                (showDate ? '<text x="' + p.x + '" y="' + (padding.top + chartH + 12) + '" text-anchor="middle" font-size="7" fill="' + textColor + '" font-weight="600">' + shortDate + '</text>' : '');
     }).join('');
     

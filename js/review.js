@@ -172,6 +172,13 @@ function fmtTimeOfDay(min) {
     return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
 }
 
+function fmtSleepHrs(min) {
+    const m = Math.round(min);
+    const h = Math.floor(m / 60);
+    const rest = m % 60;
+    return h + 'ч ' + (rest < 10 ? '0' : '') + rest + 'м';
+}
+
 function pctChange(oldVal, newVal) {
     if (oldVal === 0 && newVal === 0) return 0;
     if (oldVal === 0) return null;
@@ -1054,14 +1061,14 @@ function renderCharts(series, current, periodType) {
     const cards = [];
     const MAX = 3;
     const push = html => { if (cards.length < MAX) cards.push(html); };
-    const line = (data, field, unit, color, gid) =>
-        (typeof window.renderSVGLineChart === 'function') ? window.renderSVGLineChart(data, field, unit, color, gid, CHART_TEXT) : '';
+    const line = (data, field, unit, color, gid, extra) =>
+        (typeof window.renderSVGLineChart === 'function') ? window.renderSVGLineChart(data, field, unit, color, gid, Object.assign({}, CHART_TEXT, extra || {})) : '';
     const donut = (sectors, total, center, sub) =>
         (typeof window.renderDonutChart === 'function') ? window.renderDonutChart(sectors, total, center, sub) : '';
 
-    // 1. Вес
+    // 1. Вес (только неделя)
     const wData = series.filter(d => d.weight !== null).map(d => ({ date: d.date, weight: d.weight }));
-    if (wData.length >= 1) {
+    if (periodType !== 'month' && wData.length >= 1) {
         const total = current.nutrition.weightStart ? current.nutrition.weightStart + ' → ' + current.nutrition.weightEnd + ' кг' : '';
         push(chartCard('⚖️', 'Вес', total, line(wData, 'weight', 'кг', '#10b981', 'review-grad-weight'), true));
     }
@@ -1077,7 +1084,7 @@ function renderCharts(series, current, periodType) {
     const sleepData = series.filter(d => d.sleepMin > 0).map(d => ({ date: d.date, sleep: d.sleepMin }));
     if (sleepData.length >= 2) {
         const total = current.sleep.days > 0 ? fmtDuration(current.sleep.avgDuration) + ' в сред.' : '';
-        push(chartCard('🌙', 'Сон по ночам', total, line(sleepData, 'sleep', 'мин', '#6366f1', 'review-grad-sleep')));
+        push(chartCard('🌙', 'Сон по ночам', total, line(sleepData, 'sleep', 'мин', '#6366f1', 'review-grad-sleep', { formatValue: fmtSleepHrs })));
     }
 
     // 4. Расходы по дням
