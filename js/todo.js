@@ -780,6 +780,10 @@ function init(){
 
 /* ================= публичный API ================= */
 let initialized = false;
+window.getTodoState = function() {
+    return state;
+}
+
 window.initTodoApp = function() {
     if(initialized){ renderAll(); return; }
     initialized = true;

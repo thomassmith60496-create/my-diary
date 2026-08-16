@@ -279,8 +279,9 @@ window.renderTodoCard = function(todayData) {
 
 window.getTodayTodo = function(dateStr) {
     let tasks = [];
-    if(state.tasks && state.tasks.length > 0) {
-        state.tasks.forEach(t => {
+    const todoState = window.getTodoState ? window.getTodoState() : null;
+    if(todoState && todoState.tasks && todoState.tasks.length > 0) {
+        todoState.tasks.forEach(t => {
             if(t.date === dateStr) {
                 tasks.push({
                     id: t.id,
@@ -324,10 +325,10 @@ window.ICON = {
     x:'<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="m3.2 3.2 7.6 7.6M10.8 3.2l-7.6 7.6"/></svg>',
 };
 
-window.keyOf = function(d) {
+window.keyOf = function(date) {
     const pad = n => String(n).padStart(2,'0');
-    const [y,m,d] = [d.getFullYear(), d.getMonth()+1, d.getDate()];
-    return `${y}-${pad(m)}-${pad(d)}`;
+    const [y,m,day] = [date.getFullYear(), date.getMonth()+1, date.getDate()];
+    return `${y}-${pad(m)}-${pad(day)}`;
 }
 
 // === КАРТОЧКА ФИНАНСОВ ===
