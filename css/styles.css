@@ -348,7 +348,7 @@ header .macro-badge {
     box-shadow: 0 -4px 15px rgba(168, 85, 247, 0.2);
 }
 
-.main-tab-btn.todo { flex: 1; background: var(--color-green-dark); color: rgba(255, 255, 255, 0.6); }
+.main-tab-btn.todo { background: var(--color-green-dark); color: rgba(255, 255, 255, 0.6); }
 .main-tab-btn.todo.active {
     background: linear-gradient(135deg, var(--color-green-dark) 0%, var(--color-green) 100%);
     color: white;
@@ -5239,6 +5239,7 @@ header .macro-badge {
 .todo-app .app { max-width:1160px; margin:0 auto; }
 .todo-app .topbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; }
 .todo-app .brand { display:flex; align-items:center; gap:10px; font-weight:600; font-size:15px; letter-spacing:.2px; color:var(--color-primary-dark); }
+.todo-app .brand-mark { width:10px; height:10px; border-radius:3px; background:var(--accent); box-shadow:0 0 12px rgba(37,99,235,.4); }
 
 .todo-app .main { display:grid; grid-template-columns:minmax(340px,410px) 1fr; gap:18px; align-items:start; }
 .todo-app .panel { background:var(--surface); border:1px solid var(--border-soft); border-radius:var(--radius-xl); padding:18px; box-shadow:var(--shadow-md); }

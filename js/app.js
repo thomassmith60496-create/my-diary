@@ -165,7 +165,7 @@ function syncToCloud() {
     syncTimeout = setTimeout(() => {
         const targetUid = getTargetUid();
         if (!targetUid) return;
-        const data = { todo: todoData, 
+        const data = {
             nutrition: nutritionData,
             financeData: financeData,
             lastUpdated: Date.now()
@@ -201,7 +201,7 @@ function exportAllData() {
             trainingExport = TrainingExerciseAPI.getRawData();
         }
     } catch(e) {}
-    const data = { todo: todoData,  
+    const data = { 
         nutrition: nutritionData, 
         financeData: financeData,
         trainingData: trainingExport,

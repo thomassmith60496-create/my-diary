@@ -69,81 +69,6 @@ function save(){
   try{ localStorage.setItem(LS_KEY, JSON.stringify(state)); }catch(e){ console.warn('Не удалось сохранить данные', e); }
 }
 
-/* ================= синхронизация с Firebase ================= */
-function syncToFirebase(){
-  if (typeof firebase === 'undefined') { console.warn('Firebase not initialized'); return; }
-  const targetUid = getTargetUid();
-  if (!targetUid) return;
-  
-  const tasksData = state.tasks.map(t => ({
-    id: t.id,
-    date: t.date,
-    title: t.title,
-    description: t.description,
-    completed: t.completed,
-    deadline: t.deadline,
-    tags: t.tags,
-    createdAt: t.createdAt,
-    subtasks: t.subtasks
-  }));
-  
-  const tagsData = state.tags;
-  
-  firebase.database().ref(`lera_todo_v1/${targetUid}`).set({
-    tasks: tasksData,
-    tags: tagsData,
-    lastUpdated: Date.now()
-  }).catch(err => console.warn('Ошибка синхронизации todo с Firebase:', err));
-  
-  showSyncStatus('✅ Todo сохранено в Firebase!', 'success');
-}
-
-/* ================= получение todo из Firebase ================= */
-function loadFromFirebase(){
-  if (typeof firebase === 'undefined') { console.warn('Firebase not initialized'); return; }
-  const targetUid = getTargetUid();
-  if (!targetUid) return;
-  
-  firebase.database().ref(`lera_todo_v1/${targetUid}`).once('value')
-    .then(snapshot => {
-      const data = snapshot.val();
-      if (!data) return;
-      
-      // Merge with local data - Firebase takes precedence for existing tasks
-      if (data.tasks && Array.isArray(data.tasks)) {
-        // Get existing local task IDs
-        const localIds = new Set(state.tasks.map(t => t.id));
-        
-        // Add tasks from Firebase that don't exist locally
-        data.tasks.forEach(fbTask => {
-          if (!localIds.has(fbTask.id)) {
-            state.tasks.push({
-              id: fbTask.id,
-              date: fbTask.date || todayKey(),
-              title: fbTask.title || '',
-              description: fbTask.description || '',
-              completed: fbTask.completed || false,
-              deadline: fbTask.deadline || null,
-              tags: fbTask.tags || [],
-              createdAt: fbTask.createdAt || Date.now(),
-              subtasks: fbTask.subtasks || []
-            });
-          }
-        });
-      }
-      
-      // Update tags from Firebase
-      if (data.tags && Array.isArray(data.tags)) {
-        state.tags = data.tags;
-      }
-      
-      save();
-      renderAll();
-      showSyncStatus('✅ Todo загружено из Firebase!', 'success');
-    })
-    .catch(err => console.warn('Ошибка загрузки todo из Firebase:', err));
-}
-
 const now0 = new Date();
 let viewY = now0.getFullYear();
 let viewM = now0.getMonth();
@@ -478,7 +403,7 @@ function taskHTML(t){
 
   return `<div class="task${t.completed ? ' done' : ''}" data-id="${t.id}">
     <div class="task-main">
-      <button type="button" class="cb${t.completed ? ' checked' : ''}" data-act="toggle-task" title="${t.completed ? 'Отменить выполнение' : 'Отметить выполненную'}">${ICON.check}</button>
+      <button type="button" class="cb${t.completed ? ' checked' : ''}" data-act="toggle-task" title="${t.completed ? 'Отменить выполнение' : 'Отметить выполненной'}">${ICON.check}</button>
       <div class="task-body">
         <div class="task-title">${esc(t.title)}</div>
         ${t.description ? `<div class="task-desc">${esc(t.description)}</div>` : ''}
@@ -504,7 +429,7 @@ function subHTML(taskId, s){
     </div>`;
   }
   return `<div class="sub${s.completed ? ' done' : ''}" data-subid="${s.id}">
-    <button type="button" class="cb small${s.completed ? ' checked' : ''}" data-act="toggle-sub" title="${s.completed ? 'Отменить выполнение' : 'Отметить выполненную'}">${ICON.check}</button>
+    <button type="button" class="cb small${s.completed ? ' checked' : ''}" data-act="toggle-sub" title="${s.completed ? 'Отменить выполнение' : 'Отметить выполненной'}">${ICON.check}</button>
     <span class="sub-title">${esc(s.title)}</span>
     <span class="sub-actions">
       <button type="button" class="icon-btn" data-act="edit-sub" title="Редактировать">${ICON.pencil}</button>
@@ -618,6 +543,7 @@ function renderNewTags(){
     `<button type="button" class="chip tog${ui.newFormTags.has(tag) ? ' active' : ''}" data-tag="${esc(tag)}">#${esc(tag)}</button>`
   ).join('') + `<input id="newTagInput" class="inp tiny" placeholder="${state.tags.length ? 'ещё тег…' : 'создать тег…'}">`;
 }
+
 function openTagModal(){
   ui.tagPanelOpen = true;
   $('#tagModal').hidden = false;
@@ -858,15 +784,6 @@ window.initTodoApp = function() {
     if(initialized){ renderAll(); return; }
     initialized = true;
     init();
-};
-
-/* ================= синхронизация с облаком ================= */
-window.syncTodoToCloud = function() {
-    syncToFirebase();
-};
-
-window.loadTodoFromCloud = function() {
-    loadFromFirebase();
 };
 
 })();
