@@ -48,7 +48,7 @@ function startDeadlineCheckLoop() {
   notifyAddLog('info', 'Запущена проверка каждые 10 минут');
 }
 
-function checkAllDeadlines() {
+window.checkAllDeadlines = function() {
   var uid = window.currentUserId || currentUserId;
   if (!uid) {
     notifyAddLog('err', 'Нет currentUserId — пользователь не авторизован');
@@ -156,7 +156,7 @@ window.showNotifyLog = function() {
         '</div>' +
         '<div style="display:flex;gap:8px;margin-bottom:12px;">' +
           '<button class="btn primary" onclick="checkAllDeadlines();showNotifyLog();" style="font-size:12px;">🔍 Проверить сейчас</button>' +
-          '<button class="btn ghost" onclick="notifyLog=[];showNotifyLog();" style="font-size:12px;">🗑 Очистить лог</button>' +
+          '<button class="btn ghost" onclick="clearNotifyLog();showNotifyLog();" style="font-size:12px;">🗑 Очистить лог</button>' +
           '<button class="btn ghost" onclick="testDeadlineNotification()" style="font-size:12px;">🧪 Тест</button>' +
         '</div>' +
         '<div style="max-height:340px;overflow-y:auto;">' + logHtml + '</div>' +
@@ -168,6 +168,10 @@ window.showNotifyLog = function() {
   '</div>';
 
   document.body.insertAdjacentHTML('beforeend', html);
+};
+
+window.clearNotifyLog = function() {
+  notifyLog = [];
 };
 
 window.closeNotifyLog = function() {
