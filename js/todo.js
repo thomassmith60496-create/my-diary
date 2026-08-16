@@ -44,7 +44,7 @@ const LS_KEY = 'local-calendar-v1';
 function loadState(){
   try{
     const raw = localStorage.getItem(LS_KEY);
-    if(!raw) return {tasks:[], tags:[]};
+    if(!raw) return {tasks:[], tags:[], recurring:[]};
     const data = JSON.parse(raw);
     const tasks = Array.isArray(data.tasks) ? data.tasks.map(t => ({
       id: t.id || uid(),
@@ -59,8 +59,29 @@ function loadState(){
         id: s.id || uid(), title: String(s.title || ''), completed: !!s.completed
       })) : []
     })) : [];
-    return { tasks, tags: Array.isArray(data.tags) ? data.tags : [] };
-  }catch(e){ return {tasks:[], tags:[]}; }
+    const recurring = Array.isArray(data.recurring) ? data.recurring.map(r => ({
+      id: r.id || uid(),
+      title: String(r.title || ''),
+      description: String(r.description || ''),
+      deadline: r.deadline || null,
+      tags: Array.isArray(r.tags) ? r.tags : [],
+      subtasks: Array.isArray(r.subtasks) ? r.subtasks.map(s => ({
+        id: s.id || uid(), title: String(s.title || '')
+      })) : [],
+      schedule: {
+        freq: (r.schedule && r.schedule.freq) || 'day',
+        interval: Math.max(1, parseInt((r.schedule && r.schedule.interval) || 1, 10) || 1),
+        byDay: Array.isArray(r.schedule && r.schedule.byDay) ? r.schedule.byDay : null,
+        byMonthDay: (r.schedule && typeof r.schedule.byMonthDay === 'number') ? r.schedule.byMonthDay : null,
+      },
+      startDate: r.startDate || todayKey(),
+      endDate: r.endDate || null,
+      exceptions: Array.isArray(r.exceptions) ? r.exceptions : [],
+      occurrences: (r.occurrences && typeof r.occurrences === 'object') ? r.occurrences : {},
+      createdAt: r.createdAt || Date.now()
+    })) : [];
+    return { tasks, tags: Array.isArray(data.tags) ? data.tags : [], recurring };
+  }catch(e){ return {tasks:[], tags:[], recurring:[]}; }
 }
 
 let state = loadState();
@@ -78,6 +99,7 @@ function save(){
       const data = {
         tasks: state.tasks,
         tags: state.tags,
+        recurring: state.recurring,
         lastUpdated: Date.now()
       };
       
@@ -106,10 +128,14 @@ const ui = {
   tagPanelOpen: false,
   renamingTag: null,
   prevPct: null,         // чтобы анимация «100%» проигрывалась только в момент достижения
+  recChoice: null,       // {mode:'edit'|'delete', recId}
+  seriesModal: null,     // 'create' | recId (редактирование) | null
+  seriesForm: null,      // буфер формы серии {title, description, deadline, tags, subtasks:[], freq, interval, byDay, byMonthDay, startDate, endDate}
+  seriesListOpen: false,
+  seriesSubs: [],        // [{id,title}]
 };
 
 /* ================= доступ к данным ================= */
-const tasksOf = k => state.tasks.filter(t => t.date === k);
 const findTask = id => state.tasks.find(t => t.id === id);
 
 function dayStats(k){
@@ -123,6 +149,195 @@ function dayStats(k){
   }
   const pct = total ? Math.round(done / total * 100) : 0;
   return {total, done, subTotal, subDone, pct};
+}
+
+/* ================= регулярные задачи ================= */
+const WEEKDAY_NAMES = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+
+function startOfDay(d){
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+function addDays(d, n){
+  const x = startOfDay(d);
+  x.setDate(x.getDate() + n);
+  return x;
+}
+function dayDiff(a, b){ // b - a в днях
+  return Math.round((startOfDay(b) - startOfDay(a)) / 86400000);
+}
+function weekdayNum(d){ // Пн=1..Вс=7
+  return (d.getDay() + 6) % 7 + 1;
+}
+
+/* матчит дату по правилу шаблона */
+function occursOn(tpl, k){
+  if(!tpl || !tpl.schedule) return false;
+  if(tpl.exceptions.includes(k)) return false;
+  const s = tpl.schedule;
+  if(k < tpl.startDate) return false;
+  if(tpl.endDate && k > tpl.endDate) return false;
+
+  const d = parseKey(k);
+  const start = parseKey(tpl.startDate);
+  const interval = s.interval || 1;
+
+  if(s.freq === 'day'){
+    const diff = dayDiff(start, d);
+    return diff >= 0 && diff % interval === 0;
+  }
+
+  if(s.freq === 'week'){
+    const wd = weekdayNum(d);
+    if(!s.byDay || !s.byDay.includes(wd)) return false;
+    const weekDiff = Math.floor(dayDiff(start, d) / 7);
+    return weekDiff >= 0 && weekDiff % interval === 0;
+  }
+
+  if(s.freq === 'month'){
+    if(typeof s.byMonthDay !== 'number') return false;
+    const mDiff = (d.getFullYear() - start.getFullYear()) * 12 + (d.getMonth() - start.getMonth());
+    if(mDiff < 0 || mDiff % interval !== 0) return false;
+    if(s.byMonthDay === -1){
+      const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+      return d.getDate() === lastDay;
+    }
+    return d.getDate() === s.byMonthDay;
+  }
+
+  return false;
+}
+
+/* человекочитаемое описание расписания */
+function scheduleText(tpl){
+  const s = tpl.schedule;
+  const i = s.interval || 1;
+  if(s.freq === 'day') return i === 1 ? 'каждый день' : `каждые ${i} ${plural(i,'день','дня','дней')}`;
+  if(s.freq === 'week'){
+    if(!s.byDay || !s.byDay.length) return i === 1 ? 'каждую неделю' : `каждые ${i} недель`;
+    const days = s.byDay.slice().sort((a,b)=>a-b).map(n => WEEKDAY_NAMES[n-1]).join(', ');
+    return (i === 1 ? 'каждую неделю' : `каждые ${i} недель`) + ` · ${days}`;
+  }
+  if(s.freq === 'month'){
+    const dayTxt = s.byMonthDay === -1 ? 'в последний день месяца' : `${s.byMonthDay}-го числа`;
+    return (i === 1 ? 'каждый месяц' : `каждый ${i}-й месяц`) + ` · ${dayTxt}`;
+  }
+  return 'регулярно';
+}
+
+/* подзадачи на конкретный день (прогресс хранится в occurrences) */
+function instanceSubtasks(tpl, k){
+  const occ = tpl.occurrences[k];
+  if(occ && Array.isArray(occ.subtasks)) return occ.subtasks;
+  return tpl.subtasks.map(() => false);
+}
+
+/* сгенерировать «виртуальную» задачу для дня */
+function recurringInstance(tpl, k){
+  const occ = tpl.occurrences[k] || {completed:false};
+  return {
+    id: 'rec:' + tpl.id,
+    recId: tpl.id,
+    date: k,
+    title: tpl.title,
+    description: tpl.description || '',
+    completed: !!occ.completed,
+    deadline: tpl.deadline || null,
+    tags: [...tpl.tags],
+    createdAt: tpl.createdAt,
+    scheduleText: scheduleText(tpl),
+    subtasks: tpl.subtasks.map((s, idx) => ({
+      id: 'rec-sub:' + s.id,
+      title: s.title,
+      completed: instanceSubtasks(tpl, k)[idx] === true
+    }))
+  };
+}
+
+/* все задачи дня: обычные + регулярные */
+function tasksOf(k){
+  const out = state.tasks.filter(t => t.date === k);
+  for(const tpl of state.recurring){
+    if(occursOn(tpl, k)) out.push(recurringInstance(tpl, k));
+  }
+  return out;
+}
+
+/* toggle выполнения регулярной задачи на конкретный день */
+function toggleRecurring(recId, k){
+  const tpl = state.recurring.find(r => r.id === recId);
+  if(!tpl) return;
+  const occ = tpl.occurrences[k] || {completed:false};
+  const target = !occ.completed;
+  occ.completed = target;
+  if(target){
+    occ.subtasks = tpl.subtasks.map(() => true);
+  }
+  tpl.occurrences[k] = occ;
+  commit();
+}
+
+/* toggle подзадачи регулярной задачи на конкретный день */
+function toggleRecurringSub(recId, k, subId){
+  const tpl = state.recurring.find(r => r.id === recId);
+  if(!tpl) return;
+  const realId = String(subId).replace(/^rec-sub:/, '');
+  const subIdx = tpl.subtasks.findIndex(s => s.id === realId);
+  if(subIdx === -1) return;
+  const occ = tpl.occurrences[k] || {completed:false};
+  const arr = instanceSubtasks(tpl, k).slice();
+  arr[subIdx] = !arr[subIdx];
+  occ.subtasks = arr;
+  occ.completed = arr.every(v => v);
+  tpl.occurrences[k] = occ;
+  commit();
+}
+
+/* отсоединить один день: дата уходит в exceptions, на день создаётся обычная задача */
+function detachOccurrence(recId, k){
+  const tpl = state.recurring.find(r => r.id === recId);
+  if(!tpl) return;
+  if(!tpl.exceptions.includes(k)) tpl.exceptions.push(k);
+  const occ = tpl.occurrences[k];
+  state.tasks.push({
+    id: uid(),
+    date: k,
+    title: tpl.title,
+    description: tpl.description || '',
+    completed: !!(occ && occ.completed),
+    deadline: tpl.deadline || null,
+    tags: [...tpl.tags],
+    createdAt: tpl.createdAt,
+    subtasks: tpl.subtasks.map((s, idx) => ({
+      id: uid(), title: s.title, completed: !!(occ && occ.subtasks && occ.subtasks[idx])
+    })),
+  });
+  delete tpl.occurrences[k];
+  commit();
+  toast('Задача отсоединена от серии');
+}
+
+/* удалить один день из серии (не создавая задачу) */
+function removeRecurringOccurrence(recId, k){
+  const tpl = state.recurring.find(r => r.id === recId);
+  if(!tpl) return;
+  if(!tpl.exceptions.includes(k)) tpl.exceptions.push(k);
+  delete tpl.occurrences[k];
+  commit();
+}
+
+function deleteRecurring(recId){
+  const tpl = state.recurring.find(r => r.id === recId);
+  if(!tpl) return;
+  if(!confirm(`Удалить всю серию «${tpl.title}»?`)) return;
+  state.recurring = state.recurring.filter(r => r.id !== recId);
+  commit();
+}
+
+function restoreException(recId, k){
+  const tpl = state.recurring.find(r => r.id === recId);
+  if(!tpl) return;
+  tpl.exceptions = tpl.exceptions.filter(x => x !== k);
+  commit();
 }
 
 /* ================= иконки ================= */
@@ -300,6 +515,21 @@ function renderCalendar(){
     s.total++;
     if(t.completed) s.done++;
   }
+  // учитываем регулярные задачи в видимом месяце
+  const firstDay = new Date(viewY, viewM, 1);
+  const lastDay = new Date(viewY, viewM + 1, 0);
+  for(const tpl of state.recurring){
+    const ck = keyOf(firstDay);
+    const ek = keyOf(lastDay);
+    for(let d = parseKey(ck); keyOf(d) <= ek; d = addDays(d, 1)){
+      const k = keyOf(d);
+      if(!occursOn(tpl, k)) continue;
+      const occ = tpl.occurrences[k] || {completed:false};
+      const s = stMap[k] || (stMap[k] = {total:0, done:0});
+      s.total++;
+      if(occ.completed) s.done++;
+    }
+  }
 
   const daysInMonth = new Date(viewY, viewM + 1, 0).getDate();
   const offset = (new Date(viewY, viewM, 1).getDay() + 6) % 7; // неделя с понедельника
@@ -408,21 +638,26 @@ function taskHTML(t){
   if(ui.editingTask === t.id){
     return `<div class="task editing" data-id="${t.id}">${editFormHTML(t)}</div>`;
   }
+  const isRec = !!t.recId;
   const overdue = isOverdue(t);
   const meta = [];
+  if(isRec){
+    meta.push(`<span class="rec-badge">🔁 <span>${esc(t.scheduleText)}</span></span>`);
+  }
   if(t.deadline){
     meta.push(`<span class="dl${overdue ? ' overdue' : ''}">${ICON.clock}<span>${fmtDeadline(t.deadline)}${overdue ? ' · просрочено' : ''}</span></span>`);
   }
   for(const tag of t.tags) meta.push(`<span class="tag-pill">#${esc(tag)}</span>`);
 
-  const canMove = !t.completed && t.date < todayKey();
+  const canMove = !isRec && !t.completed && t.date < todayKey();
   const subsHtml = t.subtasks.map(s => subHTML(t.id, s)).join('');
-  const addingHere = ui.addingSubFor === t.id;
+  const addingHere = ui.addingSubFor === t.id && !isRec;
   const subsBlock = (subsHtml || addingHere)
     ? `<div class="subs">${subsHtml}${addingHere ? '<div class="sub new"><input class="sub-input" placeholder="Новая подзадача…"></div>' : ''}</div>`
     : '';
+  const addSubBtn = isRec ? '' : `<button type="button" class="add-sub" data-act="add-sub">${ICON.plus}<span>Подзадача</span></button>`;
 
-  return `<div class="task${t.completed ? ' done' : ''}" data-id="${t.id}">
+  return `<div class="task${t.completed ? ' done' : ''}${isRec ? ' rec' : ''}" data-id="${t.id}"${isRec ? ` data-rec="${esc(t.recId)}"` : ''}>
     <div class="task-main">
       <button type="button" class="cb${t.completed ? ' checked' : ''}" data-act="toggle-task" title="${t.completed ? 'Отменить выполнение' : 'Отметить выполненной'}">${ICON.check}</button>
       <div class="task-body">
@@ -432,30 +667,32 @@ function taskHTML(t){
       </div>
       <div class="task-actions">
         ${canMove ? `<button type="button" class="icon-btn" data-act="move-today" title="Перенести на сегодня">${ICON.move}</button>` : ''}
-        <button type="button" class="icon-btn" data-act="edit-task" title="Редактировать">${ICON.pencil}</button>
-        <button type="button" class="icon-btn danger" data-act="delete-task" title="Удалить">${ICON.trash}</button>
+        <button type="button" class="icon-btn" data-act="edit-task" title="${isRec ? 'Редактировать серию или этот день' : 'Редактировать'}">${ICON.pencil}</button>
+        <button type="button" class="icon-btn danger" data-act="delete-task" title="${isRec ? 'Удалить серию или этот день' : 'Удалить'}">${ICON.trash}</button>
       </div>
     </div>
     ${subsBlock}
-    <button type="button" class="add-sub" data-act="add-sub">${ICON.plus}<span>Подзадача</span></button>
+    ${addSubBtn}
   </div>`;
 }
 
 function subHTML(taskId, s){
-  if(ui.editingSub && ui.editingSub.taskId === taskId && ui.editingSub.subId === s.id){
+  const isRec = String(taskId).indexOf('rec:') === 0;
+  if(!isRec && ui.editingSub && ui.editingSub.taskId === taskId && ui.editingSub.subId === s.id){
     return `<div class="sub editing" data-subid="${s.id}">
       <input class="sub-edit-input" value="${esc(s.title)}">
       <button type="button" class="icon-btn" data-act="save-sub" title="Сохранить">${ICON.check}</button>
       <button type="button" class="icon-btn" data-act="cancel-sub-edit" title="Отмена">${ICON.x}</button>
     </div>`;
   }
+  const actions = isRec ? '' : `<span class="sub-actions">
+      <button type="button" class="icon-btn" data-act="edit-sub" title="Редактировать">${ICON.pencil}</button>
+      <button type="button" class="icon-btn danger" data-act="delete-sub" title="Удалить">${ICON.x}</button>
+    </span>`;
   return `<div class="sub${s.completed ? ' done' : ''}" data-subid="${s.id}">
     <button type="button" class="cb small${s.completed ? ' checked' : ''}" data-act="toggle-sub" title="${s.completed ? 'Отменить выполнение' : 'Отметить выполненной'}">${ICON.check}</button>
     <span class="sub-title">${esc(s.title)}</span>
-    <span class="sub-actions">
-      <button type="button" class="icon-btn" data-act="edit-sub" title="Редактировать">${ICON.pencil}</button>
-      <button type="button" class="icon-btn danger" data-act="delete-sub" title="Удалить">${ICON.x}</button>
-    </span>
+    ${actions}
   </div>`;
 }
 
@@ -502,13 +739,244 @@ function renderTagModal(){
   $('#tagList').innerHTML = rows || '<div class="tag-empty">Тегов пока нет — создайте первый выше.</div>';
 }
 
-/* ================= общий рендер ================= */
+/* ================= регулярные: модалка выбора ================= */
+function openRecurringChoice(mode, recId){
+  const tpl = state.recurring.find(r => r.id === recId);
+  if(!tpl) return;
+  ui.recChoice = {mode, recId};
+  $('#recChoiceModal').hidden = false;
+  const title = $('#recChoiceTitle');
+  title.innerHTML = `${mode === 'edit' ? '✏️' : '🗑'} «${esc(tpl.title)}» — <span class="rec-badge">🔁 <span>${esc(scheduleText(tpl))}</span></span>`;
+  $('#recChoiceMode').textContent = mode === 'edit' ? 'Что редактировать?' : 'Что удалить?';
+  $('#recChoiceThis').innerHTML = (mode === 'edit' ? '✏️ Только этот день' : '🗑 Только этот день') +
+    '<small>День отсоединится от серии и станет обычной задачей</small>';
+  $('#recChoiceAll').innerHTML = (mode === 'edit' ? '✏️ Все повторения' : '🗑 Всю серию') +
+    '<small>' + (mode === 'edit' ? 'Изменить шаблон — обновятся все дни серии' : 'Удалить серию и все её повторы') + '</small>';
+}
+function closeRecurringChoice(){
+  ui.recChoice = null;
+  $('#recChoiceModal').hidden = true;
+  renderAll();
+}
+
+/* ================= регулярные: модалка серии ================= */
+function defaultSeriesForm(){
+  return {
+    title:'', description:'', deadline:'', tags:new Set(),
+    freq:'day', interval:1, byDay:[], byMonthDay:1,
+    startDate:todayKey(), endDate:''
+  };
+}
+
+function openSeriesModal(recId){
+  ui.seriesModal = recId || 'create';
+  const tpl = recId ? state.recurring.find(r => r.id === recId) : null;
+  const f = tpl ? {
+    title:tpl.title, description:tpl.description || '', deadline:tpl.deadline || '',
+    tags:new Set(tpl.tags), freq:tpl.schedule.freq, interval:tpl.schedule.interval,
+    byDay:[...(tpl.schedule.byDay || [])], byMonthDay:typeof tpl.schedule.byMonthDay==='number' ? tpl.schedule.byMonthDay : 1,
+    startDate:tpl.startDate, endDate:tpl.endDate || ''
+  } : defaultSeriesForm();
+  ui.seriesForm = f;
+  ui.seriesSubs = tpl ? tpl.subtasks.map(s => ({id:s.id, title:s.title})) : [];
+  $('#seriesModal').hidden = false;
+  $('#seriesModalTitle').textContent = tpl ? '✏️ Редактировать серию' : '🔁 Новая регулярная задача';
+  renderSeriesForm();
+  renderSeriesSubs();
+  $('#seriesTitle').focus();
+}
+
+function closeSeriesModal(){
+  ui.seriesModal = null;
+  ui.seriesForm = null;
+  $('#seriesModal').hidden = true;
+  renderAll();
+}
+
+function renderSeriesForm(){
+  const f = ui.seriesForm;
+  if(!f) return;
+  $('#seriesTitle').value = f.title;
+  $('#seriesDesc').value = f.description;
+  $('#seriesDeadline').value = f.deadline ? f.deadline.slice(0,16) : '';
+  $('#seriesStart').value = f.startDate;
+  $('#seriesEnd').value = f.endDate;
+
+  const chips = state.tags.map(tag =>
+    `<button type="button" class="chip tog${f.tags.has(tag) ? ' active' : ''}" data-sel-tag="${esc(tag)}">#${esc(tag)}</button>`
+  ).join('');
+  $('#seriesTags').innerHTML = chips + `<input id="seriesNewTag" class="inp tiny" placeholder="${state.tags.length ? 'ещё тег…' : 'создать тег…'}">`;
+
+  // переключатель частоты
+  const freqs = [
+    {v:'day', l:'Каждые N дней'},
+    {v:'week', l:'Каждые N недель'},
+    {v:'month', l:'Каждый N-й месяц'},
+  ];
+  $('#seriesFreq').innerHTML = freqs.map(x =>
+    `<button type="button" class="chip tog${f.freq === x.v ? ' active' : ''}" data-freq="${x.v}">${x.l}</button>`
+  ).join('');
+
+  $('#seriesInterval').value = f.interval;
+
+  // недели: выбор дней
+  $('#seriesWeekDays').innerHTML = WEEKDAY_NAMES.map((name, i) => {
+    const n = i + 1;
+    return `<button type="button" class="chip wd-chip${f.byDay.includes(n) ? ' active' : ''}" data-wd="${n}">${name}</button>`;
+  }).join('');
+
+  // месяцы: число дня + опция последний день
+  const isLast = f.byMonthDay === -1;
+  $('#seriesMonthDay').value = isLast ? '' : f.byMonthDay;
+  $('#seriesLastDay').checked = isLast;
+
+  toggleSeriesFields();
+}
+
+function toggleSeriesFields(){
+  const f = ui.seriesForm;
+  if(!f) return;
+  $('#seriesWeekWrap').style.display = f.freq === 'week' ? '' : 'none';
+  $('#seriesMonthWrap').style.display = f.freq === 'month' ? '' : 'none';
+  const dayTxt = f.freq === 'day' ? plural(f.interval,'день','дня','дней')
+    : f.freq === 'week' ? plural(f.interval,'неделя','недели','недель')
+    : plural(f.interval,'месяц','месяца','месяцев');
+  $('#seriesIntervalLabel').textContent = f.freq === 'day' ? 'Каждые' : f.freq === 'week' ? 'Каждые' : 'Каждый';
+  $('#seriesIntervalUnit').textContent = dayTxt;
+}
+
+function renderSeriesSubs(){
+  const rows = ui.seriesSubs.map((s, idx) =>
+    `<div class="rec-sub-row" data-idx="${idx}">
+      <input class="inp rec-sub-inp" value="${esc(s.title)}" placeholder="Подзадача">
+      <button type="button" class="icon-btn danger" data-act="del-series-sub" data-idx="${idx}">${ICON.x}</button>
+    </div>`
+  ).join('');
+  $('#seriesSubsList').innerHTML = rows + '<button type="button" class="link-btn" data-act="add-series-sub">+ добавить подзадачу</button>';
+}
+
+function addSeriesSub(){
+  ui.seriesSubs.push({id: uid(), title:''});
+  renderSeriesSubs();
+  const list = $('#seriesSubsList');
+  const inputs = list.querySelectorAll('.rec-sub-inp');
+  if(inputs.length) inputs[inputs.length-1].focus();
+}
+
+function saveSeriesForm(){
+  const f = ui.seriesForm;
+  if(!f) return;
+  const title = $('#seriesTitle').value.trim();
+  if(!title){ toast('Введите название'); $('#seriesTitle').focus(); return; }
+  const interval = Math.max(1, parseInt($('#seriesInterval').value, 10) || 1);
+  let byDay = null, byMonthDay = null;
+  if(f.freq === 'week'){
+    byDay = f.byDay.slice().sort((a,b)=>a-b);
+    if(!byDay.length){ toast('Выберите хотя бы один день недели'); return; }
+  }
+  if(f.freq === 'month'){
+    if($('#seriesLastDay').checked){
+      byMonthDay = -1;
+    } else {
+      byMonthDay = parseInt($('#seriesMonthDay').value, 10);
+      if(!byMonthDay || byMonthDay < 1 || byMonthDay > 31){ toast('Укажите число от 1 до 31'); return; }
+    }
+  }
+  const startDate = $('#seriesStart').value || todayKey();
+  const endDate = $('#seriesEnd').value || null;
+  // id подзадач сохраняются из буфера (у новых уже сгенерированы через uid)
+  const subtaskDefs = ui.seriesSubs
+    .map(s => ({id: s.id, title: s.title.trim()}))
+    .filter(s => s.title);
+
+  const data = {
+    title,
+    description: $('#seriesDesc').value.trim(),
+    deadline: $('#seriesDeadline').value ? $('#seriesDeadline').value.slice(0,16) : null,
+    tags: [...f.tags].filter(tag => state.tags.includes(tag)),
+    schedule: {freq: f.freq, interval, byDay, byMonthDay},
+    startDate, endDate,
+    subtasks: subtaskDefs,
+  };
+
+  const tpl = ui.seriesModal !== 'create' ? state.recurring.find(r => r.id === ui.seriesModal) : null;
+  if(tpl){
+    Object.assign(tpl, data);
+    toast('Серия обновлена');
+  } else {
+    state.recurring.push({
+      id: uid(),
+      createdAt: Date.now(),
+      exceptions: [],
+      occurrences: {},
+      ...data
+    });
+    toast('Регулярная задача создана');
+  }
+  save();
+  closeSeriesModal();
+  renderAll();
+}
+
+/* ================= регулярные: список серий ================= */
+function openSeriesList(){
+  ui.seriesListOpen = true;
+  $('#seriesListModal').hidden = false;
+  renderSeriesList();
+}
+function closeSeriesList(){
+  ui.seriesListOpen = false;
+  $('#seriesListModal').hidden = true;
+  renderAll();
+}
+function renderSeriesList(){
+  const wrap = $('#seriesListWrap');
+  if(!state.recurring.length){
+    wrap.innerHTML = '<div class="tag-empty">Регулярных задач пока нет — создайте первую через кнопку «🔁 Регулярная».</div>';
+    return;
+  }
+  wrap.innerHTML = state.recurring.map(tpl => {
+    const next = nextOccurrences(tpl, 3);
+    const nextTxt = next.length ? 'ближайшие: ' + next.map(k => {
+      const d = parseKey(k); return `${d.getDate()} ${MONTHS_GEN[d.getMonth()]}`;
+    }).join(', ') : 'повторов нет';
+    return `<div class="rec-series-row" data-recid="${esc(tpl.id)}">
+      <div class="rec-series-head">
+        <span class="task-title">${esc(tpl.title)}</span>
+        <span class="rec-badge">🔁 <span>${esc(scheduleText(tpl))}</span></span>
+      </div>
+      <div class="rec-series-sub">${nextTxt}</div>
+      <div class="rec-series-actions">
+        <button type="button" class="btn ghost sm" data-act="series-edit">✏️ Изменить</button>
+        <button type="button" class="btn ghost sm danger" data-act="series-delete">🗑 Удалить</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function nextOccurrences(tpl, n){
+  const res = [];
+  const start = parseKey(tpl.startDate);
+  let d = new Date();
+  if(keyOf(d) < tpl.startDate) d = start;
+  let guard = 0;
+  while(res.length < n && guard < 3660){
+    const k = keyOf(d);
+    if(occursOn(tpl, k)) res.push(k);
+    d = addDays(d, 1);
+    guard++;
+  }
+  return res;
+}
+
 function renderAll(){
   renderCalendar();
   renderDayHeader();
   renderFilterBar();
   renderTaskList();
   renderTagModal();
+  if(ui.seriesListOpen) renderSeriesList();
+  if(ui.seriesModal) renderSeriesForm();
   postRenderFocus();
 }
 
@@ -607,19 +1075,28 @@ function onTaskClick(e){
   const act = actEl.dataset.act;
   const taskEl = actEl.closest('.task');
   const id = taskEl ? taskEl.dataset.id : null;
+  const isRec = taskEl && taskEl.dataset.rec;
 
   switch(act){
-    case 'toggle-task': toggleTask(id); break;
-    case 'edit-task': startEditTask(id); break;
+    case 'toggle-task':
+      if(isRec){ toggleRecurring(isRec, selectedDate); break; }
+      toggleTask(id); break;
+    case 'edit-task':
+      if(isRec){ openRecurringChoice('edit', isRec); break; }
+      startEditTask(id); break;
+    case 'delete-task':
+      if(isRec){ openRecurringChoice('delete', isRec); break; }
+      deleteTask(id); break;
     case 'save-task-edit': saveTaskEdit(id); break;
     case 'cancel-task-edit': ui.editingTask = null; renderAll(); break;
-    case 'delete-task': deleteTask(id); break;
     case 'add-sub':
       ui.addingSubFor = (ui.addingSubFor === id) ? null : id;
       ui.editingSub = null;
       renderAll();
       break;
-    case 'toggle-sub': toggleSub(id, actEl.closest('.sub').dataset.subid); break;
+    case 'toggle-sub':
+      if(isRec){ toggleRecurringSub(isRec, selectedDate, actEl.closest('.sub').dataset.subid); break; }
+      toggleSub(id, actEl.closest('.sub').dataset.subid); break;
     case 'edit-sub':
       ui.editingSub = {taskId: id, subId: actEl.closest('.sub').dataset.subid};
       ui.addingSubFor = null;
@@ -698,6 +1175,135 @@ function init(){
 
   /* панель тегов */
   $('#tagsBtn').addEventListener('click', openTagModal);
+
+  /* регулярные задачи */
+  $('#seriesBtn').addEventListener('click', openSeriesList);
+  $('#newSeriesBtn').addEventListener('click', () => openSeriesModal(null));
+
+  $('#recChoiceModal').addEventListener('mousedown', e => { if(e.target === e.currentTarget) closeRecurringChoice(); });
+  $('#seriesModal').addEventListener('mousedown', e => { if(e.target === e.currentTarget) closeSeriesModal(); });
+  $('#seriesListModal').addEventListener('mousedown', e => { if(e.target === e.currentTarget) closeSeriesList(); });
+
+  $('#recChoiceModal').addEventListener('click', e => {
+    const btn = e.target.closest('[data-act]');
+    if(!btn) return;
+    const act = btn.dataset.act;
+    if(act === 'rec-choice-close') closeRecurringChoice();
+    else if(act === 'rec-choice-this'){
+      const c = ui.recChoice;
+      if(!c) return;
+      const recId = c.recId;
+      const k = selectedDate;
+      closeRecurringChoice();
+      if(c.mode === 'edit'){
+        detachOccurrence(recId, k);
+        const detached = state.tasks[state.tasks.length-1];
+        if(detached) startEditTask(detached.id);
+      } else if(c.mode === 'delete'){
+        if(confirm('Убрать этот день из серии?')) removeRecurringOccurrence(recId, k);
+      }
+    }
+    else if(act === 'rec-choice-all'){
+      const c = ui.recChoice;
+      if(!c) return;
+      closeRecurringChoice();
+      if(c.mode === 'edit') openSeriesModal(c.recId);
+      else if(c.mode === 'delete') deleteRecurring(c.recId);
+    }
+  });
+
+  $('#seriesModal').addEventListener('click', e => {
+    const btn = e.target.closest('[data-act]');
+    if(!btn) return;
+    const act = btn.dataset.act;
+    if(act === 'series-close') closeSeriesModal();
+    else if(act === 'series-save') saveSeriesForm();
+    else if(act === 'add-series-sub') addSeriesSub();
+    else if(act === 'del-series-sub'){
+      const idx = parseInt(btn.dataset.idx, 10);
+      ui.seriesSubs.splice(idx, 1);
+      renderSeriesSubs();
+    }
+  });
+  $('#seriesFreq').addEventListener('click', e => {
+    const b = e.target.closest('[data-freq]');
+    if(!b) return;
+    ui.seriesForm.freq = b.dataset.freq;
+    if(b.dataset.freq !== 'week') ui.seriesForm.byDay = [];
+    renderSeriesForm();
+  });
+  $('#seriesWeekDays').addEventListener('click', e => {
+    const b = e.target.closest('[data-wd]');
+    if(!b) return;
+    const n = parseInt(b.dataset.wd, 10);
+    const arr = ui.seriesForm.byDay;
+    arr.includes(n) ? arr.splice(arr.indexOf(n), 1) : arr.push(n);
+    renderSeriesForm();
+  });
+  $('#seriesTags').addEventListener('click', e => {
+    const b = e.target.closest('[data-sel-tag]');
+    if(!b) return;
+    const tag = b.dataset.selTag;
+    ui.seriesForm.tags.has(tag) ? ui.seriesForm.tags.delete(tag) : ui.seriesForm.tags.add(tag);
+    renderSeriesForm();
+  });
+  $('#seriesInterval').addEventListener('input', e => {
+    ui.seriesForm.interval = Math.max(1, parseInt(e.target.value, 10) || 1);
+    toggleSeriesFields();
+  });
+  $('#seriesModal').addEventListener('input', e => {
+    const f = ui.seriesForm;
+    if(!f) return;
+    const id = e.target.id;
+    if(id === 'seriesTitle') f.title = e.target.value;
+    else if(id === 'seriesDesc') f.description = e.target.value;
+    else if(id === 'seriesDeadline') f.deadline = e.target.value;
+    else if(id === 'seriesStart') f.startDate = e.target.value;
+    else if(id === 'seriesEnd') f.endDate = e.target.value;
+    else if(id === 'seriesMonthDay'){ if(e.target.value === '') f.byMonthDay = 1; else f.byMonthDay = parseInt(e.target.value, 10) || 1; }
+  });
+  $('#seriesLastDay').addEventListener('change', e => {
+    if(e.target.checked){ $('#seriesMonthDay').value = ''; ui.seriesForm.byMonthDay = -1; }
+    else { ui.seriesForm.byMonthDay = parseInt($('#seriesMonthDay').value, 10) || 1; }
+  });
+  $('#seriesTags').addEventListener('keydown', e => {
+    if(e.key === 'Enter' && e.target.id === 'seriesNewTag'){
+      e.preventDefault();
+      const v = normalizeTag(e.target.value);
+      if(!v) return;
+      createTag(v);
+      ui.seriesForm.tags.add(v);
+      save();
+      renderSeriesForm();
+      $('#seriesNewTag').value = '';
+      $('#seriesNewTag').focus();
+    }
+  });
+
+  $('#seriesSubsList').addEventListener('input', e => {
+    const inp = e.target.closest('.rec-sub-inp');
+    if(!inp) return;
+    const idx = parseInt(inp.closest('.rec-sub-row').dataset.idx, 10);
+    if(ui.seriesSubs[idx]) ui.seriesSubs[idx].title = inp.value;
+  });
+
+  $('#seriesListModal').addEventListener('click', e => {
+    const btn = e.target.closest('[data-act]');
+    if(!btn) return;
+    const act = btn.dataset.act;
+    if(act === 'series-list-close') closeSeriesList();
+    else if(act === 'series-list-new'){ closeSeriesList(); openSeriesModal(null); }
+    else if(act === 'series-edit'){
+      const recId = btn.closest('.rec-series-row').dataset.recid;
+      closeSeriesList();
+      openSeriesModal(recId);
+    }
+    else if(act === 'series-delete'){
+      const recId = btn.closest('.rec-series-row').dataset.recid;
+      deleteRecurring(recId);
+      renderSeriesList();
+    }
+  });
   $('#tagClose').addEventListener('click', closeTagModal);
   $('#tagModal').addEventListener('mousedown', e => { if(e.target === e.currentTarget) closeTagModal(); });
   $('#tagCreateForm').addEventListener('submit', e => {
@@ -729,7 +1335,11 @@ function init(){
     else if(e.key === 'Escape'){ ui.renamingTag = null; renderTagModal(); }
   });
   document.addEventListener('keydown', e => {
-    if(e.key === 'Escape' && ui.tagPanelOpen) closeTagModal();
+    if(e.key !== 'Escape') return;
+    if(ui.tagPanelOpen) closeTagModal();
+    else if(ui.recChoice) closeRecurringChoice();
+    else if(ui.seriesModal) closeSeriesModal();
+    else if(ui.seriesListOpen) closeSeriesList();
   });
 
   /* быстрый ввод */
@@ -805,6 +1415,10 @@ window.getTodoState = function() {
     return state;
 }
 
+window.getTodoDayTasks = function(k) {
+    return tasksOf(k);
+}
+
 window.loadTodoFromFirebase = function(data) {
     if(!data) return;
     if(Array.isArray(data.tasks)) {
@@ -824,6 +1438,29 @@ window.loadTodoFromFirebase = function(data) {
     }
     if(Array.isArray(data.tags)) {
         state.tags = data.tags;
+    }
+    if(Array.isArray(data.recurring)) {
+        state.recurring = data.recurring.map(r => ({
+            id: r.id || uid(),
+            title: String(r.title || ''),
+            description: String(r.description || ''),
+            deadline: r.deadline || null,
+            tags: Array.isArray(r.tags) ? r.tags : [],
+            subtasks: Array.isArray(r.subtasks) ? r.subtasks.map(s => ({
+                id: s.id || uid(), title: String(s.title || '')
+            })) : [],
+            schedule: {
+                freq: (r.schedule && r.schedule.freq) || 'day',
+                interval: Math.max(1, parseInt((r.schedule && r.schedule.interval) || 1, 10) || 1),
+                byDay: Array.isArray(r.schedule && r.schedule.byDay) ? r.schedule.byDay : null,
+                byMonthDay: (r.schedule && typeof r.schedule.byMonthDay === 'number') ? r.schedule.byMonthDay : null,
+            },
+            startDate: r.startDate || todayKey(),
+            endDate: r.endDate || null,
+            exceptions: Array.isArray(r.exceptions) ? r.exceptions : [],
+            occurrences: (r.occurrences && typeof r.occurrences === 'object') ? r.occurrences : {},
+            createdAt: r.createdAt || Date.now()
+        }));
     }
     save();
     if(initialized) renderAll();

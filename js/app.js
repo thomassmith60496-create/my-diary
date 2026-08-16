@@ -196,6 +196,7 @@ function syncToCloud() {
                     db.ref('lera_todo_v1/' + targetUid).set({
                         tasks: todoState.tasks,
                         tags: todoState.tags,
+                        recurring: todoState.recurring,
                         lastUpdated: Date.now()
                     }).catch(() => {});
                 }

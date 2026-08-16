@@ -11,7 +11,7 @@
 <!-- SheetJS for Excel import -->
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <!-- Styles -->
-<link rel="stylesheet" href="css/styles.css?v=4">
+<link rel="stylesheet" href="css/styles.css?v=5">
 <!-- Favicon -->
 <link rel="icon" type="image/png" href="favicon.png">
 </head>
@@ -320,10 +320,16 @@
         <div class="app">
             <header class="topbar">
                 <div class="brand"><span class="brand-mark"></span>Календарь задач</div>
-                <button id="tagsBtn" class="btn ghost sm" type="button">
-                    <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M2 3.5A1.5 1.5 0 0 1 3.5 2h4.1c.4 0 .78.16 1.06.44l5.4 5.4a1.5 1.5 0 0 1 0 2.12l-4.1 4.1a1.5 1.5 0 0 1-2.12 0l-5.4-5.4A1.5 1.5 0 0 1 2 7.6V3.5z"/><circle cx="5.3" cy="5.3" r="1" fill="currentColor" stroke="none"/></svg>
-                    Теги
-                </button>
+                <div class="topbar-actions">
+                    <button id="seriesBtn" class="btn ghost sm" type="button">
+                        <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 6.5 9.5 10.5 7 8m6.5-1.5L13 5l1.5-1.5"/><path d="M6.5 2.5H4a1.5 1.5 0 0 0-1.5 1.5v8A1.5 1.5 0 0 0 4 13.5h8a1.5 1.5 0 0 0 1.5-1.5v-2.5"/></svg>
+                        Регулярные
+                    </button>
+                    <button id="tagsBtn" class="btn ghost sm" type="button">
+                        <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M2 3.5A1.5 1.5 0 0 1 3.5 2h4.1c.4 0 .78.16 1.06.44l5.4 5.4a1.5 1.5 0 0 1 0 2.12l-4.1 4.1a1.5 1.5 0 0 1-2.12 0l-5.4-5.4A1.5 1.5 0 0 1 2 7.6V3.5z"/><circle cx="5.3" cy="5.3" r="1" fill="currentColor" stroke="none"/></svg>
+                        Теги
+                    </button>
+                </div>
             </header>
 
             <main class="main">
@@ -355,6 +361,7 @@
 
                     <div class="day-toolbar">
                         <button id="newTaskBtn" class="btn ghost sm" type="button">+ Новая задача</button>
+                        <button id="newSeriesBtn" class="btn ghost sm" type="button">🔁 Регулярная</button>
                     </div>
 
                     <form id="newTaskForm" class="new-form" hidden>
@@ -391,6 +398,113 @@
                 </form>
                 <div id="tagList" class="tag-list"></div>
                 <p class="hint">Удаление тега не удаляет задачи — он просто перестанет отображаться в них.</p>
+            </div>
+        </div>
+
+        <!-- ВЫБОР: только этот день / вся серия -->
+        <div id="recChoiceModal" class="backdrop" hidden>
+            <div class="modal rec-choice">
+                <div class="modal-head">
+                    <h3 id="recChoiceMode"></h3>
+                    <button class="icon-btn" type="button" data-act="rec-choice-close" title="Закрыть">
+                        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="m3.2 3.2 7.6 7.6M10.8 3.2l-7.6 7.6"/></svg>
+                    </button>
+                </div>
+                <div id="recChoiceTitle" class="rec-choice-title"></div>
+                <div class="rec-choice-btns">
+                    <button class="btn ghost" type="button" data-act="rec-choice-this" id="recChoiceThis"></button>
+                    <button class="btn ghost" type="button" data-act="rec-choice-all" id="recChoiceAll"></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- МОДАЛКА СЕРИИ (создание/редактирование) -->
+        <div id="seriesModal" class="backdrop" hidden>
+            <div class="modal series-modal">
+                <div class="modal-head">
+                    <h3 id="seriesModalTitle">🔁 Новая регулярная задача</h3>
+                    <button class="icon-btn" type="button" data-act="series-close" title="Закрыть">
+                        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="m3.2 3.2 7.6 7.6M10.8 3.2l-7.6 7.6"/></svg>
+                    </button>
+                </div>
+
+                <div class="series-field">
+                    <label class="series-label">Название</label>
+                    <input id="seriesTitle" class="inp" placeholder="Название регулярной задачи" autocomplete="off">
+                </div>
+
+                <div class="series-field">
+                    <label class="series-label">Описание (необязательно)</label>
+                    <textarea id="seriesDesc" class="inp" rows="2" placeholder="Описание"></textarea>
+                </div>
+
+                <div class="series-field">
+                    <label class="series-label">Дедлайн (необязательно)</label>
+                    <input type="datetime-local" id="seriesDeadline" class="inp">
+                </div>
+
+                <div class="series-field">
+                    <label class="series-label">Теги</label>
+                    <div class="tags-row" id="seriesTags"></div>
+                </div>
+
+                <div class="series-field">
+                    <label class="series-label">Подзадачи</label>
+                    <div class="series-subs" id="seriesSubsList"></div>
+                </div>
+
+                <div class="series-field">
+                    <label class="series-label">Периодичность</label>
+                    <div class="tags-row" id="seriesFreq"></div>
+                </div>
+
+                <div class="series-interval-row">
+                    <span id="seriesIntervalLabel">Каждые</span>
+                    <input id="seriesInterval" class="inp tiny num" type="number" min="1" value="1">
+                    <span id="seriesIntervalUnit">день</span>
+                </div>
+
+                <div class="series-field" id="seriesWeekWrap">
+                    <label class="series-label">Дни недели</label>
+                    <div class="tags-row" id="seriesWeekDays"></div>
+                </div>
+
+                <div class="series-field" id="seriesMonthWrap">
+                    <label class="series-label">Число месяца</label>
+                    <div class="series-month-row">
+                        <input id="seriesMonthDay" class="inp tiny num" type="number" min="1" max="31" placeholder="15">
+                        <label class="series-check"><input type="checkbox" id="seriesLastDay"> Последний день месяца</label>
+                    </div>
+                </div>
+
+                <div class="series-field">
+                    <label class="series-label">Начало</label>
+                    <input type="date" id="seriesStart" class="inp">
+                </div>
+
+                <div class="series-field">
+                    <label class="series-label">Окончание (необязательно)</label>
+                    <input type="date" id="seriesEnd" class="inp">
+                </div>
+
+                <div class="edit-btns">
+                    <button class="btn primary" type="button" data-act="series-save">💾 Сохранить</button>
+                    <button class="btn ghost" type="button" data-act="series-close">Отмена</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- СПИСОК СЕРИЙ -->
+        <div id="seriesListModal" class="backdrop" hidden>
+            <div class="modal series-list-modal">
+                <div class="modal-head">
+                    <h3>🔁 Регулярные задачи</h3>
+                    <button class="icon-btn" type="button" data-act="series-list-close" title="Закрыть">
+                        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="m3.2 3.2 7.6 7.6M10.8 3.2l-7.6 7.6"/></svg>
+                    </button>
+                </div>
+                <div id="seriesListWrap" class="series-list-wrap"></div>
+                <button class="btn primary" type="button" data-act="series-list-new" style="margin-top:14px;width:100%;">➕ Создать регулярную</button>
             </div>
         </div>
 
@@ -720,7 +834,7 @@
     <script src="js/training-ui.js?v=3"></script>
     <script src="js/training-import.js?v=3"></script>
     <script src="js/custom-modals.js?v=3"></script>
-    <script src="js/todo.js?v=3"></script>
-    <script src="js/app.js?v=3"></script>
+    <script src="js/todo.js?v=4"></script>
+    <script src="js/app.js?v=4"></script>
 </body>
 </html>

@@ -298,6 +298,21 @@ window.getTodayTodo = function(dateStr) {
             }
         });
     }
+    // регулярные задачи
+    if(window.getTodoDayTasks) {
+        const recTasks = window.getTodoDayTasks(dateStr).filter(t => t.recId);
+        recTasks.forEach(t => {
+            tasks.push({
+                id: t.id,
+                date: t.date,
+                title: t.title,
+                description: t.description,
+                completed: t.completed,
+                deadline: t.deadline,
+                tags: t.tags
+            });
+        });
+    }
     return { tasks };
 }
 
