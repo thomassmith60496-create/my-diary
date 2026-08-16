@@ -137,6 +137,8 @@ const ui = {
   seriesListOpen: false,
   seriesSubs: [],        // [{id,title}]
   moveTask: null,        // id задачи на перенос
+  shopTaskId: null,      // id задачи-списка покупок, открытой в модалке
+  shopEditingSub: null,  // id пункта, редактируемого внутри модалки
 };
 
 /* ================= доступ к данным ================= */
@@ -355,6 +357,7 @@ const ICON = {
   x:'<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="m3.2 3.2 7.6 7.6M10.8 3.2l-7.6 7.6"/></svg>',
   clock:'<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><circle cx="7" cy="7" r="5.3"/><path d="M7 4.3V7l1.9 1.4"/></svg>',
   move:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 8h9M8.5 4.5 12 8l-3.5 3.5M13.5 3v10"/></svg>',
+  cart:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2.5h1.6l1.2 7.3a1.6 1.6 0 0 0 1.6 1.3h5.9a1.6 1.6 0 0 0 1.6-1.3l1.3-6H4.3"/><circle cx="6.1" cy="13.5" r="1.1"/><circle cx="11.2" cy="13.5" r="1.1"/></svg>',
 };
 
 /* ================= изменения данных ================= */
@@ -660,10 +663,15 @@ function taskHTML(t){
     return `<div class="task editing" data-id="${t.id}">${editFormHTML(t)}</div>`;
   }
   const isRec = !!t.recId;
+  const isShop = isShoppingTask(t);
   const overdue = isOverdue(t);
   const meta = [];
   if(isRec){
     meta.push(`<span class="rec-badge">🔁 <span>${esc(t.scheduleText)}</span></span>`);
+  }
+  if(isShop){
+    const doneN = t.subtasks.filter(s => s.completed).length;
+    meta.push(`<span class="shop-chip" title="Список покупок">${ICON.cart}<span>${doneN}/${t.subtasks.length}</span></span>`);
   }
   if(t.deadline){
     meta.push(`<span class="dl${overdue ? ' overdue' : ''}">${ICON.clock}<span>${fmtDeadline(t.deadline)}${overdue ? ' · просрочено' : ''}</span></span>`);
@@ -687,6 +695,7 @@ function taskHTML(t){
         ${meta.length ? `<div class="task-meta">${meta.join('')}</div>` : ''}
       </div>
       <div class="task-actions">
+        ${isShop ? `<button type="button" class="icon-btn shop-open-btn" data-act="open-shop" title="Открыть список покупок">${ICON.cart}</button>` : ''}
         ${canMove ? `<button type="button" class="icon-btn" data-act="move-task" title="Перенести на другую дату">${ICON.move}</button>` : ''}
         <button type="button" class="icon-btn" data-act="edit-task" title="${isRec ? 'Редактировать серию или этот день' : 'Редактировать'}">${ICON.pencil}</button>
         <button type="button" class="icon-btn danger" data-act="delete-task" title="${isRec ? 'Удалить серию или этот день' : 'Удалить'}">${ICON.trash}</button>
@@ -1000,6 +1009,8 @@ function renderAll(){
   renderFilterBar();
   renderTaskList();
   renderTagModal();
+  renderPinnedShop();
+  if(ui.shopTaskId) renderShopModal();
   if(ui.seriesListOpen) renderSeriesList();
   if(ui.seriesModal) renderSeriesForm();
   postRenderFocus();
@@ -1154,6 +1165,7 @@ function onTaskClick(e){
     case 'save-sub': saveSubEdit(id, actEl.closest('.sub').dataset.subid); break;
     case 'cancel-sub-edit': ui.editingSub = null; renderAll(); break;
     case 'delete-sub': deleteSub(id, actEl.closest('.sub').dataset.subid); break;
+    case 'open-shop': openShopModal(id); break;
     case 'move-task': openMoveModal(id); break;
     case 'toggle-edit-tag': {
       const tag = actEl.dataset.tag;
@@ -1232,6 +1244,43 @@ function init(){
   $('#statsModal').addEventListener('click', e => {
     const btn = e.target.closest('[data-act]');
     if(btn && btn.dataset.act === 'stats-close') closeTodoStats();
+  });
+
+  /* список покупок */
+  $('#pinnedShop').addEventListener('click', e => {
+    const btn = e.target.closest('[data-act="open-shop"]');
+    if(btn) openShopModal(btn.dataset.id);
+  });
+  $('#shopModal').addEventListener('mousedown', e => { if(e.target === e.currentTarget) closeShopModal(); });
+  $('#shopModal').addEventListener('click', e => {
+    const btn = e.target.closest('[data-act]');
+    if(!btn) return;
+    const act = btn.dataset.act;
+    if(act === 'shop-close') closeShopModal();
+    else if(act === 'shop-toggle-item') shopToggleItem(btn.dataset.id, btn.dataset.sub);
+    else if(act === 'shop-edit-item'){ ui.shopEditingSub = btn.dataset.sub; renderShopModal(); shopFocusEdit(); }
+    else if(act === 'shop-save-item') shopSaveEdit(btn.dataset.id, btn.dataset.sub);
+    else if(act === 'shop-cancel-item'){ ui.shopEditingSub = null; renderShopModal(); }
+    else if(act === 'shop-delete-item') shopDelete(btn.dataset.id, btn.dataset.sub);
+    else if(act === 'shop-clear-done') shopClearDone(btn.dataset.id);
+  });
+  $('#shopModal').addEventListener('submit', e => {
+    if(e.target.id !== 'shopForm') return;
+    e.preventDefault();
+    const id = ui.shopTaskId;
+    if(!id) return;
+    const inp = $('#shopInput');
+    const v = inp ? inp.value.trim() : '';
+    if(v) addSub(id, v);
+    const fresh = $('#shopInput');
+    if(fresh) fresh.focus();
+  });
+  $('#shopModal').addEventListener('keydown', e => {
+    if(e.key !== 'Enter') return;
+    if(e.target.classList.contains('shop-edit-input')){
+      e.preventDefault();
+      shopSaveEdit(ui.shopTaskId, e.target.closest('.shop-item').dataset.subid);
+    }
   });
 
   /* регулярные задачи */
@@ -1410,6 +1459,7 @@ function init(){
     else if(ui.seriesListOpen) closeSeriesList();
     else if(ui.moveTask) closeMoveModal();
     else if(!$('#statsModal').hidden) closeTodoStats();
+    else if(ui.shopTaskId) closeShopModal();
   });
 
   /* быстрый ввод */
@@ -1503,6 +1553,154 @@ function openTodoStats(){
 }
 function closeTodoStats(){
   $('#statsModal').hidden = true;
+}
+
+/* ================= список покупок ================= */
+function isShoppingTask(t){
+  return !!t && !!t.title && String(t.title).trim().toLowerCase() === 'список продуктов';
+}
+
+function shoppingTasks(){
+  return state.tasks.filter(t => isShoppingTask(t) && !t.completed);
+}
+
+function fmtShortDate(k){
+  const d = parseKey(k);
+  return `${pad(d.getDate())}.${pad(d.getMonth()+1)}.${d.getFullYear()}`;
+}
+
+function renderPinnedShop(){
+  const wrap = $('#pinnedShop');
+  if(!wrap) return;
+  const lists = shoppingTasks();
+  if(!lists.length){ wrap.innerHTML = ''; wrap.style.display = 'none'; return; }
+  wrap.style.display = '';
+  wrap.innerHTML = lists.map(t => {
+    const doneN = t.subtasks.filter(s => s.completed).length;
+    const totalN = t.subtasks.length;
+    const pct = totalN ? Math.round(doneN/totalN*100) : 0;
+    return `<div class="shop-pinned">
+      <button type="button" class="shop-pin-btn" data-act="open-shop" data-id="${t.id}" title="Открыть список покупок">${ICON.cart}</button>
+      <div class="shop-pin-body">
+        <div class="shop-pin-title">Список продуктов<span class="shop-pin-date">${fmtShortDate(t.date)}</span></div>
+        <div class="shop-pin-bar"><i style="width:${pct}%"></i></div>
+        <div class="shop-pin-sub">${doneN} из ${totalN}${totalN ? ' · ' + pct + '%' : ''}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openShopModal(id){
+  const isRec = String(id).indexOf('rec:') === 0;
+  const t = findTask(id);
+  if(!t && !isRec) return;
+  ui.shopTaskId = id;
+  ui.shopEditingSub = null;
+  renderShopModal();
+  $('#shopModal').hidden = false;
+}
+
+function closeShopModal(){
+  ui.shopTaskId = null;
+  ui.shopEditingSub = null;
+  $('#shopModal').hidden = true;
+}
+
+function renderShopModal(){
+  const id = ui.shopTaskId;
+  if(!id) return;
+  if(String(id).indexOf('rec:') === 0){
+    const tpl = state.recurring.find(r => r.id === String(id).slice(4));
+    if(!tpl){ closeShopModal(); return; }
+    renderShopContent(recurringInstance(tpl, selectedDate));
+    return;
+  }
+  const t = findTask(id);
+  if(!t){ closeShopModal(); return; }
+  renderShopContent(t);
+}
+
+function renderShopContent(t){
+  const isRec = !!t.recId;
+  const doneN = t.subtasks.filter(s => s.completed).length;
+  const totalN = t.subtasks.length;
+  const pct = totalN ? Math.round(doneN/totalN*100) : 0;
+
+  $('#shopTitle').textContent = (isRec ? '🔁 ' : '🛒 ') + t.title;
+  $('#shopProgress').innerHTML = `
+    <div class="shop-progress-bar"><i style="width:${pct}%"></i></div>
+    <div class="shop-progress-text">${doneN} из ${totalN}${totalN ? ' · ' + pct + '%' : ''}</div>`;
+  $('#shopList').innerHTML = totalN
+    ? t.subtasks.map(s => shopItemHTML(t, s)).join('')
+    : `<div class="shop-empty">Пока пусто — добавьте первый продукт</div>`;
+  $('#shopAdd').innerHTML = isRec
+    ? `<div class="shop-add-hint">Пункты заданы в серии — редактировать их можно в самой серии.</div>`
+    : `<form id="shopForm" class="shop-add" autocomplete="off">
+        <input id="shopInput" class="inp" placeholder="Добавить продукт…">
+        <button class="btn primary" type="submit">Добавить</button>
+      </form>`;
+}
+
+function shopItemHTML(t, s){
+  const isRec = !!t.recId;
+  if(!isRec && ui.shopEditingSub === s.id){
+    return `<div class="shop-item editing" data-subid="${s.id}">
+      <input class="inp shop-edit-input" value="${esc(s.title)}" placeholder="Название продукта">
+      <button type="button" class="icon-btn" data-act="shop-save-item" data-sub="${s.id}" title="Сохранить">${ICON.check}</button>
+      <button type="button" class="icon-btn" data-act="shop-cancel-item" title="Отмена">${ICON.x}</button>
+    </div>`;
+  }
+  const actions = isRec ? '' : `<span class="shop-item-actions">
+      <button type="button" class="icon-btn" data-act="shop-edit-item" data-sub="${s.id}" title="Переименовать">${ICON.pencil}</button>
+      <button type="button" class="icon-btn danger" data-act="shop-delete-item" data-sub="${s.id}" title="Удалить">${ICON.trash}</button>
+    </span>`;
+  return `<div class="shop-item${s.completed ? ' done' : ''}" data-subid="${s.id}">
+    <button type="button" class="cb small${s.completed ? ' checked' : ''}" data-act="shop-toggle-item" data-id="${t.id}" data-sub="${s.id}" title="${s.completed ? 'Отменить' : 'Отметить купленным'}">${ICON.check}</button>
+    <span class="shop-item-title">${esc(s.title)}</span>
+    ${actions}
+  </div>`;
+}
+
+function shopToggleItem(id, subId){
+  if(String(id).indexOf('rec:') === 0){
+    toggleRecurringSub(String(id).slice(4), selectedDate, subId);
+  } else {
+    toggleSub(id, subId);
+  }
+}
+
+function shopSaveEdit(id, subId){
+  const t = findTask(id);
+  if(!t){ ui.shopEditingSub = null; return; }
+  const s = t.subtasks.find(x => x.id === subId);
+  ui.shopEditingSub = null;
+  if(s){
+    const inp = document.querySelector(`#shopModal .shop-item[data-subid="${subId}"] .shop-edit-input`);
+    const v = inp ? inp.value.trim() : '';
+    if(v) s.title = v;
+  }
+  commit();
+}
+
+function shopDelete(id, subId){
+  if(String(id).indexOf('rec:') === 0) return;
+  deleteSub(id, subId);
+}
+
+function shopClearDone(id){
+  const t = findTask(id);
+  if(!t) return;
+  t.subtasks = t.subtasks.filter(s => !s.completed);
+  syncParent(t);
+  commit();
+}
+
+function shopFocusEdit(){
+  const el = $('#shopModal .shop-item.editing .shop-edit-input');
+  if(el){
+    el.focus();
+    try{ el.setSelectionRange(el.value.length, el.value.length); }catch(e){}
+  }
 }
 
 /* ================= публичный API ================= */

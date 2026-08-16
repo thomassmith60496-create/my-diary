@@ -5621,3 +5621,40 @@ header .macro-badge {
 
 .stats-modal { max-height:88vh; overflow-y:auto; width:min(720px,94vw); }
 .stats-modal .hm { overflow-x:auto; }
+
+/* ================= список покупок ================= */
+.todo-app .shop-pinned-wrap { display:flex; flex-direction:column; gap:8px; margin-bottom:14px; }
+.todo-app .shop-pinned { display:flex; align-items:center; gap:11px; padding:11px 13px; border:1px solid var(--accent-line); border-radius:12px; background:var(--accent-soft); box-shadow:var(--shadow-sm); }
+.todo-app .shop-pin-btn { width:32px; height:32px; flex:none; display:grid; place-items:center; border-radius:9px; color:#fff; background:var(--accent); transition:filter .15s; }
+.todo-app .shop-pin-btn:hover { filter:brightness(1.08); }
+.todo-app .shop-pin-btn svg { width:17px; height:17px; }
+.todo-app .shop-pin-body { flex:1; min-width:0; }
+.todo-app .shop-pin-title { font-size:13.5px; font-weight:600; color:var(--color-primary-dark); display:flex; align-items:center; gap:8px; }
+.todo-app .shop-pin-date { font-size:11px; font-weight:500; color:var(--text-3); }
+.todo-app .shop-pin-bar { height:4px; border-radius:99px; background:var(--color-gray-200); overflow:hidden; margin:7px 0 4px; }
+.todo-app .shop-pin-bar i { display:block; height:100%; border-radius:99px; background:var(--green); transition:width .3s; }
+.todo-app .shop-pin-sub { font-size:11.5px; color:var(--text-2); }
+.todo-app .shop-chip { display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:600; color:var(--accent); background:var(--accent-soft); border:1px solid var(--accent-line); padding:2px 8px; border-radius:99px; }
+.todo-app .shop-chip svg { width:11px; height:11px; }
+.todo-app .shop-open-btn { color:var(--accent); }
+.todo-app .shop-open-btn:hover { background:var(--accent-soft); }
+.todo-app .shop-modal { width:min(480px,100%); max-height:82vh; display:flex; flex-direction:column; overflow:hidden; }
+.todo-app .shop-modal .modal-head { margin-bottom:10px; }
+.todo-app .shop-progress-bar { height:6px; border-radius:99px; background:var(--color-gray-200); overflow:hidden; }
+.todo-app .shop-progress-bar i { display:block; height:100%; border-radius:99px; background:var(--accent); transition:width .3s; }
+.todo-app .shop-progress-text { font-size:12px; color:var(--text-2); margin-top:6px; }
+.todo-app .shop-list { margin-top:12px; overflow-y:auto; display:flex; flex-direction:column; gap:2px; }
+.todo-app .shop-item { display:flex; align-items:center; gap:9px; padding:6px 6px; border-radius:8px; min-height:34px; }
+.todo-app .shop-item:hover { background:var(--bg-soft); }
+.todo-app .shop-item-title { font-size:13.5px; color:var(--text); overflow-wrap:anywhere; flex:1; }
+.todo-app .shop-item.done .shop-item-title { text-decoration:line-through; opacity:.55; }
+.todo-app .shop-item-actions { display:flex; gap:2px; flex:none; }
+.todo-app .shop-item-actions { opacity:0; transition:opacity .15s; }
+.todo-app .shop-item:hover .shop-item-actions { opacity:1; }
+.todo-app .shop-item.editing { gap:6px; }
+.todo-app .shop-item.editing .shop-edit-input { flex:1; background:var(--bg-soft); border:1px solid var(--border); border-radius:7px; padding:5px 9px; color:var(--text); font-size:13px; outline:none; min-width:0; }
+.todo-app .shop-item.editing .shop-edit-input:focus { border-color:var(--accent-line); }
+.todo-app .shop-empty { text-align:center; color:var(--text-3); font-size:13px; padding:18px 0; }
+.todo-app .shop-add { display:flex; gap:8px; margin-top:12px; }
+.todo-app .shop-add .inp { flex:1; min-width:0; }
+.todo-app .shop-add-hint { margin-top:12px; font-size:12px; color:var(--text-3); text-align:center; }

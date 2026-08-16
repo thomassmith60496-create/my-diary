@@ -372,6 +372,7 @@
 
                 <!-- ЗАДАЧИ ДНЯ -->
                 <section class="panel day-panel">
+                    <div id="pinnedShop" class="shop-pinned-wrap" style="display:none"></div>
                     <div id="dayHeader"></div>
 
                     <form id="quickForm" class="quick-add" autocomplete="off">
@@ -570,6 +571,21 @@
                 <div id="statsStreaks"></div>
                 <div id="statsHeatmap"></div>
                 <p class="hint">Клик по дню откроет его в календаре.</p>
+            </div>
+        </div>
+
+        <!-- МОДАЛКА СПИСКА ПОКУПОК -->
+        <div id="shopModal" class="backdrop" hidden>
+            <div class="modal shop-modal">
+                <div class="modal-head">
+                    <h3><span id="shopTitle">🛒 Список продуктов</span></h3>
+                    <button class="icon-btn" type="button" data-act="shop-close" title="Закрыть">
+                        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="m3.2 3.2 7.6 7.6M10.8 3.2l-7.6 7.6"/></svg>
+                    </button>
+                </div>
+                <div id="shopProgress"></div>
+                <div id="shopList" class="shop-list"></div>
+                <div id="shopAdd"></div>
             </div>
         </div>
     </div>
@@ -897,7 +913,7 @@
     <script src="js/training-ui.js?v=4"></script>
     <script src="js/training-import.js?v=3"></script>
     <script src="js/custom-modals.js?v=3"></script>
-    <script src="js/todo.js?v=5"></script>
+    <script src="js/todo.js?v=6"></script>
     <script src="js/activity.js?v=2"></script>
     <script src="js/app.js?v=4"></script>
 </body>
