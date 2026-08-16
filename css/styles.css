@@ -5364,7 +5364,7 @@ header .macro-badge {
 .todo-app :focus-visible { outline:2px solid var(--accent-line); outline-offset:1px; }
 
 .todo-app .app { margin:0; }
-.todo-app .topbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; }
+.todo-app .topbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; background:transparent; color:var(--text-2); padding:0; border-radius:0; box-shadow:none; }
 .todo-app .brand { display:flex; align-items:center; gap:10px; font-weight:600; font-size:15px; letter-spacing:.2px; color:var(--color-primary-dark); }
 .todo-app .brand-mark { width:10px; height:10px; border-radius:3px; background:var(--accent); box-shadow:0 0 12px rgba(37,99,235,.4); }
 
