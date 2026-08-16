@@ -3,7 +3,7 @@
 // ============================================
 "use strict";
 
-// === ГЛАВНАЯ СТРАНИЦА ===
+// === ГЛАВНАЯ СТРАНИца ===
 
 window.renderHomePage = function() {
     const container = document.getElementById('home-content');
@@ -23,6 +23,7 @@ window.renderHomePage = function() {
     const todayNutrition = getTodayNutrition(dateStr);
     const todayFinance = getTodayFinance(dateStr);
     const recentActivity = getRecentActivity();
+    const todayTodo = getTodayTodo(dateStr);
     
     let html = '';
     
@@ -58,13 +59,16 @@ window.renderHomePage = function() {
     // Карточка питания
     html += renderNutritionCard(todayNutrition, dateStr);
     
-    html += `</div>`;
+    // Карточка задач
+    html += renderTodoCard(todayTodo);
     
     // Карточка финансов (на всю ширину)
     html += renderFinanceCard(todayFinance, dateStr);
     
     // Последняя активность
     html += renderRecentActivity(recentActivity);
+    
+    html += `</div>`;
     
     container.innerHTML = html;
 }
@@ -214,6 +218,116 @@ window.normalizeDate = function(dateStr) {
         return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
     }
     return dateStr;
+}
+
+// === КАРТОЧКА ЗАДАЧ ===
+
+window.renderTodoCard = function(todayData) {
+    const hasTasks = todayData && todayData.tasks && todayData.tasks.length > 0;
+    let bodyHtml;
+    if (hasTasks) {
+        let tasksHtml = "";
+        const todayTasks = todayData.tasks.filter(t => t.date === todayKey()).sort((a, b) => (a.completed - b.completed) || (a.createdAt - b.createdAt));
+        todayTasks.forEach((t, index) => {
+            const overdue = isOverdue(t);
+            const meta = [];
+            if(t.deadline){
+                meta.push(`<span class="dl${overdue ? " overdue" : ""}">📅${fmtDeadline(t.deadline)}${overdue ? " · просрочено" : ""}</span>`);
+            }
+            for(const tag of t.tags) meta.push(`<span class="tag-pill">#${esc(tag)}</span>`);
+            tasksHtml += `<div class="task${t.completed ? ' done' : ""}" data-id="${t.id}">
+                <div class="task-main">
+                    <button type="button" class="cb${t.completed ? ' checked' : ""}" data-act="toggle-task" title="${t.completed ? 'Отменить выполнение' : 'Отметить выполненную'}">${ICON.check}</button>
+                    <div class="task-body">
+                        <div class="task-title">${esc(t.title)}</div>
+                        ${t.description ? `<div class="task-desc">${esc(t.description)}</div>` : ""}
+                        ${meta.length ? `<div class="task-meta">${meta.join('')}</div>` : ""}
+                    </div>
+                    <div class="task-actions">
+                        <button type="button" class="icon-btn" data-act="edit-task" title="Редактировать">${ICON.pencil}</button>
+                        <button type="button" class="icon-btn danger" data-act="delete-task" title="Удалить">${ICON.trash}</button>
+                    </div>
+                </div>
+                <button type="button" class="add-sub" data-act="add-sub">📝Подзадача</button>
+            </div>`;
+        });
+        bodyHtml = `<div class="home-card todo-card">
+            <div class="home-card-header">
+                <h2 class="home-card-title">✅ Задачи</h2>
+                <div class="home-card-badge">${todayTasks.length} ${todayTasks.length === 1 ? 'задача' : todayTasks.length > 4 ? 'задач' : 'задач'}</div>
+            </div>
+            <div class="home-card-body">
+                ${tasksHtml}
+            </div>
+        </div>`;
+    } else {
+        bodyHtml = `<div class="home-card todo-card">
+            <div class="home-card-header">
+                <h2 class="home-card-title">✅ Задачи</h2>
+                <div class="home-card-badge">Задач пока нет</div>
+            </div>
+            <div class="home-card-body">
+                <div class="empty-state-mini">
+                    <div class="empty-state-mini-icon">📝</div>
+                    <div class="empty-state-mini-text">Сегодня ещё нет задач</div>
+                </div>
+            </div>
+        </div>`;
+    }
+    return bodyHtml;
+}
+
+window.getTodayTodo = function(dateStr) {
+    let tasks = [];
+    if(state.tasks && state.tasks.length > 0) {
+        state.tasks.forEach(t => {
+            if(t.date === dateStr) {
+                tasks.push({
+                    id: t.id,
+                    date: t.date,
+                    title: t.title,
+                    description: t.description,
+                    completed: t.completed,
+                    deadline: t.deadline,
+                    tags: t.tags
+                });
+            }
+        });
+    }
+    return { tasks };
+}
+
+window.isOverdue = function(t) {
+    return !!t.deadline && !t.completed && new Date(t.deadline) < new Date();
+}
+
+window.fmtDeadline = function(dl){
+    if(!dl) return '';
+    const [dp, tp] = String(dl).split('T');
+    const [y,m,d] = dp.split('-');
+    return `${d}.${m}.${y}` + (tp ? ' ' + tp.slice(0,5) : '');
+}
+
+window.esc = function(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'\u0026amp;','<':'\u0026lt;','>':'\u0026gt;','"':'\u0026quot;',"'":'&#39;'}[c]));
+}
+
+window.todayKey = function() {
+    return keyOf(new Date());
+}
+
+window.ICON = {
+    check:'<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7.6 5.4 11 12 3.6"/></svg>',
+    plus:'<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M7 2.5v9M2.5 7h9"/></svg>',
+    pencil:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m11.4 2.4 2.2 2.2-7.8 7.8-2.9.7.7-2.9 7.8-7.8z"/></svg>',
+    trash:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.7 4.3h10.6M6.4 2.3h3.2M4.1 4.3l.7 8.5c0 .5.5.9 1 .9h4.4c.5 0 1-.4 1-.9l.7-8.5M6.6 6.9v3.8M9.4 6.9v3.8"/></svg>',
+    x:'<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="m3.2 3.2 7.6 7.6M10.8 3.2l-7.6 7.6"/></svg>',
+};
+
+window.keyOf = function(d) {
+    const pad = n => String(n).padStart(2,'0');
+    const [y,m,d] = [d.getFullYear(), d.getMonth()+1, d.getDate()];
+    return `${y}-${pad(m)}-${pad(d)}`;
 }
 
 // === КАРТОЧКА ФИНАНСОВ ===
