@@ -6012,6 +6012,23 @@ header .macro-badge {
     border-color: #818cf8;
 }
 
+.sleep-phase-row {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.sleep-phase-row input {
+    width: 48px;
+    text-align: center;
+}
+
+.sleep-phase-sep {
+    color: rgba(255,255,255,0.4);
+    font-weight: 700;
+    font-size: var(--font-size-md);
+}
+
 .sleep-phase-pct {
     font-size: 10px;
     color: rgba(255,255,255,0.35);

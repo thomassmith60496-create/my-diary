@@ -628,21 +628,33 @@ function renderSleepBlock(){
             <input type="time" id="sleepWakeTime" value="${esc(wakeVal)}">
           </div>
         </div>
-        <div class="sleep-phases-title">Фазы сна (минуты)</div>
+        <div class="sleep-phases-title">Фазы сна</div>
         <div class="sleep-phases-grid">
           <div class="sleep-phase">
             <label>Глубокий</label>
-            <input type="number" id="sleepDeep" min="0" value="${p.deep || ''}" placeholder="0">
+            <div class="sleep-phase-row">
+              <input type="number" id="sleepDeepH" min="0" max="24" value="${Math.floor((p.deep||0)/60) || ''}" placeholder="ч">
+              <span class="sleep-phase-sep">:</span>
+              <input type="number" id="sleepDeepM" min="0" max="59" value="${(p.deep||0)%60 || ''}" placeholder="мм">
+            </div>
             <div class="sleep-phase-pct" id="sleepDeepPct"></div>
           </div>
           <div class="sleep-phase">
             <label>Лёгкий</label>
-            <input type="number" id="sleepLight" min="0" value="${p.light || ''}" placeholder="0">
+            <div class="sleep-phase-row">
+              <input type="number" id="sleepLightH" min="0" max="24" value="${Math.floor((p.light||0)/60) || ''}" placeholder="ч">
+              <span class="sleep-phase-sep">:</span>
+              <input type="number" id="sleepLightM" min="0" max="59" value="${(p.light||0)%60 || ''}" placeholder="мм">
+            </div>
             <div class="sleep-phase-pct" id="sleepLightPct"></div>
           </div>
           <div class="sleep-phase">
             <label>REM</label>
-            <input type="number" id="sleepRem" min="0" value="${p.rem || ''}" placeholder="0">
+            <div class="sleep-phase-row">
+              <input type="number" id="sleepRemH" min="0" max="24" value="${Math.floor((p.rem||0)/60) || ''}" placeholder="ч">
+              <span class="sleep-phase-sep">:</span>
+              <input type="number" id="sleepRemM" min="0" max="59" value="${(p.rem||0)%60 || ''}" placeholder="мм">
+            </div>
             <div class="sleep-phase-pct" id="sleepRemPct"></div>
           </div>
           <div class="sleep-phase">
@@ -742,7 +754,10 @@ function renderSleepBlock(){
   };
 
   wrap.oninput = function(e){
-    if(e.target.id === 'sleepBedtime' || e.target.id === 'sleepWakeTime'){
+    if(e.target.id === 'sleepBedtime' || e.target.id === 'sleepWakeTime'
+      || e.target.id === 'sleepDeepH' || e.target.id === 'sleepDeepM'
+      || e.target.id === 'sleepLightH' || e.target.id === 'sleepLightM'
+      || e.target.id === 'sleepRemH' || e.target.id === 'sleepRemM'){
       updateSleepPhasePcts();
     }
   };
@@ -774,11 +789,14 @@ function updateSleepPhasePcts(){
   const wake = $('#sleepWakeTime');
   if(!bed || !wake) return;
   const dur = calcSleepDuration(bed.value, wake.value);
-  ['sleepDeep','sleepLight','sleepRem'].forEach(id => {
-    const el = document.getElementById(id + 'Pct');
+  [{h:'sleepDeepH',m:'sleepDeepM',p:'sleepDeepPct'},
+   {h:'sleepLightH',m:'sleepLightM',p:'sleepLightPct'},
+   {h:'sleepRemH',m:'sleepRemM',p:'sleepRemPct'}].forEach(({h,m,p}) => {
+    const el = document.getElementById(p);
     if(!el) return;
-    const inp = document.getElementById(id);
-    const val = parseInt(inp && inp.value, 10);
+    const hInp = document.getElementById(h);
+    const mInp = document.getElementById(m);
+    const val = (parseInt(hInp && hInp.value, 10) || 0) * 60 + (parseInt(mInp && mInp.value, 10) || 0);
     if(dur > 0 && val > 0){
       el.textContent = Math.round(val / dur * 100) + '%';
     } else {
@@ -790,9 +808,12 @@ function updateSleepPhasePcts(){
 function saveSleepData(){
   const bed = $('#sleepBedtime');
   const wake = $('#sleepWakeTime');
-  const deep = $('#sleepDeep');
-  const light = $('#sleepLight');
-  const rem = $('#sleepRem');
+  const deepH = $('#sleepDeepH');
+  const deepM = $('#sleepDeepM');
+  const lightH = $('#sleepLightH');
+  const lightM = $('#sleepLightM');
+  const remH = $('#sleepRemH');
+  const remM = $('#sleepRemM');
   const awak = $('#sleepAwakenings');
   const hr = $('#sleepHeartRate');
 
@@ -802,6 +823,7 @@ function saveSleepData(){
   if(!bedtime && !wakeTime){ toast('Укажите время сна'); return; }
 
   const duration = calcSleepDuration(bedtime, wakeTime);
+  const toMin = (hInp, mInp) => (parseInt(hInp && hInp.value, 10) || 0) * 60 + (parseInt(mInp && mInp.value, 10) || 0);
 
   if(!state.sleep) state.sleep = {};
   state.sleep[selectedDate] = {
@@ -809,9 +831,9 @@ function saveSleepData(){
     wakeTime,
     duration,
     phases: {
-      deep: parseInt(deep && deep.value, 10) || 0,
-      light: parseInt(light && light.value, 10) || 0,
-      rem: parseInt(rem && rem.value, 10) || 0,
+      deep: toMin(deepH, deepM),
+      light: toMin(lightH, lightM),
+      rem: toMin(remH, remM),
       awakenings: parseInt(awak && awak.value, 10) || 0,
     },
     heartRate: parseInt(hr && hr.value, 10) || 0,
