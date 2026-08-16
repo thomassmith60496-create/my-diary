@@ -67,6 +67,9 @@ window.renderHomePage = function() {
     // Карточка финансов (на всю ширину)
     html += renderFinanceCard(todayFinance, dateStr);
     
+    // Карточка сна
+    html += renderSleepCard(dateStr);
+    
     // Карточка активности (стрики + хитмап)
     html += `
         <div class="home-card activity-card">
@@ -459,6 +462,126 @@ window.getTodayFinance = function(dateStr) {
         nextPlanned,
         savingsProgress: Math.round(totalSavings)
     };
+}
+
+// === КАРТОЧКА СНА ===
+
+window.renderSleepCard = function(dateStr) {
+    const sleepData = window.getTodoSleepAll ? window.getTodoSleepAll() : {};
+    const todaySleep = sleepData[dateStr] || null;
+    const recentDays = getRecentSleepDays(sleepData, 7);
+    const avgDuration = recentDays.length > 0
+        ? Math.round(recentDays.reduce((s, d) => s + d.duration, 0) / recentDays.length)
+        : 0;
+
+    let bodyHtml = '';
+
+    if (todaySleep && todaySleep.bedtime) {
+        const dur = todaySleep.duration || calcSleepDurationLocal(todaySleep.bedtime, todaySleep.wakeTime);
+        const durStr = fmtSleepDurationLocal(dur);
+        const p = todaySleep.phases || {};
+        const hr = todaySleep.heartRate || 0;
+
+        bodyHtml += `<div class="sleep-home-today">`;
+        bodyHtml += `<div class="sleep-home-main">
+            <div class="sleep-home-dur">${durStr}</div>
+            <div class="sleep-home-range">${esc(todaySleep.bedtime || '??:??')} → ${esc(todaySleep.wakeTime || '??:??')}</div>
+            ${hr ? `<div class="sleep-home-pill">❤ ${hr} уд/мин</div>` : ''}
+        </div>`;
+
+        if (dur > 0 && (p.deep || p.light || p.rem)) {
+            const phases = [
+                { label: 'Глуб.', val: p.deep || 0, color: '#6366f1' },
+                { label: 'Лёгк.', val: p.light || 0, color: '#818cf8' },
+                { label: 'REM', val: p.rem || 0, color: '#a78bfa' },
+            ];
+            bodyHtml += `<div class="sleep-home-phases">`;
+            phases.forEach(ph => {
+                if (ph.val > 0) {
+                    const pct = Math.round(ph.val / dur * 100);
+                    bodyHtml += `<div class="sleep-home-phase">
+                        <div class="sleep-home-phase-bar"><div style="width:${pct}%;background:${ph.color}"></div></div>
+                        <span class="sleep-home-phase-label">${ph.label} ${fmtHM(ph.val)} (${pct}%)</span>
+                    </div>`;
+                }
+            });
+            bodyHtml += `</div>`;
+        }
+
+        const allFactors = (typeof DEFAULT_SLEEP_FACTORS !== 'undefined') ? DEFAULT_SLEEP_FACTORS : [];
+        const activeFactors = [...(todaySleep.factors || []), ...(todaySleep.customFactors || [])];
+        if (activeFactors.length > 0) {
+            const labels = activeFactors.map(id => {
+                const f = allFactors.find(x => x.id === id);
+                return f ? f.label : id;
+            });
+            bodyHtml += `<div class="sleep-home-factors">${labels.map(l => `<span class="sleep-home-factor">${esc(l)}</span>`).join('')}</div>`;
+        }
+        bodyHtml += `</div>`;
+    } else {
+        bodyHtml += `<div class="empty-state-mini">
+            <div class="empty-state-mini-icon">🌙</div>
+            <div class="empty-state-mini-text">Сон за сегодня не записан</div>
+        </div>`;
+    }
+
+    if (recentDays.length > 1 && avgDuration > 0) {
+        bodyHtml += `<div class="sleep-home-avg">Среднее за ${recentDays.length} дн.: ${fmtSleepDurationLocal(avgDuration)}</div>`;
+    }
+
+    return `
+        <div class="home-card sleep-card">
+            <div class="home-card-header">
+                <h2 class="home-card-title">🌙 Сон</h2>
+                <div class="home-card-badge">${todaySleep && todaySleep.bedtime ? 'Записан' : 'Нет данных'}</div>
+            </div>
+            <div class="home-card-body">
+                ${bodyHtml}
+            </div>
+        </div>`;
+}
+
+function calcSleepDurationLocal(bedtime, wakeTime) {
+    if (!bedtime || !wakeTime) return 0;
+    const [bh, bm] = bedtime.split(':').map(Number);
+    const [wh, wm] = wakeTime.split(':').map(Number);
+    let bedMin = bh * 60 + bm;
+    let wakeMin = wh * 60 + wm;
+    if (wakeMin <= bedMin) wakeMin += 24 * 60;
+    return wakeMin - bedMin;
+}
+
+function fmtSleepDurationLocal(min) {
+    if (!min || min <= 0) return '—';
+    const h = Math.floor(min / 60);
+    const m = min % 60;
+    return h + 'ч ' + (m < 10 ? '0' : '') + m + 'мин';
+}
+
+function fmtHM(min) {
+    if (!min || min <= 0) return '0';
+    const h = Math.floor(min / 60);
+    const m = min % 60;
+    if (h > 0) return h + 'ч' + (m > 0 ? ' ' + m + 'м' : '');
+    return m + 'мин';
+}
+
+function getRecentSleepDays(sleepData, n) {
+    const days = [];
+    const today = new Date();
+    for (let i = 0; i < n; i++) {
+        const d = new Date(today);
+        d.setDate(d.getDate() - i);
+        const key = window.keyOf ? window.keyOf(d) : (function() {
+            const pad = x => String(x).padStart(2, '0');
+            return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+        })();
+        const entry = sleepData[key];
+        if (entry && entry.duration > 0) {
+            days.push({ date: key, duration: entry.duration });
+        }
+    }
+    return days;
 }
 
 // === ПОСЛЕДНЯЯ АКТИВНОСТЬ ===
