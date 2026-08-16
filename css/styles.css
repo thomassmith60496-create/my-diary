@@ -5353,7 +5353,7 @@ header .macro-badge {
     line-height:1.45;
     -webkit-font-smoothing:antialiased;
     border-radius: var(--radius-xl);
-    padding: 24px 24px 40px;
+    padding: 24px 0 40px;
     margin-top: 0;
 }
 
@@ -5363,7 +5363,7 @@ header .macro-badge {
 .todo-app [hidden] { display:none !important; }
 .todo-app :focus-visible { outline:2px solid var(--accent-line); outline-offset:1px; }
 
-.todo-app .app { max-width:1160px; margin:0 auto; }
+.todo-app .app { margin:0; }
 .todo-app .topbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; }
 .todo-app .brand { display:flex; align-items:center; gap:10px; font-weight:600; font-size:15px; letter-spacing:.2px; color:var(--color-primary-dark); }
 .todo-app .brand-mark { width:10px; height:10px; border-radius:3px; background:var(--accent); box-shadow:0 0 12px rgba(37,99,235,.4); }
