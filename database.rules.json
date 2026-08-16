@@ -12,6 +12,12 @@
         ".write": "auth.uid === $uid"
       }
     },
+    "lera_todo_v1": {
+      "$uid": {
+        ".read": "auth.uid === $uid || root.child('lera_diary_users').child(auth.uid).child('role').val() === 'reader' && root.child('lera_diary_users').child(auth.uid).child('ownerUid').val() === $uid",
+        ".write": "auth.uid === $uid"
+      }
+    },
     "lera_diary_users": {
       ".read": "auth.uid !== null && root.child('lera_diary_users').child(auth.uid).child('role').val() === 'admin'",
       "$uid": {

@@ -226,55 +226,58 @@ window.renderTodoCard = function(todayData) {
     const hasTasks = todayData && todayData.tasks && todayData.tasks.length > 0;
     let bodyHtml;
     if (hasTasks) {
-        let tasksHtml = "";
         const todayTasks = todayData.tasks.filter(t => t.date === todayKey()).sort((a, b) => (a.completed - b.completed) || (a.createdAt - b.createdAt));
+        const doneCount = todayTasks.filter(t => t.completed).length;
+        const totalCount = todayTasks.length;
+        const pct = totalCount ? Math.round(doneCount / totalCount * 100) : 0;
+        
+        let tasksHtml = '<div class="todo-list">';
         todayTasks.forEach((t, index) => {
             const overdue = isOverdue(t);
             const meta = [];
             if(t.deadline){
-                meta.push(`<span class="dl${overdue ? " overdue" : ""}">📅${fmtDeadline(t.deadline)}${overdue ? " · просрочено" : ""}</span>`);
+                meta.push(`<span class="todo-dl${overdue ? ' overdue' : ''}">📅 ${fmtDeadline(t.deadline)}${overdue ? ' · просрочено' : ''}</span>`);
             }
-            for(const tag of t.tags) meta.push(`<span class="tag-pill">#${esc(tag)}</span>`);
-            tasksHtml += `<div class="task${t.completed ? ' done' : ""}" data-id="${t.id}">
-                <div class="task-main">
-                    <button type="button" class="cb${t.completed ? ' checked' : ""}" data-act="toggle-task" title="${t.completed ? 'Отменить выполнение' : 'Отметить выполненную'}">${ICON.check}</button>
-                    <div class="task-body">
-                        <div class="task-title">${esc(t.title)}</div>
-                        ${t.description ? `<div class="task-desc">${esc(t.description)}</div>` : ""}
-                        ${meta.length ? `<div class="task-meta">${meta.join('')}</div>` : ""}
-                    </div>
-                    <div class="task-actions">
-                        <button type="button" class="icon-btn" data-act="edit-task" title="Редактировать">${ICON.pencil}</button>
-                        <button type="button" class="icon-btn danger" data-act="delete-task" title="Удалить">${ICON.trash}</button>
-                    </div>
+            for(const tag of t.tags) meta.push(`<span class="todo-tag">#${esc(tag)}</span>`);
+            tasksHtml += `<div class="todo-item${t.completed ? ' done' : ''}">
+                <span class="todo-check${t.completed ? ' checked' : ''}">${t.completed ? '✓' : ''}</span>
+                <div class="todo-content">
+                    <div class="todo-title">${esc(t.title)}</div>
+                    ${t.description ? `<div class="todo-desc">${esc(t.description)}</div>` : ''}
+                    ${meta.length ? `<div class="todo-meta">${meta.join('')}</div>` : ''}
                 </div>
-                <button type="button" class="add-sub" data-act="add-sub">📝Подзадача</button>
             </div>`;
         });
-        bodyHtml = `<div class="home-card todo-card">
-            <div class="home-card-header">
-                <h2 class="home-card-title">✅ Задачи</h2>
-                <div class="home-card-badge">${todayTasks.length} ${todayTasks.length === 1 ? 'задача' : todayTasks.length > 4 ? 'задач' : 'задач'}</div>
-            </div>
-            <div class="home-card-body">
-                ${tasksHtml}
-            </div>
-        </div>`;
-    } else {
-        bodyHtml = `<div class="home-card todo-card">
-            <div class="home-card-header">
-                <h2 class="home-card-title">✅ Задачи</h2>
-                <div class="home-card-badge">Задач пока нет</div>
-            </div>
-            <div class="home-card-body">
-                <div class="empty-state-mini">
-                    <div class="empty-state-mini-icon">📝</div>
-                    <div class="empty-state-mini-text">Сегодня ещё нет задач</div>
+        tasksHtml += '</div>';
+        
+        bodyHtml = `
+            <div class="todo-stats">
+                <div class="todo-progress">
+                    <div class="todo-progress-bar">
+                        <div class="todo-progress-fill" style="width: ${pct}%"></div>
+                    </div>
+                    <span class="todo-progress-text">${doneCount} из ${totalCount} выполнено · ${pct}%</span>
                 </div>
             </div>
-        </div>`;
+            ${tasksHtml}`;
+    } else {
+        bodyHtml = `
+            <div class="empty-state-mini">
+                <div class="empty-state-mini-icon">📝</div>
+                <div class="empty-state-mini-text">Сегодня ещё нет задач</div>
+            </div>`;
     }
-    return bodyHtml;
+    
+    return `
+        <div class="home-card todo-card">
+            <div class="home-card-header">
+                <h2 class="home-card-title">✅ Задачи</h2>
+                <div class="home-card-badge">${hasTasks ? `${todayData.tasks.length} ${todayData.tasks.length === 1 ? 'задача' : todayData.tasks.length < 5 ? 'задачи' : 'задач'}` : 'Нет задач'}</div>
+            </div>
+            <div class="home-card-body">
+                ${bodyHtml}
+            </div>
+        </div>`;
 }
 
 window.getTodayTodo = function(dateStr) {

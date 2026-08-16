@@ -306,6 +306,7 @@ window.initUserSession = function(uid) {
 window.switchDataContext = function(uid) {
     window._activeDiaryRef = db.ref('lera_diary_v1/' + uid);
     window._activeFinanceRef = db.ref('lera_finance_v1/' + uid);
+    window._activeTodoRef = db.ref('lera_todo_v1/' + uid);
     loadDataForUser(uid);
 }
 
@@ -313,6 +314,7 @@ window.loadDataForUser = function(uid) {
     var diaryPath = 'lera_diary_v1/' + uid;
     var financePath = 'lera_finance_v1/' + uid;
     var trainingPath = 'lera_training_v1/' + uid;
+    var todoPath = 'lera_todo_v1/' + uid;
     
     var diaryLoad = db.ref(diaryPath).once('value').catch(function() {
         return null; // ошибка дневника не фатальна
@@ -324,14 +326,20 @@ window.loadDataForUser = function(uid) {
     var trainingLoad = db.ref(trainingPath).once('value').catch(function() {
         return null; // ошибка тренировок не фатальна
     });
+    // Задачи загружаем отдельно — их ошибка не должна блокировать остальное
+    var todoLoad = db.ref(todoPath).once('value').catch(function() {
+        return null; // ошибка задач не фатальна
+    });
     
-    Promise.all([diaryLoad, financeLoad, trainingLoad]).then(function(results) {
+    Promise.all([diaryLoad, financeLoad, trainingLoad, todoLoad]).then(function(results) {
         var diarySnap = results[0];
         var financeSnap = results[1];
         var trainingSnap = results[2];
+        var todoSnap = results[3];
         var diaryData = diarySnap ? diarySnap.val() : null;
         var financeDataSnap = financeSnap ? financeSnap.val() : null;
         var trainingDataSnap = trainingSnap ? trainingSnap.val() : null;
+        var todoDataSnap = todoSnap ? todoSnap.val() : null;
         
         if (diaryData) {
             if (diaryData.nutrition) nutritionData = diaryData.nutrition;
@@ -359,6 +367,11 @@ window.loadDataForUser = function(uid) {
             } else {
                 TrainingExerciseAPI.load();
             }
+        }
+        
+        // Загружаем задачи из Firebase
+        if (typeof window.loadTodoFromFirebase === 'function') {
+            window.loadTodoFromFirebase(todoDataSnap);
         }
         
         isInitialLoad = false;

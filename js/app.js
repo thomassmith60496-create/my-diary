@@ -188,6 +188,20 @@ function syncToCloud() {
             }
         } catch(e) {}
         
+        // Также сохраняем задачи отдельным ключом
+        try {
+            if (typeof window.getTodoState === 'function') {
+                var todoState = window.getTodoState();
+                if (todoState) {
+                    db.ref('lera_todo_v1/' + targetUid).set({
+                        tasks: todoState.tasks,
+                        tags: todoState.tags,
+                        lastUpdated: Date.now()
+                    }).catch(() => {});
+                }
+            }
+        } catch(e) {}
+        
         showSyncStatus('✅ Сохранено!', 'success');
     }, 5000);
 }
@@ -318,8 +332,13 @@ function resetAllData() {
             db.ref(`lera_diary_v1/${targetUid}`).remove();
             db.ref(`lera_finance_v1/${targetUid}`).remove();
             db.ref(`lera_training_v1/${targetUid}`).remove();
+            db.ref(`lera_todo_v1/${targetUid}`).remove();
             nutritionData = { weeks: [], currentWeekId: null };
             financeData = { transactions: [], savings: [], planned: [], mandatoryPayments: [], categories: [] };
+            // Сброс задач
+            if (typeof window.loadTodoFromFirebase === 'function') {
+                window.loadTodoFromFirebase({ tasks: [], tags: [] });
+            }
             // Сброс тренировок
             if (typeof TrainingExerciseAPI !== 'undefined' && TrainingExerciseAPI.loadFromFirebase) {
                 TrainingExerciseAPI.loadFromFirebase({ version: 2, exercises: [], workouts: [] });

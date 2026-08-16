@@ -67,6 +67,27 @@ let state = loadState();
 
 function save(){
   try{ localStorage.setItem(LS_KEY, JSON.stringify(state)); }catch(e){ console.warn('Не удалось сохранить данные', e); }
+  
+  // Сохраняем в Firebase (если пользователь авторизован и не в режиме чтения)
+  try {
+    if (typeof db !== 'undefined' && typeof getTargetUid === 'function' && typeof isReadOnlyActive === 'function') {
+      if (isReadOnlyActive()) return;
+      const targetUid = getTargetUid();
+      if (!targetUid) return;
+      
+      const data = {
+        tasks: state.tasks,
+        tags: state.tags,
+        lastUpdated: Date.now()
+      };
+      
+      db.ref(`lera_todo_v1/${targetUid}`).set(data).catch(function(error) {
+        if (error && error.code === 'PERMISSION_DENIED') {
+          console.warn('Нет прав на запись todo в Firebase');
+        }
+      });
+    }
+  } catch(e) { console.warn('Ошибка сохранения todo в Firebase', e); }
 }
 
 const now0 = new Date();
@@ -782,6 +803,30 @@ function init(){
 let initialized = false;
 window.getTodoState = function() {
     return state;
+}
+
+window.loadTodoFromFirebase = function(data) {
+    if(!data) return;
+    if(Array.isArray(data.tasks)) {
+        state.tasks = data.tasks.map(t => ({
+            id: t.id || uid(),
+            date: t.date || todayKey(),
+            title: String(t.title || ''),
+            description: String(t.description || ''),
+            completed: !!t.completed,
+            deadline: t.deadline || null,
+            tags: Array.isArray(t.tags) ? t.tags : [],
+            createdAt: t.createdAt || Date.now(),
+            subtasks: Array.isArray(t.subtasks) ? t.subtasks.map(s => ({
+                id: s.id || uid(), title: String(s.title || ''), completed: !!s.completed
+            })) : []
+        }));
+    }
+    if(Array.isArray(data.tags)) {
+        state.tags = data.tags;
+    }
+    save();
+    if(initialized) renderAll();
 }
 
 window.initTodoApp = function() {
