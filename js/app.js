@@ -20,6 +20,9 @@ window.switchMainTab = function(tab) {
         renderTrainingExercises();
         renderTrainingProgress();
     }
+    if(tab === 'todo') {
+        if (typeof initTodoApp === 'function') initTodoApp();
+    }
     setTimeout(() => applyReadOnlyState(), 50);
 }
    
