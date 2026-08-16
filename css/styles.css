@@ -1375,8 +1375,9 @@ header .macro-badge {
 .dashboard-grid-item {
     flex: 0 0 50%;
     max-width: 50%;
-    min-width: initial;
+    min-width: 0;
     padding-right: var(--spacing-md);
+    box-sizing: border-box;
 }
 
 .dashboard-grid-item:last-child {
