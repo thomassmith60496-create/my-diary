@@ -14,11 +14,13 @@
  * @param {string} options.title - заголовок графика
  * @param {string} options.textColor - цвет текста
  * @param {string} options.gridColor - цвет сетки
+ * @param {number} options.width - ширина графика (по умолчанию 100% контейнера)
  * @returns {string} HTML/SVG строка
  */
 window.renderSVGLineChart = function(data, field, unit, color, gradientId, options) {
     options = options || {};
-    var width = 640, height = 260;
+    var width = options.width || 640;
+    var height = 260;
     var padding = { top: 26, right: 24, bottom: 50, left: 44 };
     var chartW = width - padding.left - padding.right;
     var chartH = height - padding.top - padding.bottom;

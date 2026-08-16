@@ -291,18 +291,23 @@ header .macro-badge {
 
 .dash-header {
     background: linear-gradient(135deg, var(--color-green-dark) 0%, var(--color-green) 100%);
-    box-shadow: var(--shadow-xl);
-    padding: var(--spacing-2xl) var(--spacing-3xl);
+    box-shadow: var(--shadow-md);
+    padding: var(--spacing-xl) var(--spacing-2xl);
+    border-radius: var(--radius-xl);
+    margin-bottom: var(--spacing-lg);
 }
 
 .dash-header h1 {
-    font-size: var(--font-size-2xl);
-    letter-spacing: 1px;
+    font-size: var(--font-size-xl);
+    font-weight: 700;
+    margin: 0 0 var(--spacing-xs);
+    letter-spacing: 0.5px;
 }
 
 .dash-header .subtitle {
     font-size: var(--font-size-sm);
-    margin: 0 0 var(--spacing-sm);
+    opacity: 0.9;
+    margin: 0;
 }
 
 .finance-header {
@@ -1308,16 +1313,17 @@ header .macro-badge {
 }
 
 .dashboard-title {
-    font-size: var(--font-size-lg);
+    font-size: var(--font-size-md);
+    font-weight: 700;
     margin: 0 0 var(--spacing-sm);
     color: var(--color-gray-700);
 }
 
 .dashboard-controls {
     display: flex;
-    gap: var(--spacing-xl);
+    gap: var(--spacing-lg);
     align-items: flex-end;
-    margin-bottom: var(--spacing-xl);
+    margin-bottom: var(--spacing-lg);
     flex-wrap: wrap;
 }
 
@@ -1339,6 +1345,7 @@ header .macro-badge {
     border-radius: var(--radius-sm);
     font-size: var(--font-size-sm);
     font-family: inherit;
+    min-width: 140px;
 }
 
 .metric-toggle {
@@ -1348,7 +1355,7 @@ header .macro-badge {
 }
 
 .metric-btn {
-    padding: 5px 12px;
+    padding: 5px 10px;
     border: 2px solid var(--color-gray-200);
     border-radius: var(--radius-sm);
     background: white;
@@ -1367,27 +1374,35 @@ header .macro-badge {
 
 .dashboard-grid-row {
     display: flex;
-    gap: var(--spacing-xl);
-    flex-wrap: wrap;
+    gap: var(--spacing-lg);
     margin-bottom: var(--spacing-xl);
 }
 
 .dashboard-grid-item {
-    flex: 1 1 calc(50% - var(--spacing-xl) / 2);
-    min-width: 320px;
-    max-width: calc(50% - var(--spacing-xl) / 2);
+    flex: 1 1 0;
+    min-width: 0;
+    background: white;
+    border-radius: var(--radius-xl);
+    padding: var(--spacing-lg);
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--color-gray-200);
     box-sizing: border-box;
 }
 
-.dashboard-grid-item:last-child {
-    padding-right: 0;
+.dashboard-grid-item .dashboard-title {
+    margin-top: 0;
 }
 
-@media (max-width: 768px) {
+.dashboard-grid-item .dashboard-controls {
+    margin-top: var(--spacing-md);
+}
+
+@media (max-width: 900px) {
+    .dashboard-grid-row {
+        flex-direction: column;
+    }
     .dashboard-grid-item {
-        flex: 1 1 100%;
-        max-width: 100%;
-        min-width: 0;
+        width: 100%;
     }
 }
 
