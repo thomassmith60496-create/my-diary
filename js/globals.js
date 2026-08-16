@@ -36,6 +36,15 @@ const formStarsData = {};
 let syncTimeout = null;
 let isInitialLoad = true;
 
+// --- Факторы сна (дефолтные) ---
+const DEFAULT_SLEEP_FACTORS = [
+    { id: 'coffee', label: 'Кофе после 18' },
+    { id: 'work', label: 'Работа после 19' },
+    { id: 'training', label: 'Тренировка' },
+    { id: 'late_food', label: 'Поздний приём пищи' },
+    { id: 'ventilation', label: 'Проветривание комнаты' },
+];
+
 // --- Константы ---
 const mealIcons = {
     breakfast:"З", lunch:"О", dinner:"У", snack:"П", snack1:"П1", snack2:"П2",

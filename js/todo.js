@@ -44,7 +44,7 @@ const LS_KEY = 'local-calendar-v1';
 function loadState(){
   try{
     const raw = localStorage.getItem(LS_KEY);
-    if(!raw) return {tasks:[], tags:[], recurring:[]};
+    if(!raw) return {tasks:[], tags:[], recurring:[], sleep:{}};
     const data = JSON.parse(raw);
     const tasks = Array.isArray(data.tasks) ? data.tasks.map(t => ({
       id: t.id || uid(),
@@ -82,8 +82,8 @@ function loadState(){
       occurrences: (r.occurrences && typeof r.occurrences === 'object') ? r.occurrences : {},
       createdAt: r.createdAt || Date.now()
     })) : [];
-    return { tasks, tags: Array.isArray(data.tags) ? data.tags : [], recurring };
-  }catch(e){ return {tasks:[], tags:[], recurring:[]}; }
+    return { tasks, tags: Array.isArray(data.tags) ? data.tags : [], recurring, sleep: (data.sleep && typeof data.sleep === 'object') ? data.sleep : {} };
+  }catch(e){ return {tasks:[], tags:[], recurring:[], sleep:{}}; }
 }
 
 let state = loadState();
@@ -102,6 +102,7 @@ function save(){
         tasks: state.tasks,
         tags: state.tags,
         recurring: state.recurring,
+        sleep: state.sleep || {},
         lastUpdated: Date.now()
       };
       
@@ -139,6 +140,8 @@ const ui = {
   moveTask: null,        // id задачи на перенос
   shopTaskId: null,      // id задачи-списка покупок, открытой в модалке
   shopEditingSub: null,  // id пункта, редактируемого внутри модалки
+  sleepExpanded: false,  // развернут ли блок сна
+  sleepFactors: [],      // пользовательские факторы (из localStorage)
 };
 
 /* ================= доступ к данным ================= */
@@ -519,6 +522,307 @@ function saveRename(oldName){
   }
   ui.renamingTag = null;
   commit();
+}
+
+/* ================= сон ================= */
+const SLEEP_LS_KEY = 'local-sleep-factors-v1';
+
+function loadCustomSleepFactors(){
+  try{
+    const raw = localStorage.getItem(SLEEP_LS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  }catch(e){ return []; }
+}
+
+function saveCustomSleepFactors(){
+  try{ localStorage.setItem(SLEEP_LS_KEY, JSON.stringify(ui.sleepFactors)); }catch(e){}
+}
+
+function getAllSleepFactors(){
+  const defaults = (typeof DEFAULT_SLEEP_FACTORS !== 'undefined') ? DEFAULT_SLEEP_FACTORS : [];
+  return [...defaults, ...ui.sleepFactors.map(f => ({ id: f.id || f, label: f.label || f }))];
+}
+
+function getSleep(k){
+  return (state.sleep && state.sleep[k]) ? state.sleep[k] : null;
+}
+
+function calcSleepDuration(bedtime, wakeTime){
+  if(!bedtime || !wakeTime) return 0;
+  const [bh, bm] = bedtime.split(':').map(Number);
+  const [wh, wm] = wakeTime.split(':').map(Number);
+  let bedMin = bh * 60 + bm;
+  let wakeMin = wh * 60 + wm;
+  if(wakeMin <= bedMin) wakeMin += 24 * 60;
+  return wakeMin - bedMin;
+}
+
+function fmtSleepDuration(min){
+  if(!min || min <= 0) return '';
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return h + 'ч ' + (m < 10 ? '0' : '') + m + 'мин';
+}
+
+function renderSleepBlock(){
+  const wrap = $('#sleepBlock');
+  if(!wrap) return;
+  const k = selectedDate;
+  const data = getSleep(k);
+  const hasData = data && (data.bedtime || data.wakeTime);
+
+  if(hasData && !ui.sleepExpanded){
+    const dur = fmtSleepDuration(data.duration || calcSleepDuration(data.bedtime, data.wakeTime));
+    const pulseTxt = data.heartRate ? data.heartRate + ' уд/мин' : '';
+    const allFactors = getAllSleepFactors();
+    const activeFactors = [...(data.factors || []), ...(data.customFactors || [])];
+    const factorLabels = activeFactors.map(id => {
+      const f = allFactors.find(x => x.id === id);
+      return f ? f.label : id;
+    });
+
+    wrap.innerHTML = `<div class="sleep-block" id="sleepToggle">
+      <div class="sleep-collapsed">
+        <span class="sleep-icon">🌙</span>
+        <div class="sleep-summary">
+          <span class="sleep-summary-duration">${dur}</span>
+          ${pulseTxt ? `<span class="sleep-summary-pill">❤ ${pulseTxt}</span>` : ''}
+          ${factorLabels.length ? `<div class="sleep-summary-factors">${factorLabels.map(l => `<span class="sleep-summary-factor">${esc(l)}</span>`).join('')}</div>` : ''}
+        </div>
+        <span class="sleep-expand-icon">▼</span>
+      </div>
+    </div>`;
+  } else {
+    const bedVal = data ? (data.bedtime || '') : '';
+    const wakeVal = data ? (data.wakeTime || '') : '';
+    const hr = data ? (data.heartRate || '') : '';
+    const p = data ? (data.phases || {}) : {};
+    const activeSet = new Set([...(data ? data.factors : []) || []]);
+    const activeCustom = new Set([...(data ? data.customFactors : []) || []]);
+    const allFactors = getAllSleepFactors();
+
+    const factorChips = allFactors.map(f => {
+      const isActive = activeSet.has(f.id);
+      return `<button type="button" class="sleep-factor-chip${isActive ? ' active' : ''}" data-factor="${esc(f.id)}">${esc(f.label)}</button>`;
+    }).join('');
+    const customChips = (data ? data.customFactors : []).map(id => {
+      return `<button type="button" class="sleep-factor-chip active" data-factor="${esc(id)}">${esc(id)}<span class="sleep-factor-remove" data-rm-factor="${esc(id)}">✕</span></button>`;
+    }).join('');
+
+    wrap.innerHTML = `<div class="sleep-block expanded" id="sleepToggle">
+      <div class="sleep-collapsed">
+        <span class="sleep-icon">🌙</span>
+        <div class="sleep-summary">
+          <span class="sleep-summary-empty">Сон</span>
+        </div>
+        <span class="sleep-expand-icon">▼</span>
+      </div>
+      <div class="sleep-form">
+        <div class="sleep-form-grid">
+          <div class="sleep-field">
+            <label>🌙 Лёг</label>
+            <input type="time" id="sleepBedtime" value="${esc(bedVal)}">
+          </div>
+          <div class="sleep-field">
+            <label>☀️ Проснулся</label>
+            <input type="time" id="sleepWakeTime" value="${esc(wakeVal)}">
+          </div>
+        </div>
+        <div class="sleep-phases-title">Фазы сна (минуты)</div>
+        <div class="sleep-phases-grid">
+          <div class="sleep-phase">
+            <label>Глубокий</label>
+            <input type="number" id="sleepDeep" min="0" value="${p.deep || ''}" placeholder="0">
+            <div class="sleep-phase-pct" id="sleepDeepPct"></div>
+          </div>
+          <div class="sleep-phase">
+            <label>Лёгкий</label>
+            <input type="number" id="sleepLight" min="0" value="${p.light || ''}" placeholder="0">
+            <div class="sleep-phase-pct" id="sleepLightPct"></div>
+          </div>
+          <div class="sleep-phase">
+            <label>REM</label>
+            <input type="number" id="sleepRem" min="0" value="${p.rem || ''}" placeholder="0">
+            <div class="sleep-phase-pct" id="sleepRemPct"></div>
+          </div>
+          <div class="sleep-phase">
+            <label>Пробуждения</label>
+            <input type="number" id="sleepAwakenings" min="0" value="${p.awakenings || ''}" placeholder="0">
+            <div class="sleep-phase-pct"></div>
+          </div>
+        </div>
+        <div class="sleep-field" style="max-width:160px;margin-bottom:var(--spacing-lg);">
+          <label>❤️ Средний пульс</label>
+          <input type="number" id="sleepHeartRate" min="30" max="220" value="${esc(hr)}" placeholder="уд/мин">
+        </div>
+        <div class="sleep-factors-title">Факторы перед сном</div>
+        <div class="sleep-factors-row" id="sleepFactorsRow">
+          ${factorChips}${customChips}
+          <div class="sleep-add-factor-row">
+            <input class="sleep-add-factor-input" id="sleepNewFactor" placeholder="Свой фактор…">
+            <button type="button" class="sleep-add-factor-btn" id="sleepAddFactorBtn">+</button>
+          </div>
+        </div>
+        <div class="sleep-actions">
+          <button type="button" class="btn sleep-btn-clear" id="sleepClearBtn">🗑 Очистить</button>
+          <button type="button" class="btn sleep-btn-save" id="sleepSaveBtn">💾 Сохранить</button>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  wrap.onclick = function(e){
+    const toggle = e.target.closest('#sleepToggle');
+    if(!toggle) return;
+    const collapsed = e.target.closest('.sleep-collapsed');
+    if(collapsed && !toggle.classList.contains('expanded')){
+      ui.sleepExpanded = true;
+      renderSleepBlock();
+      return;
+    }
+    const rmFactor = e.target.closest('[data-rm-factor]');
+    if(rmFactor){
+      e.stopPropagation();
+      const fid = rmFactor.dataset.rmFactor;
+      const data = getSleep(selectedDate);
+      if(data){
+        data.customFactors = (data.customFactors || []).filter(x => x !== fid);
+        commit();
+        renderSleepBlock();
+      }
+      return;
+    }
+    const factorChip = e.target.closest('.sleep-factor-chip');
+    if(factorChip && !factorChip.classList.contains('sleep-add-factor-btn')){
+      e.stopPropagation();
+      const fid = factorChip.dataset.factor;
+      const data = getSleep(selectedDate) || {};
+      if(!state.sleep) state.sleep = {};
+      if(!state.sleep[selectedDate]) state.sleep[selectedDate] = {};
+      const d = state.sleep[selectedDate];
+      if(!d.factors) d.factors = [];
+      if(!d.customFactors) d.customFactors = [];
+      const isDefault = (typeof DEFAULT_SLEEP_FACTORS !== 'undefined') && DEFAULT_SLEEP_FACTORS.some(f => f.id === fid);
+      const arr = isDefault ? d.factors : d.customFactors;
+      const idx = arr.indexOf(fid);
+      if(idx >= 0) arr.splice(idx, 1); else arr.push(fid);
+      commit();
+      renderSleepBlock();
+      return;
+    }
+    const saveBtn = e.target.closest('#sleepSaveBtn');
+    if(saveBtn){
+      e.stopPropagation();
+      saveSleepData();
+      return;
+    }
+    const clearBtn = e.target.closest('#sleepClearBtn');
+    if(clearBtn){
+      e.stopPropagation();
+      if(state.sleep) delete state.sleep[selectedDate];
+      ui.sleepExpanded = false;
+      commit();
+      renderSleepBlock();
+      toast('Данные сна очищены');
+      return;
+    }
+    const addBtn = e.target.closest('#sleepAddFactorBtn');
+    if(addBtn){
+      e.stopPropagation();
+      addCustomSleepFactor();
+      return;
+    }
+  };
+
+  wrap.onkeydown = function(e){
+    if(e.key === 'Enter' && e.target.id === 'sleepNewFactor'){
+      e.preventDefault();
+      addCustomSleepFactor();
+    }
+  };
+
+  wrap.oninput = function(e){
+    if(e.target.id === 'sleepBedtime' || e.target.id === 'sleepWakeTime'){
+      updateSleepPhasePcts();
+    }
+  };
+}
+
+function addCustomSleepFactor(){
+  const inp = $('#sleepNewFactor');
+  if(!inp) return;
+  const v = inp.value.trim();
+  if(!v) return;
+  const id = 'custom_' + v.toLowerCase().replace(/[^a-zа-я0-9]/g, '_');
+  if(!ui.sleepFactors.some(f => f.id === id)){
+    ui.sleepFactors.push({ id, label: v });
+    saveCustomSleepFactors();
+  }
+  const data = getSleep(selectedDate) || {};
+  if(!state.sleep) state.sleep = {};
+  if(!state.sleep[selectedDate]) state.sleep[selectedDate] = {};
+  const d = state.sleep[selectedDate];
+  if(!d.customFactors) d.customFactors = [];
+  if(!d.customFactors.includes(id)) d.customFactors.push(id);
+  inp.value = '';
+  commit();
+  renderSleepBlock();
+}
+
+function updateSleepPhasePcts(){
+  const bed = $('#sleepBedtime');
+  const wake = $('#sleepWakeTime');
+  if(!bed || !wake) return;
+  const dur = calcSleepDuration(bed.value, wake.value);
+  ['sleepDeep','sleepLight','sleepRem'].forEach(id => {
+    const el = document.getElementById(id + 'Pct');
+    if(!el) return;
+    const inp = document.getElementById(id);
+    const val = parseInt(inp && inp.value, 10);
+    if(dur > 0 && val > 0){
+      el.textContent = Math.round(val / dur * 100) + '%';
+    } else {
+      el.textContent = '';
+    }
+  });
+}
+
+function saveSleepData(){
+  const bed = $('#sleepBedtime');
+  const wake = $('#sleepWakeTime');
+  const deep = $('#sleepDeep');
+  const light = $('#sleepLight');
+  const rem = $('#sleepRem');
+  const awak = $('#sleepAwakenings');
+  const hr = $('#sleepHeartRate');
+
+  if(!bed || !wake) return;
+  const bedtime = bed.value;
+  const wakeTime = wake.value;
+  if(!bedtime && !wakeTime){ toast('Укажите время сна'); return; }
+
+  const duration = calcSleepDuration(bedtime, wakeTime);
+
+  if(!state.sleep) state.sleep = {};
+  state.sleep[selectedDate] = {
+    bedtime,
+    wakeTime,
+    duration,
+    phases: {
+      deep: parseInt(deep && deep.value, 10) || 0,
+      light: parseInt(light && light.value, 10) || 0,
+      rem: parseInt(rem && rem.value, 10) || 0,
+      awakenings: parseInt(awak && awak.value, 10) || 0,
+    },
+    heartRate: parseInt(hr && hr.value, 10) || 0,
+    factors: state.sleep[selectedDate] ? [...(state.sleep[selectedDate].factors || [])] : [],
+    customFactors: state.sleep[selectedDate] ? [...(state.sleep[selectedDate].customFactors || [])] : [],
+  };
+
+  ui.sleepExpanded = false;
+  commit();
+  renderSleepBlock();
+  toast('Сон сохранён');
 }
 
 /* ================= рендер: календарь ================= */
@@ -1006,6 +1310,7 @@ function nextOccurrences(tpl, n){
 function renderAll(){
   renderCalendar();
   renderDayHeader();
+  renderSleepBlock();
   renderFilterBar();
   renderTaskList();
   renderTagModal();
@@ -1037,6 +1342,7 @@ function selectDate(k){
   ui.editingTask = null;
   ui.editingSub = null;
   ui.addingSubFor = null;
+  ui.sleepExpanded = false;
   ui.prevPct = dayStats(k).pct; // не проигрывать анимацию 100% при переходе на готовый день
   renderAll();
 }
@@ -1453,6 +1759,7 @@ function init(){
   });
   document.addEventListener('keydown', e => {
     if(e.key !== 'Escape') return;
+    if(ui.sleepExpanded){ ui.sleepExpanded = false; renderSleepBlock(); return; }
     if(ui.tagPanelOpen) closeTagModal();
     else if(ui.recChoice) closeRecurringChoice();
     else if(ui.seriesModal) closeSeriesModal();
@@ -1530,6 +1837,7 @@ function init(){
   $('#taskList').addEventListener('keydown', onTaskKeydown);
 
   ui.prevPct = dayStats(selectedDate).pct;
+  ui.sleepFactors = loadCustomSleepFactors();
   renderAll();
 }
 
@@ -1709,6 +2017,14 @@ window.getTodoState = function() {
     return state;
 }
 
+window.getTodoSleepData = function(dateKey) {
+    return getSleep(dateKey);
+}
+
+window.getTodoSleepAll = function() {
+    return state.sleep || {};
+}
+
 window.getTodoDayTasks = function(k) {
     return tasksOf(k);
 }
@@ -1757,6 +2073,9 @@ window.loadTodoFromFirebase = function(data) {
             occurrences: (r.occurrences && typeof r.occurrences === 'object') ? r.occurrences : {},
             createdAt: r.createdAt || Date.now()
         }));
+    }
+    if(data.sleep && typeof data.sleep === 'object') {
+        state.sleep = data.sleep;
     }
     save();
     if(initialized) renderAll();
