@@ -59,18 +59,20 @@ window.renderSVGLineChart = function(data, field, unit, color, gradientId, optio
         var val = yMin + (yMax - yMin) * (i / 5);
         var y = padding.top + chartH - (i / 5) * chartH;
         gridLines.push('<line x1="' + padding.left + '" y1="' + y + '" x2="' + (padding.left + chartW) + '" y2="' + y + '" stroke="' + gridColor + '" stroke-width="1" stroke-dasharray="2,4"/>');
-        gridLines.push('<text x="' + (padding.left - 8) + '" y="' + (y + 4) + '" text-anchor="end" font-size="14" fill="' + textColor + '" font-weight="600">' + Math.round(val) + '</text>');
+        gridLines.push('<text x="' + (padding.left - 8) + '" y="' + (y + 4) + '" text-anchor="end" font-size="10" fill="' + textColor + '" font-weight="600">' + Math.round(val) + '</text>');
     }
     
+    var dateInterval = data.length > 14 ? Math.ceil(data.length / 10) : 1;
     var pointsHtml = points.map(function(p, i) {
         var isFirst = i === 0, isLast = i === data.length - 1;
         var pointColor = isLast ? color : (isFirst ? '#2563eb' : color);
-        // Format date as DD.MM.YY
         var dateParts = p.date.split('-');
         var shortDate = dateParts.length === 3 ? dateParts[2] + '.' + dateParts[1] + '.' + dateParts[0].slice(2) : p.date;
-        return '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + (isFirst || isLast ? 6 : 4) + '" fill="' + pointColor + '" stroke="white" stroke-width="2"/>' +
-               '<text x="' + p.x + '" y="' + (p.y - 10) + '" text-anchor="middle" font-size="14" font-weight="700" fill="' + titleColor + '">' + p.value + '</text>' +
-               '<text x="' + p.x + '" y="' + (padding.top + chartH + 18) + '" text-anchor="middle" font-size="12" fill="' + textColor + '" font-weight="600">' + shortDate + '</text>';
+        var showDate = isFirst || isLast || (i % dateInterval === 0);
+        var showValue = isFirst || isLast || data.length <= 14;
+        return '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + (isFirst || isLast ? 5 : 3) + '" fill="' + pointColor + '" stroke="white" stroke-width="1.5"/>' +
+               (showValue ? '<text x="' + p.x + '" y="' + (p.y - 8) + '" text-anchor="middle" font-size="9" font-weight="700" fill="' + titleColor + '">' + p.value + '</text>' : '') +
+               (showDate ? '<text x="' + p.x + '" y="' + (padding.top + chartH + 14) + '" text-anchor="middle" font-size="9" fill="' + textColor + '" font-weight="600">' + shortDate + '</text>' : '');
     }).join('');
     
     var titleHtml = options.title ? '<text x="' + (width / 2) + '" y="18" text-anchor="middle" font-size="16" font-weight="700" fill="' + titleColor + '">' + options.title + '</text>' : '';

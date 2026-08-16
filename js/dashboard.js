@@ -673,9 +673,9 @@ window.renderWeightChart = function() {
     
     statsContainer.innerHTML = `
         <div class="dashboard-stats">
-            <div class="stat-card"><div class="stat-label">Старт</div><div class="stat-value">${first.toFixed(1)} кг</div><div class="stat-sub">${formatDateShortRussian(filteredData[0].date)}</div>
-            <div class="stat-card"><div class="stat-label">Сейчас</div><div class="stat-value">${last.toFixed(1)} кг</div><div class="stat-sub">${formatDateShortRussian(filteredData[filteredData.length - 1].date)}</div>
-            <div class="stat-card" style="border-left-color:${trendColor};"><div class="stat-label">Изменение ${trendIcon}</div><div class="stat-value" style="color:${trendColor};">${diff > 0 ? '+' : ''}${diff.toFixed(1)} кг</div><div class="stat-sub">${filteredData.length} измерений</div>
+            <div class="stat-card"><div class="stat-label">Старт</div><div class="stat-value">${first.toFixed(1)} кг</div><div class="stat-sub">${formatDateShortRussian(filteredData[0].date)}</div></div>
+            <div class="stat-card"><div class="stat-label">Сейчас</div><div class="stat-value">${last.toFixed(1)} кг</div><div class="stat-sub">${formatDateShortRussian(filteredData[filteredData.length - 1].date)}</div></div>
+            <div class="stat-card" style="border-left-color:${trendColor};"><div class="stat-label">Изменение ${trendIcon}</div><div class="stat-value" style="color:${trendColor};">${diff > 0 ? '+' : ''}${diff.toFixed(1)} кг</div><div class="stat-sub">${filteredData.length} измерений</div></div>
         </div>
     `;
 }
@@ -757,9 +757,9 @@ window.renderKbjuChart = function() {
     
     statsContainer.innerHTML = `
         <div class="dashboard-stats">
-            <div class="stat-card"><div class="stat-label">Среднее</div><div class="stat-value">${Math.round(avg)} ${config.unit}</div><div class="stat-sub">${config.label}</div>
-            <div class="stat-card"><div class="stat-label">Макс</div><div class="stat-value">${max} ${config.unit}</div><div class="stat-sub">${config.label}</div>
-            <div class="stat-card"><div class="stat-label">Мин</div><div class="stat-value">${min} ${config.unit}</div><div class="stat-sub">${config.label}</div>
+            <div class="stat-card"><div class="stat-label">Среднее</div><div class="stat-value">${Math.round(avg)} ${config.unit}</div><div class="stat-sub">${config.label}</div></div>
+            <div class="stat-card"><div class="stat-label">Макс</div><div class="stat-value">${max} ${config.unit}</div><div class="stat-sub">${config.label}</div></div>
+            <div class="stat-card"><div class="stat-label">Мин</div><div class="stat-value">${min} ${config.unit}</div><div class="stat-sub">${config.label}</div></div>
         </div>
     `;
 }
