@@ -20,7 +20,7 @@ window.initTaskDeadlineNotifications = function() {
       }
     });
   }
-  // Если пользователь previously отменил — ничего не делаем
+  // Если пользователь previous отменил — ничего не делаем
 };
 
 // Запуск цикла проверки раз в 10 минут
@@ -70,3 +70,16 @@ function checkAllDeadlines() {
     console.error('Ошибка при проверке дедлайнов:', error);
   });
 }
+
+// === РУЧНОЙ ТЕСТ ===
+// Показывает тестовое уведомление сразу (не ждет дедлайн).
+// Используется для проверки работоспособности уведомлений.
+// После теста эту кнопку можно удалить.
+window.testDeadlineNotification = function() {
+  if (Notification.permission === 'granted') {
+    new Notification('🧪 Тест уведомления', {
+      body: 'Это тестовое уведомление системы дедлайнов',
+      icon: 'favicon.png'
+    });
+  }
+};
