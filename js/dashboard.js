@@ -122,9 +122,21 @@ window.renderHabitCard = function(dateStr) {
         body = '<div class="habit-card-empty">Нет активных привычек.<br>Добавь в разделе <b>✅ To-Do → 🎯 Привычки</b>.</div>';
     } else {
         body = habits.map(h => {
-            const goalTag = (h.goal && h.goal.period !== 'day' && typeof window.habitGoalLabel === 'function')
-                ? '<span class="habit-card-goal">' + window.habitGoalLabel(h.goal) + '</span>'
-                : '';
+            const goalTag = (h.goal && h.goal.period === 'day' && h.target > 1)
+                ? '<span class="habit-card-goal">' + h.count + '/' + h.target + '</span>'
+                : ((h.goal && h.goal.period !== 'day' && typeof window.habitGoalLabel === 'function') ? '<span class="habit-card-goal">' + window.habitGoalLabel(h.goal) + '</span>' : '');
+            if (h.goal && h.goal.period === 'day') {
+                const complete = h.done;
+                return '<div class="habit-row stepper' + (complete ? ' done' : '') + '">' +
+                    '<span class="habit-check' + (complete ? ' on' : '') + '">' + (complete ? '✓' : '') + '</span>' +
+                    '<span class="habit-row-name">' + esc(h.name) + '</span>' + goalTag +
+                    '<span class="hcs">' +
+                        '<button type="button" class="hcs-btn" onclick="window.habitDec(\'' + h.id + '\',\'' + dateStr + '\')"' + (h.count <= 0 ? ' disabled' : '') + '>−</button>' +
+                        '<span class="hcs-val">' + h.count + '/' + h.target + '</span>' +
+                        '<button type="button" class="hcs-btn" onclick="window.habitInc(\'' + h.id + '\',\'' + dateStr + '\')"' + (h.count >= h.target ? ' disabled' : '') + '>+</button>' +
+                    '</span>' +
+                '</div>';
+            }
             return '<button type="button" class="habit-row' + (h.done ? ' done' : '') + '" onclick="window.toggleHabit(\'' + h.id + '\',\'' + dateStr + '\')">' +
                 '<span class="habit-check' + (h.done ? ' on' : '') + '">' + (h.done ? '✓' : '') + '</span>' +
                 '<span class="habit-row-name">' + esc(h.name) + '</span>' + goalTag +
