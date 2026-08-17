@@ -711,17 +711,43 @@ function renderSleepBlock(){
     const factorChip = e.target.closest('.sleep-factor-chip');
     if(factorChip && !factorChip.classList.contains('sleep-add-factor-btn')){
       e.stopPropagation();
-      const fid = factorChip.dataset.factor;
-      const data = getSleep(selectedDate) || {};
+      // Save form data before toggling factor to preserve input values
+      const bed = $('#sleepBedtime');
+      const wake = $('#sleepWakeTime');
+      const deepH = $('#sleepDeepH');
+      const deepM = $('#sleepDeepM');
+      const lightH = $('#sleepLightH');
+      const lightM = $('#sleepLightM');
+      const remH = $('#sleepRemH');
+      const remM = $('#sleepRemM');
+      const awak = $('#sleepAwakenings');
+      const hr = $('#sleepHeartRate');
+      
+      const toMin = (hInp, mInp) => (parseInt(hInp && hInp.value, 10) || 0) * 60 + (parseInt(mInp && mInp.value, 10) || 0);
+      
       if(!state.sleep) state.sleep = {};
       if(!state.sleep[selectedDate]) state.sleep[selectedDate] = {};
       const d = state.sleep[selectedDate];
+      
+      d.bedtime = bed ? bed.value : (d.bedtime || '');
+      d.wakeTime = wake ? wake.value : (d.wakeTime || '');
+      d.duration = calcSleepDuration(d.bedtime, d.wakeTime);
+      d.phases = {
+        deep: toMin(deepH, deepM),
+        light: toMin(lightH, lightM),
+        rem: toMin(remH, remM),
+        awakenings: parseInt(awak && awak.value, 10) || 0,
+      };
+      d.heartRate = parseInt(hr && hr.value, 10) || 0;
       if(!d.factors) d.factors = [];
       if(!d.customFactors) d.customFactors = [];
+      
+      const fid = factorChip.dataset.factor;
       const isDefault = (typeof DEFAULT_SLEEP_FACTORS !== 'undefined') && DEFAULT_SLEEP_FACTORS.some(f => f.id === fid);
       const arr = isDefault ? d.factors : d.customFactors;
       const idx = arr.indexOf(fid);
       if(idx >= 0) arr.splice(idx, 1); else arr.push(fid);
+      
       commit();
       renderSleepBlock();
       return;

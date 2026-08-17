@@ -1059,39 +1059,40 @@ function buildDonutSectors(byCategory) {
 
 function renderCharts(series, current, periodType) {
     const cards = [];
-    const MAX = 3;
+    const isWeekly = periodType === 'week';
+    const MAX = isWeekly ? 3 : 4;
     const push = html => { if (cards.length < MAX) cards.push(html); };
     const line = (data, field, unit, color, gid, extra) =>
         (typeof window.renderSVGLineChart === 'function') ? window.renderSVGLineChart(data, field, unit, color, gid, Object.assign({}, CHART_TEXT, extra || {})) : '';
     const donut = (sectors, total, center, sub) =>
         (typeof window.renderDonutChart === 'function') ? window.renderDonutChart(sectors, total, center, sub) : '';
 
-    // 1. Вес (только неделя)
+    // 1. Вес (ТОЛЬКО месяц)
     const wData = series.filter(d => d.weight !== null).map(d => ({ date: d.date, weight: d.weight }));
-    if (periodType !== 'month' && wData.length >= 1) {
+    if (!isWeekly && wData.length >= 1) {
         const total = current.nutrition.weightStart ? current.nutrition.weightStart + ' → ' + current.nutrition.weightEnd + ' кг' : '';
         push(chartCard('⚖️', 'Вес', total, line(wData, 'weight', 'кг', '#10b981', 'review-grad-weight'), true));
     }
 
-    // 2. Калории по дням
+    // 2. Сон по ночам (приоритет для недельного)
+    const sleepData = series.filter(d => d.sleepMin > 0).map(d => ({ date: d.date, sleep: d.sleepMin }));
+    if (sleepData.length >= 1) {
+        const total = current.sleep.days > 0 ? fmtDuration(current.sleep.avgDuration) + ' в сред.' : '';
+        push(chartCard('🌙', '🌙 Сон по ночам', total, line(sleepData, 'sleep', 'мин', '#6366f1', 'review-grad-sleep', { formatValue: fmtSleepHrs })));
+    }
+
+    // 3. Расходы по дням (приоритет для недельного)
+    const expData = series.filter(d => d.expense > 0).map(d => ({ date: d.date, expense: d.expense }));
+    if (expData.length >= 1) {
+        const total = current.finance.expense.total > 0 ? fmtMoney(current.finance.expense.total) : '';
+        push(chartCard('📉', '📉 Расходы по дням', total, line(expData, 'expense', '₽', '#f43f5e', 'review-grad-exp')));
+    }
+
+    // 4. Калории по дням
     const calData = series.filter(d => d.calories > 0).map(d => ({ date: d.date, cal: d.calories }));
     if (calData.length >= 2) {
         const avg = Math.round(calData.reduce((s, d) => s + d.cal, 0) / calData.length);
         push(chartCard('📘', 'Калории по дням', avg + ' ккал в сред.', line(calData, 'cal', 'ккал', '#f59e0b', 'review-grad-cal'), true));
-    }
-
-    // 3. Сон по ночам
-    const sleepData = series.filter(d => d.sleepMin > 0).map(d => ({ date: d.date, sleep: d.sleepMin }));
-    if (sleepData.length >= 2) {
-        const total = current.sleep.days > 0 ? fmtDuration(current.sleep.avgDuration) + ' в сред.' : '';
-        push(chartCard('🌙', 'Сон по ночам', total, line(sleepData, 'sleep', 'мин', '#6366f1', 'review-grad-sleep', { formatValue: fmtSleepHrs })));
-    }
-
-    // 4. Расходы по дням
-    const expData = series.filter(d => d.expense > 0).map(d => ({ date: d.date, expense: d.expense }));
-    if (expData.length >= 1) {
-        const total = current.finance.expense.total > 0 ? fmtMoney(current.finance.expense.total) : '';
-        push(chartCard('📉', 'Расходы по дням', total, line(expData, 'expense', '₽', '#f43f5e', 'review-grad-exp')));
     }
 
     // 5. Расходы по категориям
@@ -1110,11 +1111,17 @@ function renderCharts(series, current, periodType) {
         push(chartCard('🏋️', 'Объём тренировок', total, line(trData, 'volume', 'кг', '#14b8a6', 'review-grad-train'), true));
     }
 
-    // 7. Доходы по категориям (только месяц — доходы не еженедельные)
-    if (periodType !== 'week' && Object.keys(current.finance.income.byCategory).length > 0) {
+    // 7. Доходы по категориям (только месяц)
+    if (!isWeekly && Object.keys(current.finance.income.byCategory).length > 0) {
         const sectors = buildDonutSectors(current.finance.income.byCategory);
         push(chartCard('📈', 'Доходы по категориям', fmtMoney(current.finance.income.total),
             donut(sectors, current.finance.income.total, fmtMoney(current.finance.income.total), 'всего доходов'), false));
+    }
+
+    // 8. Вес (только месяц, если есть место)
+    if (!isWeekly && wData.length >= 1) {
+        const total = current.nutrition.weightStart ? current.nutrition.weightStart + ' → ' + current.nutrition.weightEnd + ' кг' : '';
+        push(chartCard('⚖️', 'Вес', total, line(wData, 'weight', 'кг', '#10b981', 'review-grad-weight'), true));
     }
 
     if (!cards.length) return '';
