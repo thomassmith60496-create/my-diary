@@ -567,7 +567,119 @@ function pctDir(pct) {
     return pct > 0 ? 'up' : 'down';
 }
 
-function generateFacts(current, prev, periodType) {
+// ============ TRENDS / RECORDS / COMPARE HELPERS ============
+
+// Сравнимые метрики для рекордов, отклонений, трендов и Compare Periods.
+const REVIEW_METRICS = [
+    { key: 'training.workouts', label: 'Тренировки', icon: '🏋️', fmt: v => Math.round(v) + ' шт', higherBetter: true },
+    { key: 'training.volume', label: 'Объём', icon: '🏋️', fmt: v => fmtNum(v) + ' кг', higherBetter: true },
+    { key: 'training.sets', label: 'Подходы', icon: '💪', fmt: v => Math.round(v) + ' шт', higherBetter: true },
+    { key: 'tasks.done', label: 'Задачи', icon: '✅', fmt: v => Math.round(v) + ' шт', higherBetter: true },
+    { key: 'sleep.avgDuration', label: 'Сон', icon: '🌙', fmt: v => fmtDuration(v), higherBetter: true },
+    { key: 'finance.expense.total', label: 'Расходы', icon: '📉', fmt: v => fmtMoney(v), higherBetter: false, skipRecord: true },
+    { key: 'finance.savings.total', label: 'Накопления', icon: '🏦', fmt: v => fmtMoney(v), higherBetter: true },
+    { key: 'activeDays.count', label: 'Активные дни', icon: '🔥', fmt: v => Math.round(v) + ' дн', higherBetter: true },
+    { key: 'nutrition.avgCalories', label: 'Средние ккал', icon: '📘', fmt: v => Math.round(v) + ' ккал', higherBetter: true, skipRecord: true, skipTrend: true },
+    { key: 'nutrition.weightEnd', label: 'Вес', icon: '⚖️', fmt: v => Math.round(v) + ' кг', higherBetter: false }
+];
+
+function getMetric(obj, path) {
+    return path.split('.').reduce((o, k) => (o == null ? undefined : o[k]), obj);
+}
+
+// Собирает сводки за последние N периодов (текущий + назад).
+function collectReviewHistory(periodType) {
+    const allCount = periodType === 'week' ? 52 : 24;
+    const list = [];
+    let ref = getSelectedPeriod(periodType);
+    for (let i = 0; i < allCount; i++) {
+        list.push({ start: ref.start, end: ref.end, label: ref.label });
+        const pr = getPreviousRange(periodType, ref.start);
+        ref = { start: pr.start, end: pr.end, label: pr.label };
+    }
+    list.forEach(p => { p.summary = collectPeriod(p.start, p.end); });
+    return list;
+}
+
+// Личные рекорды: за всё время и в окне 6 периодов.
+function detectRecords(current, history) {
+    const facts = [];
+    REVIEW_METRICS.forEach(m => {
+        if (m.skipRecord) return;
+        const cur = getMetric(current, m.key);
+        if (cur == null || isNaN(cur) || cur === 0) return;
+        const values = history.map(h => getMetric(h.summary, m.key)).filter(v => v != null && !isNaN(v) && v !== 0);
+        if (!values.length) return;
+        const best = m.higherBetter ? Math.max.apply(null, values) : Math.min.apply(null, values);
+        const winValues = history.slice(0, 6).map(h => getMetric(h.summary, m.key)).filter(v => v != null && !isNaN(v) && v !== 0);
+        const winBest = winValues.length ? (m.higherBetter ? Math.max.apply(null, winValues) : Math.min.apply(null, winValues)) : null;
+        const isAllTime = cur === best;
+        const isWindow = winBest != null && cur === winBest && !isAllTime;
+        if (isAllTime) {
+            facts.push({ icon: '🏆', text: 'Личный рекорд за всё время — ' + m.label + ': ' + m.fmt(cur) + '!', type: 'record', weight: 4, margin: Math.abs(cur - best) });
+        } else if (isWindow) {
+            facts.push({ icon: '📌', text: 'Рекорд в окне 6 периодов — ' + m.label + ': ' + m.fmt(cur) + '.', type: 'record', weight: 2, margin: 0 });
+        }
+    });
+    facts.sort((a, b) => (b.weight - a.weight) || ((b.margin || 0) - (a.margin || 0)));
+    return facts.slice(0, 4);
+}
+
+// Заметные отклонения от среднего за предыдущие 6 периодов.
+function detectDeviations(current, history) {
+    const facts = [];
+    const baseline = history.slice(1, 7);
+    REVIEW_METRICS.forEach(m => {
+        if (m.skipRecord) return;
+        const cur = getMetric(current, m.key);
+        if (cur == null || isNaN(cur) || cur === 0) return;
+        const vals = baseline.map(h => getMetric(h.summary, m.key)).filter(v => v != null && !isNaN(v) && v !== 0);
+        if (vals.length < 3) return;
+        const avg = vals.reduce((s, v) => s + v, 0) / vals.length;
+        if (avg === 0) return;
+        const diff = (cur - avg) / avg;
+        if (Math.abs(diff) >= 0.35) {
+            facts.push({ icon: '⚠️', text: 'Заметное отклонение по «' + m.label + '»: ' + m.fmt(cur) + ' — это ' + (diff > 0 ? '+' : '') + Math.round(diff * 100) + '% к среднему за 6 периодов (' + m.fmt(Math.round(avg)) + ').', type: 'deviation' });
+        }
+    });
+    return facts.slice(0, 3);
+}
+
+// Простые устойчивые тренды: сравнение среднего первой и второй половин окна (без ML).
+function computeTrends(history) {
+    const win = history.slice(0, 6);
+    const trends = [];
+    REVIEW_METRICS.forEach(m => {
+        if (m.skipTrend) return;
+        const vals = win.map(h => { const v = getMetric(h.summary, m.key); return (v == null || isNaN(v)) ? null : v; });
+        const present = vals.filter(v => v !== null && v !== 0);
+        if (present.length < 4) return;
+        const fi = vals.findIndex(v => v !== null);
+        const li = vals.length - 1 - [...vals].reverse().findIndex(v => v !== null);
+        const half = Math.floor(vals.length / 2);
+        const firstHalf = vals.slice(fi, fi + half).filter(v => v !== null);
+        const secondHalf = vals.slice(li - half + 1, li + 1).filter(v => v !== null);
+        if (!firstHalf.length || !secondHalf.length) return;
+        const fAvg = firstHalf.reduce((s, v) => s + v, 0) / firstHalf.length;
+        const sAvg = secondHalf.reduce((s, v) => s + v, 0) / secondHalf.length;
+        if (fAvg === 0) return;
+        const change = (sAvg - fAvg) / fAvg;
+        let dir = 'flat';
+        if (change > 0.05) dir = 'up';
+        else if (change < -0.05) dir = 'down';
+        if (dir === 'flat') return;
+        const first = vals[fi], last = vals[li];
+        trends.push({
+            metric: m, dir: dir,
+            changePct: Math.round(change * 100),
+            first: m.fmt(Math.round(first)),
+            last: m.fmt(Math.round(last))
+        });
+    });
+    return trends;
+}
+
+function generateFacts(current, prev, periodType, history) {
     const facts = [];
 
     if (!prev) {
@@ -634,6 +746,16 @@ function generateFacts(current, prev, periodType) {
         }
     });
 
+    // tags that disappeared compared to previous period
+    Object.keys(prev.tasks.byTag).forEach(tag => {
+        if (!current.tasks.byTag[tag]) {
+            const pp = prev.tasks.byTag[tag];
+            if (pp.total > 0) {
+                facts.push({ icon: '🏷', text: 'Тег #' + esc(tag) + ' в этом периоде исчез (было ' + pp.done + '/' + pp.total + ').', type: 'removed' });
+            }
+        }
+    });
+
     // --- Расходы по категориям ---
     const catFacts = [];
     const allCats = new Set(Object.keys(current.finance.expense.byCategory));
@@ -643,7 +765,7 @@ function generateFacts(current, prev, periodType) {
         const pc = prev.finance.expense.byCategory[cat] || 0;
         if (cc === 0 && pc === 0) return;
         if (cc === 0) {
-            catFacts.push({ cat, pct: null, text: 'Расходы на категорию «' + esc(cat) + '» обнулились (было ' + fmtMoney(pc) + ').', type: 'increase' });
+            catFacts.push({ cat, pct: null, text: 'Расходы на категорию «' + esc(cat) + '» обнулились (было ' + fmtMoney(pc) + ').', type: 'removed' });
             return;
         }
         if (pc === 0) {
@@ -720,6 +842,12 @@ function generateFacts(current, prev, periodType) {
             text: 'Активных дней: ' + current.activeDays.count + ' из ' + current.activeDays.total + ' (' + (adDelta > 0 ? '+' : '') + adDelta + ').',
             type: adDelta > 0 ? 'increase' : 'decrease'
         });
+    }
+
+    // --- Рекорды (за всё время и в окне 6 периодов) ---
+    if (history && history.length) {
+        detectRecords(current, history).forEach(r => facts.push(r));
+        detectDeviations(current, history).forEach(d => facts.push(d));
     }
 
     if (facts.length === 0) {
@@ -1003,13 +1131,46 @@ function renderHeroScore(score, current, prev, periodType, firstFact) {
     const color = scoreColor(score.overall);
     const pct = Math.round(score.overall * 10);
     const badge = firstFact ? '🏆 ' + firstFact.text : '🏆 Главное за период';
-    const partsHtml = score.parts.map(p =>
-        '<div class="review-hero-part" title="' + esc(p.note) + '">' +
+
+    const prevScore = (prev && score) ? computePeriodScore(prev, null, periodType) : null;
+    const prevParts = prevScore && prevScore.parts.length ? prevScore.parts : null;
+
+    const partsHtml = score.parts.map(p => {
+        let deltaHtml = '';
+        if (prevParts) {
+            const pp = prevParts.find(x => x.key === p.key);
+            if (pp && pp.score !== p.score) {
+                const d = Math.round((p.score - pp.score) * 10) / 10;
+                const dcls = d > 0 ? 'up' : 'down';
+                deltaHtml = '<span class="review-hero-part-delta trend-' + dcls + '">' + (d > 0 ? '+' : '') + d.toFixed(1) + '</span>';
+            }
+        }
+        return '<div class="review-hero-part" title="' + esc(p.note) + '">' +
             '<span class="review-hero-part-icon">' + p.icon + '</span>' +
             '<span class="review-hero-part-label">' + esc(p.label) + '</span>' +
             '<div class="review-hero-part-bar"><i style="width:' + Math.round(p.score * 10) + '%;background:' + scoreColor(p.score) + '"></i></div>' +
             '<span class="review-hero-part-score">' + p.score.toFixed(1) + '</span>' +
-        '</div>').join('');
+            deltaHtml +
+        '</div>';
+    }).join('');
+
+    let partsNote = '';
+    if (prevParts) {
+        const contribs = [];
+        prevParts.forEach(pp => {
+            const cp = score.parts.find(x => x.key === pp.key);
+            if (cp) contribs.push({ label: cp.label, c: (cp.score - pp.score) * cp.weight });
+        });
+        contribs.sort((a, b) => b.c - a.c);
+        const raise = contribs.filter(x => x.c > 0.05)[0];
+        const lower = contribs.filter(x => x.c < -0.05).sort((a, b) => a.c - b.c)[0];
+        if (raise || lower) {
+            partsNote = '<div class="review-hero-parts-note">';
+            if (raise) partsNote += 'Повысило: <b>' + esc(raise.label) + '</b>';
+            if (lower) partsNote += (raise ? ' · ' : '') + 'Понизило: <b>' + esc(lower.label) + '</b>';
+            partsNote += '</div>';
+        }
+    }
 
     return '' +
         '<div class="review-hero">' +
@@ -1022,6 +1183,7 @@ function renderHeroScore(score, current, prev, periodType, firstFact) {
                 '<div class="review-hero-verdict">' + esc(generateVerdict(current, prev, score, periodType)) + '</div>' +
                 '<div class="review-hero-badge">' + esc(badge) + '</div>' +
                 '<div class="review-hero-parts">' + partsHtml + '</div>' +
+                partsNote +
             '</div>' +
         '</div>';
 }
@@ -1130,6 +1292,114 @@ function renderCharts(series, current, periodType) {
         '<div class="review-charts-grid">' + cards.join('') + '</div>';
 }
 
+// ============ FACTS GROUPING ============
+
+function renderFactsGrouped(facts) {
+    if (!facts.length) return '<div class="review-empty-facts">Нет данных для анализа.</div>';
+    const groups = [
+        { types: ['record'], title: '🏆 Рекорды' },
+        { types: ['increase'], title: '📈 Рост' },
+        { types: ['decrease'], title: '📉 Снижение' },
+        { types: ['new'], title: '🆕 Новое' },
+        { types: ['removed'], title: '🗑 Исчезло' },
+        { types: ['deviation'], title: '⚠️ Заметные отклонения' },
+        { types: ['same', 'info'], title: 'ℹ️ Прочее' }
+    ];
+    let html = '';
+    groups.forEach(g => {
+        const items = facts.filter(f => g.types.indexOf(f.type) >= 0);
+        if (!items.length) return;
+        html += '<div class="review-fact-group">' +
+            '<div class="review-fact-group-title">' + g.title + '</div>' +
+            '<div class="review-facts-list">' +
+            items.map(f => '<div class="review-fact fact-' + f.type + '">' +
+                '<span class="review-fact-icon">' + f.icon + '</span>' +
+                '<span class="review-fact-text">' + esc(f.text) + '</span>' +
+            '</div>').join('') +
+            '</div></div>';
+    });
+    return html;
+}
+
+// ============ TRENDS SECTION ============
+
+function renderTrendsSection(history, periodType) {
+    const trends = computeTrends(history);
+    if (!trends.length) return '';
+    const items = trends.map(t => {
+        const arrow = t.dir === 'up' ? '▲' : (t.dir === 'down' ? '▼' : '–');
+        const cls = t.dir === 'up' ? 'up' : (t.dir === 'down' ? 'down' : 'same');
+        return '<div class="review-trend-item trend-' + cls + '">' +
+            '<span class="review-trend-icon">' + t.metric.icon + '</span>' +
+            '<span class="review-trend-label">' + esc(t.metric.label) + '</span>' +
+            '<span class="review-trend-dir">' + arrow + ' ' + (t.dir === 'up' ? 'растёт' : 'падает') + '</span>' +
+            '<span class="review-trend-change">' + (t.changePct > 0 ? '+' : '') + t.changePct + '% за 6 периодов</span>' +
+            '<span class="review-trend-range">' + t.first + ' → ' + t.last + '</span>' +
+        '</div>';
+    }).join('');
+    return '<details class="review-section">' +
+        '<summary class="review-section-summary">📈 Тенденции <span class="review-section-hint">устойчивые изменения за 6 периодов</span></summary>' +
+        '<div class="review-section-body"><div class="review-trends-grid">' + items + '</div>' +
+        '<div class="review-trends-note">Рассчитано сравнением среднего первой и второй половин окна без ML.</div>' +
+        '</div></details>';
+}
+
+// ============ COMPARE PERIODS SECTION ============
+
+function renderCompareSection(current, prev, history, periodType) {
+    if (!prev) return '';
+    const baseline = history.slice(1, 7);
+    function avgMetric(key) {
+        const vals = baseline.map(h => getMetric(h.summary, key)).filter(v => v != null && !isNaN(v) && v !== 0);
+        return vals.length ? vals.reduce((s, v) => s + v, 0) / vals.length : null;
+    }
+    const rows = REVIEW_METRICS.filter(m => !m.skipCompare).map(m => {
+        const cur = getMetric(current, m.key);
+        const pv = getMetric(prev, m.key);
+        const av = avgMetric(m.key);
+        if ((cur == null || cur === 0 || isNaN(cur)) && (pv == null || pv === 0 || isNaN(pv))) return '';
+        const pct = (pv && pv !== 0) ? pctChange(pv, cur) : null;
+        const pctCls = pct === null ? 'new' : (pct > 0 ? 'up' : 'down');
+        const avTxt = av != null ? m.fmt(Math.round(av)) : '—';
+        const curTxt = (cur != null && !isNaN(cur)) ? m.fmt(Math.round(cur)) : '—';
+        const pvTxt = (pv != null && !isNaN(pv)) ? m.fmt(Math.round(pv)) : '—';
+        return '<tr>' +
+            '<td class="rc-name">' + m.icon + ' ' + esc(m.label) + '</td>' +
+            '<td class="rc-val">' + curTxt + '</td>' +
+            '<td class="rc-val">' + pvTxt + '</td>' +
+            '<td class="rc-pct trend-' + pctCls + '">' + (pct === null ? 'впервые' : (pct > 0 ? '+' : '') + pct + '%') + '</td>' +
+            '<td class="rc-val rc-avg">' + avTxt + '</td>' +
+        '</tr>';
+    }).join('');
+    const curSeries = (current.dateRange) ? collectDailySeries(current.dateRange.start, current.dateRange.end) : [];
+    const prevSeries = (prev.dateRange) ? collectDailySeries(prev.dateRange.start, prev.dateRange.end) : [];
+    const mline = (series, opts) => (typeof window.renderMultiLineChart === 'function') ? window.renderMultiLineChart(series, Object.assign({}, CHART_TEXT, opts || {})) : '';
+    let charts = '';
+    const calCur = curSeries.filter(d => d.calories > 0).map(d => ({ date: d.date, cal: d.calories }));
+    const calPrev = prevSeries.filter(d => d.calories > 0).map(d => ({ date: d.date, cal: d.calories }));
+    if (calCur.length >= 2 || calPrev.length >= 2) {
+        charts += chartCard('📘', 'Калории: текущий vs предыдущий', '', mline([
+            { data: calCur, field: 'cal', color: '#f59e0b', label: 'Текущий' },
+            { data: calPrev, field: 'cal', color: '#94a3b8', label: 'Предыдущий' }
+        ], { title: 'ккал' }), true);
+    }
+    const expCur = curSeries.filter(d => d.expense > 0).map(d => ({ date: d.date, expense: d.expense }));
+    const expPrev = prevSeries.filter(d => d.expense > 0).map(d => ({ date: d.date, expense: d.expense }));
+    if (expCur.length >= 1 || expPrev.length >= 1) {
+        charts += chartCard('📉', 'Расходы: текущий vs предыдущий', '', mline([
+            { data: expCur, field: 'expense', color: '#f43f5e', label: 'Текущий' },
+            { data: expPrev, field: 'expense', color: '#94a3b8', label: 'Предыдущий' }
+        ], { title: '₽' }), true);
+    }
+    const chartsHtml = charts ? '<div class="review-charts-grid">' + charts + '</div>' : '';
+    return '<details class="review-section">' +
+        '<summary class="review-section-summary">🆚 Compare Periods <span class="review-section-hint">текущий vs предыдущий · ср. за 6</span></summary>' +
+        '<div class="review-section-body">' +
+            '<table class="review-compare-table"><thead><tr><th>Показатель</th><th>Текущий</th><th>Предыдущий</th><th>Δ%</th><th>Среднее за 6</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+            chartsHtml +
+        '</div></details>';
+}
+
 function renderReviewHTML(periodType, current, prev) {
     const selectId = periodType === 'week' ? 'review-week-select' : 'review-month-select';
     const enumFn = periodType === 'week' ? enumWeeks : enumMonths;
@@ -1143,16 +1413,10 @@ function renderReviewHTML(periodType, current, prev) {
         ? getSelectedPeriod('week').label
         : getSelectedPeriod('month').label;
 
-    const facts = prev ? generateFacts(current, prev, periodType) : generateFacts(current, null, periodType);
+    const history = collectReviewHistory(periodType);
+    const facts = prev ? generateFacts(current, prev, periodType, history) : generateFacts(current, null, periodType, history);
     const factsHtml = '<h3 class="review-facts-title">🔍 Что изменилось?</h3>' +
-        (facts.length ? '<div class="review-facts-list">' +
-            facts.map(f =>
-                '<div class="review-fact fact-' + f.type + '">' +
-                    '<span class="review-fact-icon">' + f.icon + '</span>' +
-                    '<span class="review-fact-text">' + esc(f.text) + '</span>' +
-                '</div>').join('') +
-            '</div>'
-        : '<div class="review-empty-facts">Нет данных для анализа.</div>');
+        (facts.length ? renderFactsGrouped(facts) : '<div class="review-empty-facts">Нет данных для анализа.</div>');
 
     const series = (current && current.dateRange) ? collectDailySeries(current.dateRange.start, current.dateRange.end) : [];
     const score = computePeriodScore(current, prev, periodType);
@@ -1175,6 +1439,8 @@ function renderReviewHTML(periodType, current, prev) {
         heroHtml +
         '<div class="review-stat-grid">' + renderStatGrid(current, prev) + '</div>' +
         chartsHtml +
+        (prev ? renderTrendsSection(history, periodType) : '') +
+        (prev ? renderCompareSection(current, prev, history, periodType) : '') +
         '<div class="review-facts">' + factsHtml + '</div>';
 }
 
@@ -1337,10 +1603,35 @@ window.exportReview = function(periodType, format) {
     lines.push('Сон: ' + fmtDuration(current.sleep.avgDuration) + ' в сред. (' + current.sleep.days + ' дней)');
 
     if (prev) {
+        const history = collectReviewHistory(periodType);
         lines.push('');
         lines.push('--- Что изменилось? ---');
-        const facts = generateFacts(current, prev, periodType);
+        const facts = generateFacts(current, prev, periodType, history);
         facts.forEach(f => lines.push((f.icon || '•') + ' ' + f.text));
+
+        lines.push('');
+        lines.push('--- Тенденции (6 периодов) ---');
+        const trends = computeTrends(history);
+        if (trends.length) {
+            trends.forEach(t => lines.push('  ' + t.metric.icon + ' ' + t.metric.label + ': ' + (t.dir === 'up' ? 'растёт' : 'падает') + ' (' + (t.changePct > 0 ? '+' : '') + t.changePct + '%) — ' + t.first + ' → ' + t.last));
+        } else {
+            lines.push('  Нет устойчивых трендов.');
+        }
+
+        lines.push('');
+        lines.push('--- Compare Periods (текущий vs предыдущий, ср. за 6) ---');
+        REVIEW_METRICS.filter(m => !m.skipCompare).forEach(m => {
+            const cur = getMetric(current, m.key);
+            const pv = getMetric(prev, m.key);
+            if ((cur == null || cur === 0 || isNaN(cur)) && (pv == null || pv === 0 || isNaN(pv))) return;
+            const bl = history.slice(1, 7).map(h => getMetric(h.summary, m.key)).filter(v => v != null && !isNaN(v) && v !== 0);
+            const av = bl.length ? Math.round(bl.reduce((s, v) => s + v, 0) / bl.length) : null;
+            const pct = (pv && pv !== 0) ? pctChange(pv, cur) : null;
+            lines.push('  ' + m.label + ': тек ' + (cur != null && !isNaN(cur) ? Math.round(cur) : '—') +
+                ' / пред ' + (pv != null && !isNaN(pv) ? Math.round(pv) : '—') +
+                ' / Δ ' + (pct === null ? 'впервые' : (pct > 0 ? '+' : '') + pct + '%') +
+                ' / ср.6 ' + (av != null ? av : '—'));
+        });
     }
 
     const text = lines.join('\n');
@@ -1355,7 +1646,7 @@ window.exportReview = function(periodType, format) {
 
 function exportReviewPDF(periodType) {
     const { p, current, prev } = collectWithPrev(periodType);
-    const content = renderReviewHTML(periodType, current, prev);
+    const content = renderReviewHTML(periodType, current, prev).replace(/<details class="review-section">/g, '<details class="review-section" open>');
 
     const cssPromise = (function() {
         if (typeof fetch === 'function') {
@@ -1416,6 +1707,13 @@ window.__review = {
     renderReviewHTML: renderReviewHTML,
     renderCharts: renderCharts,
     renderHeroScore: renderHeroScore,
+    renderFactsGrouped: renderFactsGrouped,
+    renderTrendsSection: renderTrendsSection,
+    renderCompareSection: renderCompareSection,
+    computeTrends: computeTrends,
+    detectRecords: detectRecords,
+    detectDeviations: detectDeviations,
+    collectReviewHistory: collectReviewHistory,
     buildDonutSectors: buildDonutSectors,
     getSelectedPeriod: getSelectedPeriod,
     getWeekRange: getWeekRange,

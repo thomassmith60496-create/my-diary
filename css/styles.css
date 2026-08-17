@@ -6787,3 +6787,224 @@ header .macro-badge {
         grid-template-columns: 1fr;
     }
 }
+
+/* === REVIEW: FACT GROUPS, TRENDS, COMPARE, HERO DELTAS === */
+
+.review-fact.record {
+    border-left-color: #f59e0b;
+    background: #fffbeb;
+}
+
+.review-fact.removed {
+    border-left-color: var(--color-gray-400);
+    background: #f8fafc;
+}
+
+.review-fact.deviation {
+    border-left-color: #f97316;
+    background: #fff7ed;
+}
+
+.review-fact-group {
+    margin-bottom: var(--spacing-md);
+}
+
+.review-fact-group-title {
+    font-size: var(--font-size-sm);
+    font-weight: 700;
+    color: var(--color-gray-600);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin: var(--spacing-md) 0 var(--spacing-xs);
+}
+
+.review-section {
+    background: white;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-gray-200);
+    box-shadow: var(--shadow-sm);
+    padding: var(--spacing-lg);
+    margin-bottom: var(--spacing-lg);
+}
+
+.review-section > summary {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    cursor: pointer;
+    font-size: var(--font-size-lg);
+    font-weight: 700;
+    color: var(--color-gray-900);
+    list-style: none;
+    user-select: none;
+}
+
+.review-section > summary::-webkit-details-marker {
+    display: none;
+}
+
+.review-section > summary::before {
+    content: "▶";
+    font-size: 10px;
+    color: var(--color-gray-400);
+    transition: transform 0.2s ease;
+}
+
+.review-section[open] > summary::before {
+    transform: rotate(90deg);
+}
+
+.review-section-hint {
+    margin-left: auto;
+    font-size: var(--font-size-xs);
+    font-weight: 500;
+    color: var(--color-gray-500);
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+.review-section-body {
+    margin-top: var(--spacing-md);
+}
+
+.review-trends-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--spacing-sm);
+}
+
+.review-trend-item {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px 10px;
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-radius: var(--radius-md);
+    background: var(--color-gray-50);
+    border-left: 3px solid var(--color-gray-300);
+}
+
+.review-trend-item.trend-up {
+    border-left-color: var(--color-success);
+    background: #f0fdf4;
+}
+
+.review-trend-item.trend-down {
+    border-left-color: var(--color-danger);
+    background: #fef2f2;
+}
+
+.review-trend-icon {
+    font-size: var(--font-size-lg);
+}
+
+.review-trend-label {
+    font-weight: 600;
+    color: var(--color-gray-700);
+}
+
+.review-trend-dir {
+    font-size: var(--font-size-sm);
+    font-weight: 700;
+}
+
+.review-trend-item.trend-up .review-trend-dir {
+    color: var(--color-success-dark);
+}
+
+.review-trend-item.trend-down .review-trend-dir {
+    color: var(--color-danger-dark);
+}
+
+.review-trend-change {
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+    color: var(--color-gray-600);
+}
+
+.review-trend-range {
+    width: 100%;
+    font-size: var(--font-size-xs);
+    color: var(--color-gray-500);
+}
+
+.review-trends-note {
+    margin-top: var(--spacing-sm);
+    font-size: var(--font-size-xs);
+    color: var(--color-gray-400);
+    font-style: italic;
+}
+
+.review-compare-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: var(--spacing-md);
+    font-size: var(--font-size-sm);
+}
+
+.review-compare-table th,
+.review-compare-table td {
+    text-align: right;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--color-gray-200);
+}
+
+.review-compare-table th {
+    color: var(--color-gray-500);
+    font-weight: 600;
+    font-size: var(--font-size-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.review-compare-table th:first-child,
+.review-compare-table td.rc-name {
+    text-align: left;
+}
+
+.review-compare-table td.rc-name {
+    color: var(--color-gray-700);
+    font-weight: 600;
+}
+
+.review-compare-table td.rc-avg {
+    color: var(--color-gray-400);
+}
+
+.review-compare-table td.rc-pct {
+    font-weight: 700;
+}
+
+.review-hero-part-delta {
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+    margin-left: 4px;
+    padding: 1px 6px;
+    border-radius: var(--radius-full);
+}
+
+.review-hero-part-delta.trend-up {
+    color: var(--color-success-dark);
+    background: #dcfce8;
+}
+
+.review-hero-part-delta.trend-down {
+    color: var(--color-danger-dark);
+    background: #fee2e2;
+}
+
+.review-hero-parts-note {
+    margin-top: var(--spacing-sm);
+    font-size: var(--font-size-sm);
+    color: var(--color-gray-700);
+}
+
+.review-hero-parts-note b {
+    color: var(--color-gray-900);
+}
+
+@media (max-width: 900px) {
+    .review-trends-grid {
+        grid-template-columns: 1fr;
+    }
+}

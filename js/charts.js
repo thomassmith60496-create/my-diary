@@ -134,3 +134,74 @@ window.renderDonutChart = function(sectors, total, centerText, centerSubtext) {
     '</svg>' +
     '<div style="flex:1;min-width:150px;">' + legendHtml + '</div>';
 }
+
+/**
+ * Мульти-серийный SVG-линейный график (для сравнения периодов)
+ * @param {Array} series - [{ data, field, color, label }]
+ * @param {Object} options - настройки (gridColor, textColor, titleColor, title, width)
+ */
+window.renderMultiLineChart = function(series, options) {
+    options = options || {};
+    var width = options.width || 640;
+    var height = 240;
+    var padding = { top: 28, right: 20, bottom: 44, left: 44 };
+    var chartW = width - padding.left - padding.right;
+    var chartH = height - padding.top - padding.bottom;
+
+    var allVals = [];
+    series.forEach(function(s) {
+        (s.data || []).forEach(function(d) {
+            var v = d[s.field];
+            if (!isNaN(v) && v != null) allVals.push(v);
+        });
+    });
+    if (!allVals.length) return '<div class="chart-empty">Нет данных для отображения</div>';
+
+    var minVal = Math.min.apply(null, allVals);
+    var maxVal = Math.max.apply(null, allVals);
+    var valRange = Math.max(maxVal - minVal, 0.01);
+    var yMin = Math.max(0, minVal - Math.max(valRange * 0.1, 0.5));
+    var yMax = maxVal + Math.max(valRange * 0.15, 0.5);
+    var maxLen = Math.max.apply(null, series.map(function(s) { return (s.data || []).length; }));
+    var xStep = maxLen > 1 ? (chartW - 24) / (maxLen - 1) : chartW / 2;
+
+    function xAt(i) { return padding.left + 12 + (maxLen > 1 ? i * xStep : chartW / 2); }
+    function yAt(v) { return padding.top + chartH - ((v - yMin) / (yMax - yMin)) * chartH; }
+
+    var gridColor = options.gridColor || '#e2e8f0';
+    var textColor = options.textColor || '#64748b';
+    var titleColor = options.titleColor || '#0f172a';
+
+    var gridLines = [];
+    for (var i = 0; i <= 4; i++) {
+        var val = yMin + (yMax - yMin) * (i / 4);
+        var y = padding.top + chartH - (i / 4) * chartH;
+        gridLines.push('<line x1="' + padding.left + '" y1="' + y + '" x2="' + (padding.left + chartW) + '" y2="' + y + '" stroke="' + gridColor + '" stroke-width="1" stroke-dasharray="2,4"/>');
+        gridLines.push('<text x="' + (padding.left - 6) + '" y="' + (y + 3) + '" text-anchor="end" font-size="8" fill="' + textColor + '" font-weight="600">' + Math.round(val) + '</text>');
+    }
+
+    var paths = '';
+    series.forEach(function(s) {
+        var data = s.data || [];
+        if (!data.length) return;
+        var pts = data.map(function(d, i) { return { x: xAt(i), y: yAt(d[s.field]), value: d[s.field], date: d.date }; });
+        var linePath = pts.map(function(p, i) { return (i === 0 ? 'M' : 'L') + ' ' + p.x + ' ' + p.y; }).join(' ');
+        paths += '<path d="' + linePath + '" fill="none" stroke="' + s.color + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
+        paths += pts.map(function(p) { return '<circle cx="' + p.x + '" cy="' + p.y + '" r="2.5" fill="' + s.color + '" stroke="white" stroke-width="1"/>'; }).join('');
+    });
+
+    var legend = series.map(function(s) {
+        return '<span style="display:inline-flex;align-items:center;gap:4px;margin-right:12px;font-size:11px;color:#1e293b;">' +
+            '<span style="width:10px;height:3px;background:' + s.color + ';display:inline-block;border-radius:2px;"></span>' + s.label + '</span>';
+    }).join('');
+
+    var titleHtml = options.title ? '<text x="' + (width / 2) + '" y="16" text-anchor="middle" font-size="12" font-weight="700" fill="' + titleColor + '">' + options.title + '</text>' : '';
+
+    return '<div class="dashboard-chart"><svg class="chart-svg" viewBox="0 0 ' + width + ' ' + height + '" preserveAspectRatio="xMidYMid meet">' +
+        gridLines.join('') +
+        '<line x1="' + padding.left + '" y1="' + padding.top + '" x2="' + padding.left + '" y2="' + (padding.top + chartH) + '" stroke="' + textColor + '" stroke-width="1.5"/>' +
+        '<line x1="' + padding.left + '" y1="' + (padding.top + chartH) + '" x2="' + (padding.left + chartW) + '" y2="' + (padding.top + chartH) + '" stroke="' + textColor + '" stroke-width="1.5"/>' +
+        paths +
+        titleHtml +
+    '</svg><div style="margin-top:4px;">' + legend + '</div></div>';
+};
