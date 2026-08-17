@@ -37,7 +37,12 @@ async function handleWorkFolderSelected(input) {
         
         for (let i = 0; i < files.length; i++) {
             const file = files[i];
-            const relPath = file.webkitRelativePath || file.name;
+            const fullPath = file.webkitRelativePath || file.name;
+            
+            // Убираем имя корневой папки vault из пути (первый сегмент)
+            const parts = fullPath.split('/');
+            const vaultRoot = parts[0];
+            const relPath = parts.slice(1).join('/');
             
             // Фильтруем: только .md в нужных папках
             if (!relPath.endsWith('.md')) continue;
