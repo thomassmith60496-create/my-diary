@@ -645,33 +645,43 @@ function detectDeviations(current, history) {
     return facts.slice(0, 3);
 }
 
-// Простые устойчивые тренды: сравнение среднего первой и второй половин окна (без ML).
+// Простые устойчивые тренды: направление по крайним точкам окна (старое -> новое),
+// устойчивость подтверждается совпадением со сравнением средних половин (без ML).
 function computeTrends(history) {
-    const win = history.slice(0, 6);
+    // history[0] — текущий (самый свежий) период, поэтому разворачиваем в хронологию: старые -> новые.
+    const chrono = history.slice(0, 6).map(h => h.summary).reverse();
     const trends = [];
     REVIEW_METRICS.forEach(m => {
         if (m.skipTrend) return;
-        const vals = win.map(h => { const v = getMetric(h.summary, m.key); return (v == null || isNaN(v)) ? null : v; });
+        const vals = chrono.map(s => { const v = getMetric(s, m.key); return (v == null || isNaN(v)) ? null : v; });
         const present = vals.filter(v => v !== null && v !== 0);
         if (present.length < 4) return;
         const fi = vals.findIndex(v => v !== null);
         const li = vals.length - 1 - [...vals].reverse().findIndex(v => v !== null);
         const half = Math.floor(vals.length / 2);
-        const firstHalf = vals.slice(fi, fi + half).filter(v => v !== null);
-        const secondHalf = vals.slice(li - half + 1, li + 1).filter(v => v !== null);
-        if (!firstHalf.length || !secondHalf.length) return;
-        const fAvg = firstHalf.reduce((s, v) => s + v, 0) / firstHalf.length;
-        const sAvg = secondHalf.reduce((s, v) => s + v, 0) / secondHalf.length;
-        if (fAvg === 0) return;
-        const change = (sAvg - fAvg) / fAvg;
+        const olderHalf = vals.slice(fi, fi + half).filter(v => v !== null);
+        const recentHalf = vals.slice(li - half + 1, li + 1).filter(v => v !== null);
+        if (!olderHalf.length || !recentHalf.length) return;
+        const first = vals[fi];
+        const last = vals[li];
+        // Направление и % по крайним точкам (чтобы совпадало с показанным диапазоном).
+        const ep = Math.abs(first) > 1e-9 ? (last - first) / Math.abs(first) * 100 : null;
+        const oAvg = olderHalf.reduce((s, v) => s + v, 0) / olderHalf.length;
+        const rAvg = recentHalf.reduce((s, v) => s + v, 0) / recentHalf.length;
+        const halfDir = Math.sign(rAvg - oAvg);
+        const epDir = ep == null ? 0 : Math.sign(ep);
+        // Тренд устойчив, только если половины подтверждают направление крайних точек.
+        if (ep != null && halfDir !== 0 && epDir !== 0 && halfDir !== epDir) return;
+        const changePct = ep == null
+            ? Math.round((rAvg - oAvg) / (Math.abs(oAvg) > 1e-9 ? Math.abs(oAvg) : 1) * 100)
+            : Math.round(ep);
         let dir = 'flat';
-        if (change > 0.05) dir = 'up';
-        else if (change < -0.05) dir = 'down';
+        if (changePct > 5) dir = 'up';
+        else if (changePct < -5) dir = 'down';
         if (dir === 'flat') return;
-        const first = vals[fi], last = vals[li];
         trends.push({
             metric: m, dir: dir,
-            changePct: Math.round(change * 100),
+            changePct: changePct,
             first: m.fmt(Math.round(first)),
             last: m.fmt(Math.round(last))
         });
