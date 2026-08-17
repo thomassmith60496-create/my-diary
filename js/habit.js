@@ -335,10 +335,13 @@ function dayCell(habit, k){
   const target = habit.goal.count;
   if(habit.goal.period === 'day'){
     const complete = cnt >= target;
-    return '<div class="ht-cell day'+(complete?' complete':'')+'">' +
-      '<button class="ht-step" type="button" onclick="window.habitDec(\''+habit.id+'\',\''+k+'\')"'+(cnt<=0?' disabled':'')+' aria-label="минус">−</button>' +
-      '<span class="ht-count">'+cnt+'/'+target+'</span>' +
-      '<button class="ht-step" type="button" onclick="window.habitInc(\''+habit.id+'\',\''+k+'\')"'+(cnt>=target?' disabled':'')+' aria-label="плюс">+</button>' +
+    const miss = !complete && parseKey(k) < parseKey(todayKey());
+    return '<div class="ht-cell'+(complete?' full':'')+(miss?' miss':'')+'">' +
+      '<span class="ht-steps">' +
+        '<button class="ht-step" type="button" onclick="window.habitDec(\''+habit.id+'\',\''+k+'\')"'+(cnt<=0?' disabled':'')+' aria-label="минус">−</button>' +
+        '<span class="ht-count">'+cnt+'/'+target+'</span>' +
+        '<button class="ht-step" type="button" onclick="window.habitInc(\''+habit.id+'\',\''+k+'\')"'+(cnt>=target?' disabled':'')+' aria-label="плюс">+</button>' +
+      '</span>' +
     '</div>';
   }
   const done = cnt >= 1;
