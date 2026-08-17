@@ -99,10 +99,11 @@ var gridColor = options.gridColor || '#a7f3d0';
  * @param {string} centerSubtext - подтекст в центре
  * @returns {string} HTML/SVG строка
  */
-window.renderDonutChart = function(sectors, total, centerText, centerSubtext) {
+window.renderDonutChart = function(sectors, total, centerText, centerSubtext, unit) {
     var outerR = 90, innerR = 50;
     var cx = 120, cy = 120;
     var cumulativeAngle = 0;
+    unit = (unit === undefined) ? ' ₽' : unit;
     
     function polarToCartesian(cx, cy, r, angleDeg) {
         var rad = (angleDeg - 90) * Math.PI / 180;
@@ -123,7 +124,7 @@ window.renderDonutChart = function(sectors, total, centerText, centerSubtext) {
         return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">' +
             '<div style="width:12px;height:12px;border-radius:3px;background:' + s.color + ';flex-shrink:0;"></div>' +
             '<span style="font-size:12px;color:#1e293b;">' + s.name + '</span>' +
-            '<span style="font-size:12px;font-weight:700;color:#1e293b;margin-left:auto;">' + Math.round(s.value).toLocaleString('ru-RU') + ' ₽ (' + pct + '%)</span>' +
+            '<span style="font-size:12px;font-weight:700;color:#1e293b;margin-left:auto;">' + Math.round(s.value).toLocaleString('ru-RU') + unit + ' (' + pct + '%)</span>' +
         '</div>';
     }).join('');
     

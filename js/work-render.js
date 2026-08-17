@@ -384,7 +384,7 @@ function renderWorkAnalytics() {
         { name: 'Закрыто', value: stats.closedTasks, color: '#16a34a', startAngle: 0, angle: stats.totalTasks ? stats.closedTasks / stats.totalTasks * 360 : 0 },
         { name: 'Открыто', value: stats.openTasks, color: '#3b82f6', startAngle: stats.totalTasks ? stats.closedTasks / stats.totalTasks * 360 : 0, angle: stats.totalTasks ? stats.openTasks / stats.totalTasks * 360 : 0 }
     ];
-    const donutHtml = renderDonutChart(donutSectors, stats.totalTasks, stats.completionRate + '%', 'completion rate');
+    const donutHtml = renderDonutChart(donutSectors, stats.totalTasks, stats.completionRate + '%', 'completion rate', '');
     
     // Задачи по статусам — SVG bars
     const statusData = Object.entries(stats.byStatus).map(([s, c]) => ({ label: s, value: c }));
@@ -466,17 +466,21 @@ function renderSVGBars(data, color) {
     const maxVal = Math.max(...data.map(d => d.value), 1);
     const barHeight = 20;
     const gap = 6;
+    const labelWidth = 140;
+    const valueWidth = 40;
+    const chartWidth = 300;
+    const totalWidth = labelWidth + chartWidth + valueWidth;
     const height = data.length * (barHeight + gap) + 20;
     
     const bars = data.map((d, i) => {
-        const width = Math.max(d.value / maxVal * 100, 2);
+        const width = Math.max(d.value / maxVal * chartWidth, 2);
         const y = 10 + i * (barHeight + gap);
-        return `<rect x="0" y="${y}" width="${width}%" height="${barHeight}" rx="4" fill="${color}" opacity="0.85"/>
-            <text x="${width + 6}%" y="${y + barHeight - 5}" font-size="10" fill="#475569" font-weight="600">${d.value}</text>
-            <text x="0" y="${y - 3}" font-size="9" fill="#64748b">${esc(d.label)}</text>`;
+        return `<rect x="${labelWidth}" y="${y}" width="${width}" height="${barHeight}" rx="4" fill="${color}" opacity="0.85"/>
+            <text x="${labelWidth + width + 6}" y="${y + barHeight - 5}" font-size="11" fill="#475569" font-weight="600">${d.value}</text>
+            <text x="0" y="${y + barHeight - 5}" font-size="11" fill="#64748b">${esc(d.label)}</text>`;
     }).join('');
     
-    return `<svg class="work-svg-bars" viewBox="0 0 100 ${height}" preserveAspectRatio="none" style="width:100%;height:${height}px">${bars}</svg>`;
+    return `<svg class="work-svg-bars" viewBox="0 0 ${totalWidth} ${height}" preserveAspectRatio="xMidYMid meet" style="width:100%;height:auto;max-width:${totalWidth}px">${bars}</svg>`;
 }
 
 // ============================================
