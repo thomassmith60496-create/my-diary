@@ -1250,14 +1250,14 @@ function renderCharts(series, current, periodType) {
     const sleepData = series.filter(d => d.sleepMin > 0).map(d => ({ date: d.date, sleep: d.sleepMin }));
     if (sleepData.length >= 1) {
         const total = current.sleep.days > 0 ? fmtDuration(current.sleep.avgDuration) + ' в сред.' : '';
-        push(chartCard('🌙', '🌙 Сон по ночам', total, line(sleepData, 'sleep', 'мин', '#6366f1', 'review-grad-sleep', { formatValue: fmtSleepHrs })));
+        push(chartCard('🌙', 'Сон по ночам', total, line(sleepData, 'sleep', 'мин', '#6366f1', 'review-grad-sleep', { formatValue: fmtSleepHrs })));
     }
 
     // 3. Расходы по дням (приоритет для недельного)
     const expData = series.filter(d => d.expense > 0).map(d => ({ date: d.date, expense: d.expense }));
     if (expData.length >= 1) {
         const total = current.finance.expense.total > 0 ? fmtMoney(current.finance.expense.total) : '';
-        push(chartCard('📉', '📉 Расходы по дням', total, line(expData, 'expense', '₽', '#f43f5e', 'review-grad-exp')));
+        push(chartCard('📉', 'Расходы по дням', total, line(expData, 'expense', '₽', '#f43f5e', 'review-grad-exp')));
     }
 
     // 4. Калории по дням
@@ -1381,32 +1381,10 @@ function renderCompareSection(current, prev, history, periodType) {
             '<td class="rc-val rc-avg">' + avTxt + '</td>' +
         '</tr>';
     }).join('');
-    const curSeries = (current.dateRange) ? collectDailySeries(current.dateRange.start, current.dateRange.end) : [];
-    const prevSeries = (prev.dateRange) ? collectDailySeries(prev.dateRange.start, prev.dateRange.end) : [];
-    const mline = (series, opts) => (typeof window.renderMultiLineChart === 'function') ? window.renderMultiLineChart(series, Object.assign({}, CHART_TEXT, opts || {})) : '';
-    let charts = '';
-    const calCur = curSeries.filter(d => d.calories > 0).map(d => ({ date: d.date, cal: d.calories }));
-    const calPrev = prevSeries.filter(d => d.calories > 0).map(d => ({ date: d.date, cal: d.calories }));
-    if (calCur.length >= 2 || calPrev.length >= 2) {
-        charts += chartCard('📘', 'Калории: текущий vs предыдущий', '', mline([
-            { data: calCur, field: 'cal', color: '#f59e0b', label: 'Текущий' },
-            { data: calPrev, field: 'cal', color: '#94a3b8', label: 'Предыдущий' }
-        ], { title: 'ккал' }), true);
-    }
-    const expCur = curSeries.filter(d => d.expense > 0).map(d => ({ date: d.date, expense: d.expense }));
-    const expPrev = prevSeries.filter(d => d.expense > 0).map(d => ({ date: d.date, expense: d.expense }));
-    if (expCur.length >= 1 || expPrev.length >= 1) {
-        charts += chartCard('📉', 'Расходы: текущий vs предыдущий', '', mline([
-            { data: expCur, field: 'expense', color: '#f43f5e', label: 'Текущий' },
-            { data: expPrev, field: 'expense', color: '#94a3b8', label: 'Предыдущий' }
-        ], { title: '₽' }), true);
-    }
-    const chartsHtml = charts ? '<div class="review-charts-grid">' + charts + '</div>' : '';
     return '<details class="review-section">' +
         '<summary class="review-section-summary">🆚 Compare Periods <span class="review-section-hint">текущий vs предыдущий · ср. за 6</span></summary>' +
         '<div class="review-section-body">' +
             '<table class="review-compare-table"><thead><tr><th>Показатель</th><th>Текущий</th><th>Предыдущий</th><th>Δ%</th><th>Среднее за 6</th></tr></thead><tbody>' + rows + '</tbody></table>' +
-            chartsHtml +
         '</div></details>';
 }
 
