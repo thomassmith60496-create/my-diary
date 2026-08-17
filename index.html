@@ -65,6 +65,12 @@
     <div id="user-bar-container"></div>
     <div id="read-only-banner-container"></div>
     <div id="sync-status" class="sync-status"></div>
+    <div class="global-tabs">
+        <button class="global-tab-btn personal active" onclick="switchGlobalTab('personal', event)">👤 Личное</button>
+        <button class="global-tab-btn work" onclick="switchGlobalTab('work', event)">💼 Работа</button>
+    </div>
+
+    <div class="global-tab-content active" id="global-tab-personal">
     <div class="main-tabs">
         <button class="main-tab-btn home active" onclick="switchMainTab('home')">🏠 Главная</button>
         <button class="main-tab-btn food" onclick="switchMainTab('food')">📘 Питание</button>
@@ -599,6 +605,33 @@
     </div>
     <div class="todo-sub" id="todo-sub-habits"></div>
 </div>
+    </div>
+
+<div class="global-tab-content" id="global-tab-work">
+    <header class="work-header">
+        <h1>💼 РАБОТА</h1>
+        <div class="subtitle">Read-only данные из Obsidian · источник истины — Obsidian</div>
+        <div class="work-sync-line" id="work-sync-info">Ещё не синхронизировано</div>
+    </header>
+    <div class="work-toolbar">
+        <button class="btn primary" onclick="syncWorkFromObsidian()">🔄 Синхронизировать с Obsidian</button>
+        <input type="file" id="work-vault-folder" webkitdirectory directory multiple accept=".md" style="display:none;" onchange="handleWorkFolderSelected(this)">
+    </div>
+    <div class="work-sub-tabs">
+        <button class="work-sub-tab-btn active" onclick="switchWorkSubTab('dashboard', event)">📊 Dashboard</button>
+        <button class="work-sub-tab-btn" onclick="switchWorkSubTab('projects', event)">📁 Проекты</button>
+        <button class="work-sub-tab-btn" onclick="switchWorkSubTab('tasks', event)">✅ Задачи</button>
+        <button class="work-sub-tab-btn" onclick="switchWorkSubTab('meetings', event)">🗓 Встречи</button>
+        <button class="work-sub-tab-btn" onclick="switchWorkSubTab('analytics', event)">📈 Аналитика</button>
+        <button class="work-sub-tab-btn" onclick="switchWorkSubTab('ideas', event)">💡 Идеи</button>
+    </div>
+    <div class="work-sub-tab-content active" id="work-sub-dashboard"></div>
+    <div class="work-sub-tab-content" id="work-sub-projects"></div>
+    <div class="work-sub-tab-content" id="work-sub-tasks"></div>
+    <div class="work-sub-tab-content" id="work-sub-meetings"></div>
+    <div class="work-sub-tab-content" id="work-sub-analytics"></div>
+    <div class="work-sub-tab-content" id="work-sub-ideas"></div>
+</div>
 
 <div class="modal-overlay" id="nutrition-modal" onclick="if(event.target===this)closeAllModals()">
     <div class="modal">
@@ -932,6 +965,10 @@
     <script src="js/todo.js?v=6"></script>
     <script src="js/habit.js?v=1"></script>
     <script src="js/activity.js?v=3"></script>
+    <script src="js/work-parser.js?v=2"></script>
+    <script src="js/work-data.js?v=2"></script>
+    <script src="js/work-import.js?v=2"></script>
+    <script src="js/work-render.js?v=2"></script>
 <script src="js/app.js?v=4"></script>
     <script src="js/notifications.js?v=6"></script>
 </body>

@@ -26,6 +26,7 @@ window.switchHomeSubTab = function(tab, event) {
 };
 
 window.switchMainTab = function(tab) {
+    activateGlobalTab('personal');
     document.querySelectorAll('.main-tab-btn').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.main-tab-content').forEach(c => c.classList.remove('active'));
     document.querySelector(`.main-tab-btn.${tab}`).classList.add('active');
@@ -58,6 +59,36 @@ window.switchSubTab = function(tab, event) {
     if(tab === 'dashboard') renderDashboard();
     setTimeout(() => applyReadOnlyState(), 50);
 }
+
+function activateGlobalTab(tab) {
+    const btn = document.querySelector('.global-tab-btn.' + tab);
+    if (!btn) return;
+    document.querySelectorAll('.global-tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.global-tab-content').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+    const content = document.getElementById('global-tab-' + tab);
+    if (content) content.classList.add('active');
+}
+
+window.switchGlobalTab = function(tab, event) {
+    activateGlobalTab(tab);
+    if (tab === 'work') {
+        if (typeof renderWorkPage === 'function') renderWorkPage();
+    }
+    setTimeout(() => applyReadOnlyState(), 50);
+};
+
+window.switchWorkSubTab = function(tab, event) {
+    const workContent = document.getElementById('global-tab-work');
+    if (!workContent) return;
+    workContent.querySelectorAll('.work-sub-tab-btn').forEach(b => b.classList.remove('active'));
+    workContent.querySelectorAll('.work-sub-tab-content').forEach(c => c.classList.remove('active'));
+    if (event && event.target) event.target.classList.add('active');
+    const content = document.getElementById('work-sub-' + tab);
+    if (content) content.classList.add('active');
+    if (typeof renderWorkSubTab === 'function') renderWorkSubTab(tab);
+    setTimeout(() => applyReadOnlyState(), 50);
+};
 
 window.switchTrainingSubTab = function(tab, event) {
     const trainContent = document.getElementById('main-tab-train');

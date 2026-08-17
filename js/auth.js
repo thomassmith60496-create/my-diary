@@ -49,7 +49,7 @@ window.applyReadOnlyState = function() {
     // Disable ALL inputs/selects/buttons by default in read-only mode
     // Then selectively RE-ENABLE view controls
     
-    document.querySelectorAll('input:not([type="file"]), textarea, select, button:not(.user-bar-btn):not(.main-tab-btn):not(.sub-tab-btn)').forEach(el => {
+    document.querySelectorAll('input:not([type="file"]), textarea, select, button:not(.user-bar-btn):not(.main-tab-btn):not(.sub-tab-btn):not(.global-tab-btn):not(.work-sub-tab-btn)').forEach(el => {
         if (isReadOnly) {
             el.classList.add('read-only-input');
             el.disabled = true;
@@ -115,19 +115,25 @@ window.applyReadOnlyState = function() {
             el.disabled = false;
         });
         
-        // 10. Финансы - кнопка "Обновить" на дашборде
+        // 10. Работа - фильтры задач/аналитики (view-only)
+        document.querySelectorAll('#global-tab-work .work-filter-select').forEach(el => {
+            el.classList.remove('read-only-input');
+            el.disabled = false;
+        });
+        
+        // 11. Финансы - кнопка "Обновить" на дашборде
         document.querySelectorAll('#fin-sub-dashboard button[onclick*="renderFinanceDashboard"]').forEach(el => {
             el.classList.remove('read-only-input');
             el.disabled = false;
         });
         
-        // 11. Кнопка "Наверх" (scroll to top)
+        // 12. Кнопка "Наверх" (scroll to top)
         document.querySelectorAll('.btn-scroll-top').forEach(el => {
             el.classList.remove('read-only-input');
             el.disabled = false;
         });
         
-        // 12. Экспорт/импорт - кнопки экспорта в любой вкладке
+        // 13. Экспорт/импорт - кнопки экспорта в любой вкладке
         document.querySelectorAll('button[onclick*="exportAllData"], button[onclick*="exportMenuAsText"], button[onclick*="printMenu"]').forEach(el => {
             el.classList.remove('read-only-input');
             el.disabled = false;
