@@ -333,8 +333,13 @@
        </div>
    </div>
 
-<div class="main-tab-content" id="main-tab-todo">
-    <div class="todo-app">
+    <div class="main-tab-content" id="main-tab-todo">
+        <div class="sub-tabs todo-sub-tabs">
+            <button class="sub-tab-btn active" id="todo-subtab-tasks" type="button" onclick="switchTodoSubTab('tasks')">📋 Задачи</button>
+            <button class="sub-tab-btn" id="todo-subtab-habits" type="button" onclick="switchTodoSubTab('habits')">🎯 Привычки</button>
+        </div>
+        <div class="todo-sub active" id="todo-sub-tasks">
+        <div class="todo-app">
         <div class="app">
             <header class="topbar">
                 <div class="brand"><span class="brand-mark"></span>Календарь задач</div>
@@ -591,6 +596,8 @@
             </div>
         </div>
     </div>
+    </div>
+    <div class="todo-sub" id="todo-sub-habits"></div>
 </div>
 
 <div class="modal-overlay" id="nutrition-modal" onclick="if(event.target===this)closeAllModals()">
@@ -923,7 +930,8 @@
     <script src="js/training-import.js?v=3"></script>
     <script src="js/custom-modals.js?v=3"></script>
     <script src="js/todo.js?v=6"></script>
-    <script src="js/activity.js?v=2"></script>
+    <script src="js/habit.js?v=1"></script>
+    <script src="js/activity.js?v=3"></script>
 <script src="js/app.js?v=4"></script>
     <script src="js/notifications.js?v=6"></script>
 </body>

@@ -13,6 +13,7 @@ const MODULE_COLORS = {
     training:  '#3b82f6',
     finance:   '#ef4444',
     todo:      '#8b5cf6',
+    habits:    '#f59e0b',
     overall:   '#14b8a6'
 };
 
@@ -21,6 +22,7 @@ const MODULE_LABELS = {
     training:  'Тренировки',
     finance:   'Финансы',
     todo:      'Задачи',
+    habits:    'Привычки',
     overall:   'Всего'
 };
 
@@ -29,6 +31,7 @@ const MODULE_ICONS = {
     training:  '🏋️',
     finance:   '💰',
     todo:      '✅',
+    habits:    '🎯',
     overall:   '🔥'
 };
 
@@ -67,6 +70,7 @@ function initEntry(map, k) {
             training:  { sets: 0, workouts: 0 },
             finance:   { expense: 0, income: 0, count: 0 },
             todo:      { done: 0, total: 0 },
+            habits:    { done: 0, total: 0 },
             active: false
         };
     }
@@ -179,6 +183,26 @@ function buildMap(startKey, endKey) {
         }
     } catch (err) {}
 
+    // --- Привычки ---
+    try {
+        if (typeof window.getHabitDayProgress === 'function') {
+            let d = parseKey(startKey);
+            let guard = 0;
+            while (keyOfDate(d) <= endKey && guard < 20000) {
+                const k = keyOfDate(d);
+                const p = window.getHabitDayProgress(k);
+                if (p && p.total > 0) {
+                    const e = initEntry(map, k);
+                    e.habits.done = p.done;
+                    e.habits.total = p.total;
+                    if (p.done > 0) e.active = true;
+                }
+                d = addDays(d, 1);
+                guard++;
+            }
+        }
+    } catch (err) {}
+
     return map;
 }
 
@@ -189,6 +213,7 @@ function moduleValue(entry, module) {
         case 'training':  return entry.training.sets;
         case 'finance':   return Math.round(entry.finance.expense);
         case 'todo':      return entry.todo.done;
+        case 'habits':    return entry.habits.done;
         case 'overall':   return entry.active ? 1 : 0;
     }
     return 0;
@@ -201,6 +226,7 @@ function moduleActive(entry, module) {
         case 'training':  return entry.training.workouts > 0;
         case 'finance':   return entry.finance.count > 0;
         case 'todo':      return entry.todo.done > 0;
+        case 'habits':    return entry.habits.done > 0;
         case 'overall':   return entry.active;
     }
     return false;
@@ -219,6 +245,8 @@ function tooltipText(date, entry, module) {
             return label + ' · расход ' + Math.round(entry.finance.expense).toLocaleString('ru-RU') + ' ₽ · ' + entry.finance.count + ' операций';
         case 'todo':
             return label + ' · выполнено ' + entry.todo.done + ' из ' + entry.todo.total;
+        case 'habits':
+            return label + ' · выполнено ' + entry.habits.done + ' из ' + entry.habits.total;
         case 'overall':
             return entry.active ? label + ' · активный день' : label;
     }
@@ -403,7 +431,7 @@ window.renderActivityStreaks = function(container, opts) {
     const today = keyOfDate(new Date());
     const map = buildMap('2000-01-01', today);
 
-    const list = (opts.only && opts.only.length) ? opts.only : ['overall', 'nutrition', 'training', 'finance', 'todo'];
+    const list = (opts.only && opts.only.length) ? opts.only : ['overall', 'nutrition', 'training', 'finance', 'todo', 'habits'];
 
     const html = list.map(module => {
         const activeSet = new Set();
@@ -507,6 +535,15 @@ window.activityNavigate = function(module, date) {
     else if (module === 'training') activityOpenTrainingDay(date);
     else if (module === 'finance') activityOpenFinanceDay(date);
     else if (module === 'todo') activityOpenTodoDay(date);
+    else if (module === 'habits') activityOpenHabitsDay(date);
 };
+
+function activityOpenHabitsDay(date) {
+    if (typeof window.habitOpenDate === 'function') {
+        setTimeout(() => window.habitOpenDate(date), 80);
+    } else if (typeof switchMainTab === 'function') {
+        switchMainTab('todo');
+    }
+}
 
 })();

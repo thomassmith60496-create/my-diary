@@ -88,6 +88,9 @@ window.renderHomeToday = function() {
     
     // Карточка сна
     html += renderSleepCard(dateStr);
+
+    // Карточка привычек
+    html += renderHabitCard(dateStr);
     
     // Карточка активности (стрики + хитмап)
     html += `
@@ -108,6 +111,32 @@ window.renderHomeToday = function() {
     container.innerHTML = html;
     renderHomeActivity();
 }
+
+window.renderHabitCard = function(dateStr) {
+    if (typeof window.getHabitDayHabits !== 'function') return '';
+    const habits = window.getHabitDayHabits(dateStr);
+    const total = habits.length;
+    const done = habits.filter(h => h.done).length;
+    let body;
+    if (total === 0) {
+        body = '<div class="habit-card-empty">Нет активных привычек.<br>Добавь в разделе <b>✅ To-Do → 🎯 Привычки</b>.</div>';
+    } else {
+        body = habits.map(h => {
+            const goalTag = (h.goal && h.goal.period !== 'day' && typeof window.habitGoalLabel === 'function')
+                ? '<span class="habit-card-goal">' + window.habitGoalLabel(h.goal) + '</span>'
+                : '';
+            return '<button type="button" class="habit-row' + (h.done ? ' done' : '') + '" onclick="window.toggleHabit(\'' + h.id + '\',\'' + dateStr + '\')">' +
+                '<span class="habit-check' + (h.done ? ' on' : '') + '">' + (h.done ? '✓' : '') + '</span>' +
+                '<span class="habit-row-name">' + esc(h.name) + '</span>' + goalTag +
+            '</button>';
+        }).join('');
+        body += '<div class="habit-card-progress">' + done + ' / ' + total + ' выполнено сегодня</div>';
+    }
+    return '<div class="home-card habit-card">' +
+        '<div class="home-card-header"><h2 class="home-card-title">🎯 Привычки</h2>' +
+        '<div class="home-card-badge">' + (total ? (done + '/' + total) : 'нет') + '</div></div>' +
+        '<div class="home-card-body">' + body + '</div></div>';
+};
 
 window.getGreeting = function(hour) {
     if(hour >= 5 && hour < 12) return 'Доброе утро';
@@ -614,7 +643,7 @@ window.renderHomeActivity = function() {
     
     const switcher = document.getElementById('home-hm-switch');
     if(switcher) {
-        const modules = [['overall','Все'],['nutrition','Питание'],['training','Тренировки'],['finance','Финансы'],['todo','Задачи']];
+        const modules = [['overall','Все'],['nutrition','Питание'],['training','Тренировки'],['finance','Финансы'],['todo','Задачи'],['habits','Привычки']];
         switcher.innerHTML = modules.map(m =>
             `<button type="button" class="${homeActivityModule === m[0] ? 'active' : ''}" data-hm-module="${m[0]}" onclick="setHomeActivityModule('${m[0]}')">${m[1]}</button>`
         ).join('');

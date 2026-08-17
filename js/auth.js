@@ -319,6 +319,7 @@ window.loadDataForUser = function(uid) {
     var financePath = 'lera_finance_v1/' + uid;
     var trainingPath = 'lera_training_v1/' + uid;
     var todoPath = 'lera_todo_v1/' + uid;
+    var habitPath = 'lera_habit_v1/' + uid;
     
     var diaryLoad = db.ref(diaryPath).once('value').catch(function() {
         return null; // ошибка дневника не фатальна
@@ -334,12 +335,17 @@ window.loadDataForUser = function(uid) {
     var todoLoad = db.ref(todoPath).once('value').catch(function() {
         return null; // ошибка задач не фатальна
     });
-    
-    Promise.all([diaryLoad, financeLoad, trainingLoad, todoLoad]).then(function(results) {
+    // Привычки загружаем отдельно — их ошибка не должна блокировать остальное
+    var habitLoad = db.ref(habitPath).once('value').catch(function() {
+        return null; // ошибка привычек не фатальна
+    });
+
+    Promise.all([diaryLoad, financeLoad, trainingLoad, todoLoad, habitLoad]).then(function(results) {
         var diarySnap = results[0];
         var financeSnap = results[1];
         var trainingSnap = results[2];
         var todoSnap = results[3];
+        var habitSnap = results[4];
         var diaryData = diarySnap ? diarySnap.val() : null;
         var financeDataSnap = financeSnap ? financeSnap.val() : null;
         var trainingDataSnap = trainingSnap ? trainingSnap.val() : null;
@@ -376,6 +382,11 @@ window.loadDataForUser = function(uid) {
         // Загружаем задачи из Firebase
         if (typeof window.loadTodoFromFirebase === 'function') {
             window.loadTodoFromFirebase(todoDataSnap);
+        }
+
+        // Загружаем привычки из Firebase
+        if (typeof window.loadHabitsFromFirebase === 'function') {
+            window.loadHabitsFromFirebase(habitDataSnap);
         }
         
         isInitialLoad = false;

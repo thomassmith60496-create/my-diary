@@ -442,6 +442,10 @@ function collectActiveDays(start, end) {
             const sl = window.getTodoSleepAll() || {};
             if (sl[k] && (sl[k].bedtime || sl[k].wakeTime)) dayActive = true;
         }
+        if (!dayActive && typeof window.getHabitDayProgress === 'function') {
+            const hp = window.getHabitDayProgress(k);
+            if (hp && hp.total > 0 && hp.done > 0) dayActive = true;
+        }
 
         if (dayActive) active.add(k);
         d = addDays(d, 1);
@@ -460,6 +464,16 @@ function collectPeriod(start, end) {
         nutrition: collectNutrition(start, end),
         sleep: collectSleep(start, end),
         activeDays: collectActiveDays(start, end),
+        habits: collectHabits(start, end),
+    };
+}
+
+function collectHabits(start, end) {
+    if (typeof window.getHabitStats === 'function') return window.getHabitStats(start, end);
+    return {
+        totalHabits: 0, totalCount: 0, doneCount: 0, rate: null, avgDayRate: null,
+        doneDays: 0, fullDoneDays: 0, totalDays: 0,
+        currentStreak: 0, longestStreak: 0, byHabit: [], bestHabit: null, worstHabit: null
     };
 }
 
@@ -579,6 +593,7 @@ const REVIEW_METRICS = [
     { key: 'finance.expense.total', label: 'Расходы', icon: '📉', fmt: v => fmtMoney(v), higherBetter: false, skipRecord: true },
     { key: 'finance.savings.total', label: 'Накопления', icon: '🏦', fmt: v => fmtMoney(v), higherBetter: true },
     { key: 'activeDays.count', label: 'Активные дни', icon: '🔥', fmt: v => Math.round(v) + ' дн', higherBetter: true },
+    { key: 'habits.rate', label: 'Привычки', icon: '🎯', fmt: v => Math.round(v) + '%', higherBetter: true },
     { key: 'nutrition.avgCalories', label: 'Средние ккал', icon: '📘', fmt: v => Math.round(v) + ' ккал', higherBetter: true, skipRecord: true, skipTrend: true },
     { key: 'nutrition.weightEnd', label: 'Вес', icon: '⚖️', fmt: v => Math.round(v) + ' кг', higherBetter: false }
 ];
@@ -854,6 +869,28 @@ function generateFacts(current, prev, periodType, history) {
         });
     }
 
+    // --- Привычки ---
+    if (current.habits.totalHabits > 0 && prev.habits.totalHabits > 0) {
+        const d = current.habits.doneCount - prev.habits.doneCount;
+        if (d !== 0) {
+            facts.push({
+                icon: '🎯',
+                text: 'Отметок по привычкам: ' + current.habits.doneCount + ' (' + (d > 0 ? '+' : '') + d + ' к прошлому периоду).',
+                type: d > 0 ? 'increase' : 'decrease'
+            });
+        }
+        if (current.habits.rate != null && prev.habits.rate != null) {
+            const dr = current.habits.rate - prev.habits.rate;
+            if (Math.abs(dr) >= 3) {
+                facts.push({
+                    icon: '🎯',
+                    text: 'Доля выполнения привычек: ' + current.habits.rate + '% (' + (dr > 0 ? '+' : '') + dr + '% к прошлому).',
+                    type: dr > 0 ? 'increase' : 'decrease'
+                });
+            }
+        }
+    }
+
     // --- Рекорды (за всё время и в окне 6 периодов) ---
     if (history && history.length) {
         detectRecords(current, history).forEach(r => facts.push(r));
@@ -914,6 +951,11 @@ function computePeriodScore(current, prev, periodType) {
     if (current.nutrition.avgCalories > 0 && current.activeDays.total > 0) {
         const s = clampScore((current.nutrition.days / current.activeDays.total) * 10);
         parts.push({ key: 'nutrition', label: 'Питание', icon: '📘', score: s, weight: 1, note: current.nutrition.days + ' дней записано' });
+    }
+
+    if (current.habits.totalHabits > 0 && current.habits.totalCount > 0) {
+        const s = clampScore((current.habits.doneCount / current.habits.totalCount) * 10);
+        parts.push({ key: 'habits', label: 'Привычки', icon: '🎯', score: s, weight: 1, note: current.habits.doneCount + ' из ' + current.habits.totalCount + ' отметок (' + current.habits.rate + '%)' });
     }
 
     if (current.finance.planned.total > 0) {
@@ -1124,6 +1166,17 @@ function renderStatGrid(current, prev) {
         current.sleep.days > 0 ? fmtDuration(current.sleep.avgDuration) : '—',
         current.sleep.days > 0 ? [current.sleep.days + ' дней', fmtTimeOfDay(current.sleep.avgBedtime) + ' → ' + fmtTimeOfDay(current.sleep.avgWakeTime)] : [],
         sleepTrend));
+
+    // Привычки
+    let habTrend = null;
+    if (prev && prev.habits.rate != null && current.habits.rate != null) {
+        const pct = pctChange(prev.habits.rate, current.habits.rate);
+        habTrend = { dir: pctDir(pct), label: pctLabel(pct) };
+    }
+    cards.push(statCard('🎯', 'Привычки',
+        current.habits.doneCount > 0 ? (current.habits.doneCount + '/' + current.habits.totalCount) : '—',
+        current.habits.totalHabits > 0 ? [current.habits.rate + '% выполнено', 'серия ' + current.habits.currentStreak + ' дн'] : [],
+        habTrend));
 
     return cards.map(c => c).join('');
 }
@@ -1589,6 +1642,8 @@ window.exportReview = function(periodType, format) {
     if (current.nutrition.weightStart) lines.push('  Вес: ' + current.nutrition.weightStart + ' → ' + current.nutrition.weightEnd + ' кг');
     lines.push('Активных дней: ' + current.activeDays.count + ' из ' + current.activeDays.total);
     lines.push('Сон: ' + fmtDuration(current.sleep.avgDuration) + ' в сред. (' + current.sleep.days + ' дней)');
+    lines.push('Привычки: ' + current.habits.doneCount + '/' + current.habits.totalCount + ' отметок · ' + (current.habits.rate != null ? current.habits.rate + '%' : '—'));
+    if (current.habits.totalHabits > 0) lines.push('  Серия: ' + current.habits.currentStreak + ' дн · рекорд ' + current.habits.longestStreak + ' дн');
 
     if (prev) {
         const history = collectReviewHistory(periodType);
@@ -1688,6 +1743,7 @@ function exportReviewPDF(periodType) {
 
 window.__review = {
     collectPeriod: collectPeriod,
+    collectHabits: collectHabits,
     collectDailySeries: collectDailySeries,
     generateFacts: generateFacts,
     computePeriodScore: computePeriodScore,

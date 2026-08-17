@@ -44,6 +44,8 @@ window.switchMainTab = function(tab) {
     }
     if(tab === 'todo') {
         if (typeof initTodoApp === 'function') initTodoApp();
+        const activeSub = (document.getElementById('todo-subtab-habits') && document.getElementById('todo-subtab-habits').classList.contains('active')) ? 'habits' : 'tasks';
+        if (typeof window.switchTodoSubTab === 'function') window.switchTodoSubTab(activeSub);
     }
     setTimeout(() => applyReadOnlyState(), 50);
 }
