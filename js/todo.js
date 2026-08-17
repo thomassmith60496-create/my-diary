@@ -339,7 +339,7 @@ function removeRecurringOccurrence(recId, k){
 function deleteRecurring(recId){
   const tpl = state.recurring.find(r => r.id === recId);
   if(!tpl) return;
-  if(!confirm(`Удалить всю серию «${tpl.title}»?`)) return;
+  if(!customConfirm()) return;
   state.recurring = state.recurring.filter(r => r.id !== recId);
   commit();
 }
@@ -405,7 +405,7 @@ function toggleSub(taskId, subId){
 }
 
 function deleteTask(id){
-  if(!confirm('Удалить задачу?')) return;
+  if(!customConfirm()) return;
   state.tasks = state.tasks.filter(t => t.id !== id);
   if(ui.editingTask === id) ui.editingTask = null;
   commit();
@@ -461,7 +461,7 @@ function saveSubEdit(taskId, subId){
 }
 
 function deleteSub(taskId, subId){
-  if(!confirm('Удалить подзадачу?')) return;
+  if(!customConfirm()) return;
   const t = findTask(taskId); if(!t) return;
   t.subtasks = t.subtasks.filter(s => s.id !== subId);
   syncParent(t);
@@ -499,7 +499,7 @@ function createTag(name){
 }
 
 function deleteTag(tag){
-  if(!confirm(`Удалить тег #${tag}? Задачи останутся на месте.`)) return;
+  if(!customConfirm()) return;
   state.tags = state.tags.filter(t => t !== tag);
   state.tasks.forEach(t => { t.tags = t.tags.filter(x => x !== tag); });
   ui.editTags.delete(tag);
@@ -687,8 +687,12 @@ function renderSleepBlock(){
     const toggle = e.target.closest('#sleepToggle');
     if(!toggle) return;
     const collapsed = e.target.closest('.sleep-collapsed');
-    if(collapsed && !toggle.classList.contains('expanded')){
-      ui.sleepExpanded = true;
+    if(collapsed){
+      if(toggle.classList.contains('expanded')){
+        ui.sleepExpanded = false;
+      } else {
+        ui.sleepExpanded = true;
+      }
       renderSleepBlock();
       return;
     }
@@ -768,7 +772,7 @@ function addCustomSleepFactor(){
   if(!inp) return;
   const v = inp.value.trim();
   if(!v) return;
-  const id = 'custom_' + v.toLowerCase().replace(/[^a-zа-я0-9]/g, '_');
+  const id = 'custom_' + v.toLowerCase().replace(/[^a-zа-яё0-9]/g, '_');
   if(!ui.sleepFactors.some(f => f.id === id)){
     ui.sleepFactors.push({ id, label: v });
     saveCustomSleepFactors();
@@ -986,7 +990,7 @@ function renderTaskList(){
 
 function taskHTML(t){
   if(ui.editingTask === t.id){
-    return `<div class="task editing" data-id="${t.id}">${editFormHTML(t)}</div>`;
+    return `<div class="task editing" data-id="${esc(t.id)}">${editFormHTML(t)}</div>`;
   }
   const isRec = !!t.recId;
   const isShop = isShoppingTask(t);
@@ -1012,7 +1016,7 @@ function taskHTML(t){
     : '';
   const addSubBtn = isRec ? '' : `<button type="button" class="add-sub" data-act="add-sub">${ICON.plus}<span>Подзадача</span></button>`;
 
-  return `<div class="task${t.completed ? ' done' : ''}${isRec ? ' rec' : ''}" data-id="${t.id}"${isRec ? ` data-rec="${esc(t.recId)}"` : ''}>
+  return `<div class="task${t.completed ? ' done' : ''}${isRec ? ' rec' : ''}" data-id="${esc(t.id)}"${isRec ? ` data-rec="${esc(t.recId)}"` : ''}>\r
     <div class="task-main">
       <button type="button" class="cb${t.completed ? ' checked' : ''}" data-act="toggle-task" title="${t.completed ? 'Отменить выполнение' : 'Отметить выполненной'}">${ICON.check}</button>
       <div class="task-body">
@@ -1644,7 +1648,7 @@ function init(){
         const detached = state.tasks[state.tasks.length-1];
         if(detached) startEditTask(detached.id);
       } else if(c.mode === 'delete'){
-        if(confirm('Убрать этот день из серии?')) removeRecurringOccurrence(recId, k);
+        if(customConfirm()) removeRecurringOccurrence(recId, k);
       }
     }
     else if(act === 'rec-choice-all'){
@@ -1910,7 +1914,7 @@ function renderPinnedShop(){
     const totalN = t.subtasks.length;
     const pct = totalN ? Math.round(doneN/totalN*100) : 0;
     return `<div class="shop-pinned">
-      <button type="button" class="shop-pin-btn" data-act="open-shop" data-id="${t.id}" title="Открыть список покупок">${ICON.cart}</button>
+      <button type="button" class="shop-pin-btn" data-act="open-shop" data-id="${esc(t.id)}" title="Открыть список покупок">${ICON.cart}</button>\r
       <div class="shop-pin-body">
         <div class="shop-pin-title">Список продуктов<span class="shop-pin-date">${fmtShortDate(t.date)}</span></div>
         <div class="shop-pin-bar"><i style="width:${pct}%"></i></div>
@@ -1985,7 +1989,7 @@ function shopItemHTML(t, s){
       <button type="button" class="icon-btn danger" data-act="shop-delete-item" data-sub="${s.id}" title="Удалить">${ICON.trash}</button>
     </span>`;
   return `<div class="shop-item${s.completed ? ' done' : ''}" data-subid="${s.id}">
-    <button type="button" class="cb small${s.completed ? ' checked' : ''}" data-act="shop-toggle-item" data-id="${t.id}" data-sub="${s.id}" title="${s.completed ? 'Отменить' : 'Отметить купленным'}">${ICON.check}</button>
+    <button type="button" class="cb small${s.completed ? ' checked' : ''}" data-act="shop-toggle-item" data-id="${esc(t.id)}" data-sub="${esc(s.id)}" title="${s.completed ? 'Отменить' : 'Отметить купленным'}">${ICON.check}</button>\r
     <span class="shop-item-title">${esc(s.title)}</span>
     ${actions}
   </div>`;

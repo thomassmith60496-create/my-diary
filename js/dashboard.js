@@ -32,7 +32,7 @@ window.renderHomeToday = function() {
     if(!container) return;
     
     const today = new Date();
-    const dateStr = today.toISOString().slice(0, 10);
+    const dateStr = getLocalDateStr(today);
     const dayNames = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
     const dayName = dayNames[today.getDay()];
     const months = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
@@ -429,9 +429,6 @@ window.renderFinanceCard = function(todayData, dateStr) {
         bodyHtml += `
             <div class="savings-progress">
                 <div class="savings-label">🏦 Накопления: ${todayData.savingsProgress.toLocaleString('ru-RU')} ₽</div>
-                <div class="savings-bar">
-                    <div class="savings-bar-fill" style="width: ${Math.min(100, todayData.savingsProgress / 100)}%"></div>
-                </div>
             </div>`;
     }
     

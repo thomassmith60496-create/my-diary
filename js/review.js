@@ -577,10 +577,10 @@ function generateFacts(current, prev, periodType) {
 
     // --- Тренировки: количество (виртуальная правила) ---
     if (current.training.workouts !== prev.training.workouts) {
-        const verb = current.training.workouts > prev.training.workouts ? 'вместо' : 'вместо';
+        const verb = current.training.workouts > prev.training.workouts ? 'больше' : 'меньше';
         facts.push({
             icon: '🏋️',
-            text: 'В этот период ты тренировал' + (current.training.workouts === 0 ? 'а 0 раз' : 'а ' + current.training.workouts + ' ' + plural(current.training.workouts, 'раз', 'раза', 'раз')) + ' ' + verb + ' ' + prev.training.workouts + ' ' + plural(prev.training.workouts, 'раз', 'раза', 'раз') + '.',
+            text: 'В этот период ты тренировал' + (current.training.workouts === 0 ? 'а 0 раз' : 'а ' + current.training.workouts + ' ' + plural(current.training.workouts, 'раз', 'раза', 'раз')) + ' ' + verb + ', чем ' + prev.training.workouts + ' ' + plural(prev.training.workouts, 'раз', 'раза', 'раз') + '.',
             type: current.training.workouts > prev.training.workouts ? 'increase' : 'decrease'
         });
     }
@@ -617,7 +617,7 @@ function generateFacts(current, prev, periodType) {
         if (Math.abs(cr - pr) >= 5) {
             tagFacts.push({
                 tag, cur: cr, prev: pr,
-                text: 'Выполнение задач по тегу #' + tag + ' ' + (cr > pr ? 'выросло' : 'упало') + ' с ' + pr + '% до ' + cr + '%.',
+                text: 'Выполнение задач по тегу #' + esc(tag) + ' ' + (cr > pr ? 'выросло' : 'упало') + ' с ' + pr + '% до ' + cr + '%.',
                 type: cr > pr ? 'increase' : 'decrease'
             });
         }
@@ -630,7 +630,7 @@ function generateFacts(current, prev, periodType) {
         if (!prev.tasks.byTag[tag]) {
             const cp = current.tasks.byTag[tag];
             const cr = cp.total > 0 ? Math.round(cp.done / cp.total * 100) : 0;
-            facts.push({ icon: '🏷', text: 'Новый тег #' + tag + ': ' + cp.done + ' из ' + cp.total + ' задач выполнено (' + cr + '%).', type: 'new' });
+            facts.push({ icon: '🏷', text: 'Новый тег #' + esc(tag) + ': ' + cp.done + ' из ' + cp.total + ' задач выполнено (' + cr + '%).', type: 'new' });
         }
     });
 
@@ -643,16 +643,16 @@ function generateFacts(current, prev, periodType) {
         const pc = prev.finance.expense.byCategory[cat] || 0;
         if (cc === 0 && pc === 0) return;
         if (cc === 0) {
-            catFacts.push({ cat, pct: null, text: 'Расходы на категорию «' + cat + '» обнулились (было ' + fmtMoney(pc) + ').', type: 'increase' });
+            catFacts.push({ cat, pct: null, text: 'Расходы на категорию «' + esc(cat) + '» обнулились (было ' + fmtMoney(pc) + ').', type: 'increase' });
             return;
         }
         if (pc === 0) {
-            catFacts.push({ cat, pct: null, text: 'Расходы на категорию «' + cat + '» впервые: ' + fmtMoney(cc) + '.', type: 'new' });
+            catFacts.push({ cat, pct: null, text: 'Расходы на категорию «' + esc(cat) + '» впервые: ' + fmtMoney(cc) + '.', type: 'new' });
             return;
         }
         const pct = Math.round((cc - pc) / pc * 100);
         if (Math.abs(pct) >= 5) {
-            catFacts.push({ cat, pct, text: 'Расходы на категорию «' + cat + '» ' + (pct > 0 ? 'выросли' : 'упали') + ' на ' + Math.abs(pct) + '%.', type: pct > 0 ? 'decrease' : 'increase' });
+            catFacts.push({ cat, pct, text: 'Расходы на категорию «' + esc(cat) + '» ' + (pct > 0 ? 'выросли' : 'упали') + ' на ' + Math.abs(pct) + '%.', type: pct > 0 ? 'decrease' : 'increase' });
         }
     });
     catFacts.sort((a, b) => Math.abs(b.pct === null ? 1000 : b.pct) - Math.abs(a.pct === null ? 1000 : a.pct));
@@ -877,8 +877,8 @@ function scoreColor(score) {
 function statCard(icon, title, value, sub, trend) {
     const trendHtml = trend ? '<span class="review-trend trend-' + trend.dir + '">' + trend.label + '</span>' : '';
     const subHtml = Array.isArray(sub)
-        ? '<div class="review-stat-sub">' + sub.map(s => '<span class="review-stat-chip">' + s + '</span>').join('') + '</div>'
-        : (sub ? '<div class="review-stat-sub">' + sub + '</div>' : '');
+        ? '<div class="review-stat-sub">' + sub.map(s => '<span class="review-stat-chip">' + esc(s) + '</span>').join('') + '</div>'
+        : (sub ? '<div class="review-stat-sub">' + esc(sub) + '</div>' : '');
     return '' +
         '<div class="review-stat-card">' +
             '<div class="review-stat-header">' +
@@ -1142,7 +1142,7 @@ function renderReviewHTML(periodType, current, prev) {
             facts.map(f =>
                 '<div class="review-fact fact-' + f.type + '">' +
                     '<span class="review-fact-icon">' + f.icon + '</span>' +
-                    '<span class="review-fact-text">' + f.text + '</span>' +
+                    '<span class="review-fact-text">' + esc(f.text) + '</span>' +
                 '</div>').join('') +
             '</div>'
         : '<div class="review-empty-facts">Нет данных для анализа.</div>');

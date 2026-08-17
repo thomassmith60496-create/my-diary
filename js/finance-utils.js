@@ -10,7 +10,7 @@ window.parseAmountFormula = function(val) {
         try {
             const expr = val.trim().substring(1);
             // Safe math parser — only allows +, -, *, /, parentheses, numbers, and decimals
-            const sanitized = expr.replace(/[^0-9+\-*/().,\s]/g, '').replace(',', '.');
+            const sanitized = expr.replace(/[^0-9+\-*/().,\s]/g, '').replace(/,/g, '.');
             const result = safeEval(sanitized);
             if(typeof result === 'number' && isFinite(result) && result > 0) {
                 return Math.round(result * 100) / 100;

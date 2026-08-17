@@ -22,13 +22,7 @@ let trainingUIState = {
 let progressUIState = {
     period: 'all',
     muscleGroup: 'all',
-    selectedVariantId: null,
-    exercises: [],
-    startDate: '',
-    endDate: '',
-    chartType: 'line',
-    chartData: null,
-    historyEntries: []
+    exercises: []
 };
 
 // === ГЛАВНАЯ ФУНКЦИЯ РЕНДЕРИНГА ===
@@ -251,7 +245,7 @@ window.renderVariantRow = function(exerciseId, variant) {
         html += '<button class="train-action-btn" onclick="startVariantEdit(\'' + exerciseId + '\', \'' + variant.id + '\')" title="Редактировать">✏️</button>';
         html += '<button class="train-action-btn" onclick="showVariantProgress(\'' + variant.id + '\')" title="Прогресс">📊</button>';
         html += '<button class="train-action-btn" onclick="deleteVariantConfirm(\'' + exerciseId + '\', \'' + variant.id + '\')" title="Удалить">🗑️</button>';
-        html += '<button class="train-action-btn" onclick="openMoveVariantModal(\'' + exerciseId + '\', \'' + variant.id + '\', \'' + escapeHtml(variant.name) + '\')" title="Перенести">🚚</button>';
+        html += '<button class="train-action-btn" onclick="openMoveVariantModal(\'' + exerciseId + '\', \'' + variant.id + '\', \'' + esc(variant.name) + '\')" title="Перенести">🚚</button>';
         html += '</div>';
         html += '</div>';
     }
@@ -475,9 +469,9 @@ window.openMoveVariantModal = function(fromExerciseId, variantId, variantName) {
         return;
     }
 
-    let message = 'Переместить "' + variantName + '" в упражнение:\n';
+    let message = 'Переместить "' + esc(variantName) + '" в упражнение:\n';
     options.forEach((o, i) => {
-        message += (i + 1) + '. ' + o.name + '\n';
+        message += (i + 1) + '. ' + esc(o.name) + '\n';
     });
     message += '\nВведите номер:';
 
@@ -509,8 +503,6 @@ window.openMoveVariantModal = function(fromExerciseId, variantId, variantName) {
 let workoutsUIState = {
     viewingWorkoutId: null,      // ID тренировки для просмотра/редактирования
     editingWorkoutId: null,      // ID тренировки в режиме редактирования
-    editingWorkoutDate: '',      // дата при редактировании
-    editingWorkoutComment: '',   // комментарий при редактировании
     addExerciseWorkoutId: null,  // ID тренировки, куда добавляем упражнение
     editSetWorkoutId: null,      // ID тренировки, где редактируем подход
     editSetVariantId: null,      // variantId упражнения, где редактируем подход
@@ -645,14 +637,14 @@ window.renderSetSummary = function(sets, variant) {
     switch (mt) {
         case 'reps_weight':
             return sets.map(s => s.warmup
-                ? (s.weight ? Math.round(s.weight) + 'кг' : '') + '×' + (s.reps || '—') + ' (разм)'
-                : (s.weight ? Math.round(s.weight) + 'кг' : '') + '×' + (s.reps || '—')).join(', ');
+                ? (s.weight ? Math.round(s.weight * 10) / 10 + 'кг' : '') + '×' + (s.reps || '—') + ' (разм)'
+                : (s.weight ? Math.round(s.weight * 10) / 10 + 'кг' : '') + '×' + (s.reps || '—')).join(', ');
         case 'reps':
             return sets.map(s => (s.reps || '—') + ' повт').join(', ');
         case 'time':
             return sets.map(s => (s.time || '—') + ' с').join(', ');
         case 'distance':
-            return sets.map(s => (s.distance || '—') + ' км').join(', ');
+            return sets.map(s => (s.distance || '—') + ' м').join(', ');
         case 'weight_only':
             return sets.map(s => (s.weight ? s.weight + 'кг' : '—')).join(', ');
         default:
@@ -771,8 +763,8 @@ window.renderWorkoutDetail = function(workoutId) {
 window.renderWorkoutExerciseBlock = function(workoutId, exercise, idx, total) {
     const variant = TrainingWorkoutAPI.getVariantById(exercise.variantId);
     const name = variant
-        ? escapeHtml(variant.baseExerciseName) + ' — ' + escapeHtml(variant.name)
-        : '❓ Неизвестное (' + exercise.variantId + ')';
+        ? esc(variant.baseExerciseName) + ' — ' + esc(variant.name)
+        : '❓ Неизвестное (' + esc(exercise.variantId) + ')';
     const mt = variant ? (variant.measurementType || 'reps_weight') : 'reps_weight';
     const isCollapsed = workoutsUIState.collapsedExercises.has(exercise.variantId);
 
@@ -842,7 +834,7 @@ window.renderSetHeaderRow = function(mt) {
             html += '<span class="train-set-col time">Время, с</span>';
             break;
         case 'distance':
-            html += '<span class="train-set-col dist">Дист., км</span>';
+            html += '<span class="train-set-col dist">Дист., м</span>';
             break;
         case 'weight_only':
             html += '<span class="train-set-col weight">Вес, кг</span>';
@@ -1468,9 +1460,8 @@ window.renderTrainingProgress = function() {
             });
 
             var colorPalette = ['#7e22ce', '#2563eb', '#16a34a', '#ea580c', '#dc2626', '#0891b2', '#7c3aed', '#d97706', '#059669', '#4f46e5'];
-            var activeGroups = MUSCLE_CATEGORIES.filter(function(c) { return muscleStats[c] > 0; });
-            var otherMuscle = muscleStats['Другое'] || 0;
-    }
+var activeGroups = MUSCLE_CATEGORIES.filter(function(c) { return muscleStats[c] > 0; });
+        }
 
     html += '<div class="train-progress-summary">';
     html += '<div class="train-progress-card">';
@@ -1495,9 +1486,6 @@ window.renderTrainingProgress = function() {
             segments.push({ name: cat, value: value, angle: angle, startAngle: cumulativeAngle, color: colorPalette[i % colorPalette.length] });
             cumulativeAngle += angle;
         });
-        if (otherMuscle > 0) {
-            segments.push({ name: 'Другое', value: otherMuscle, angle: (otherMuscle / totalSets) * Math.PI * 2, startAngle: cumulativeAngle, color: '#94a3b8' });
-        }
 
         var donutSvg = '<svg width="' + svgSize + '" height="' + svgSize + '" viewBox="0 0 ' + svgSize + ' ' + svgSize + '" class="train-donut-chart">';
         segments.forEach(function(seg) {
@@ -1762,7 +1750,7 @@ window.renderTrainingProgress = function() {
                                 case 'reps_weight': resultText = (entry.bestWeight || 0) + ' кг'; break;
                                 case 'reps': resultText = (entry.maxReps || 0) + ' повт'; break;
                                 case 'time': resultText = (entry.bestTime || 0) + ' с'; break;
-                                case 'distance': resultText = (entry.bestDistance || 0) + ' км'; break;
+                                case 'distance': resultText = (entry.bestDistance || 0) + ' м'; break;
                                 case 'weight_only': resultText = (entry.bestWeight || 0) + ' кг'; break;
                             }
                             html += '<tr>';
@@ -1778,7 +1766,7 @@ window.renderTrainingProgress = function() {
                                     case 'reps_weight': setDetail = (s.weight || 0) + ' кг × ' + (s.reps || 0) + warmupLabel; break;
                                     case 'reps': setDetail = (s.reps || 0) + ' повт' + warmupLabel; break;
                                     case 'time': setDetail = (s.time || 0) + ' с' + warmupLabel; break;
-                                    case 'distance': setDetail = (s.distance || 0) + ' км' + warmupLabel; break;
+                                    case 'distance': setDetail = (s.distance || 0) + ' м' + warmupLabel; break;
                                     case 'weight_only': setDetail = (s.weight || 0) + ' кг' + warmupLabel; break;
                                 }
                                 if (s.comment) setDetail += ' — ' + escapeHtml(s.comment);
@@ -1823,7 +1811,7 @@ function getVariantBestValue(overall, mt) {
         case 'reps_weight': return (overall.bestWeight || 0) + ' кг';
         case 'reps': return (overall.maxReps || 0) + ' повт';
         case 'time': return (overall.bestTime || 0) + ' с';
-        case 'distance': return (overall.bestDistance || 0) + ' км';
+        case 'distance': return (overall.bestDistance || 0) + ' м';
         case 'weight_only': return (overall.bestWeight || 0) + ' кг';
         default: return '-';
     }
@@ -1928,7 +1916,7 @@ window.showVariantProgress = function(variantId) {
                     detailText = 'Лучшее: ' + (entry.bestTime || 0) + ' с, Общее: ' + (entry.totalTime || 0) + ' с';
                     break;
                 case 'distance':
-                    detailText = 'Лучшее: ' + (entry.bestDistance || 0) + ' км, Общее: ' + (entry.totalDistance || 0) + ' км';
+                    detailText = 'Лучшее: ' + (entry.bestDistance || 0) + ' м, Общее: ' + (entry.totalDistance || 0) + ' м';
                     break;
                 case 'weight_only':
                     detailText = 'Лучший вес: ' + (entry.bestWeight || 0) + ' кг';

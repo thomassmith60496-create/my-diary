@@ -27,7 +27,7 @@ window.updateFinanceCategoryOptions = function() {
     }
     
     catSelect.innerHTML = '<option value="">— выбрать —</option>' +
-        cats.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+        cats.map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('');
     
     updateFinanceSubcategoryOptions();
 }
@@ -38,7 +38,7 @@ window.updateFinanceSubcategoryOptions = function() {
     const cat = financeData.categories.find(c => c.id === catId);
     if(cat && cat.subcategories && cat.subcategories.length > 0) {
         subSelect.innerHTML = '<option value="">— выбрать —</option>' +
-            cat.subcategories.map(sc => `<option value="${sc}">${sc}</option>`).join('');
+            cat.subcategories.map(sc => `<option value="${esc(sc)}">${esc(sc)}</option>`).join('');
     } else {
         subSelect.innerHTML = '<option value="">— (нет подкатегорий) —</option>';
     }
@@ -48,7 +48,7 @@ window.updatePlanCategoryOptions = function() {
     const catSelect = document.getElementById('f-plan-category');
     const expenseCats = financeData.categories.filter(c => c.type === 'expense');
     catSelect.innerHTML = '<option value="">— выбрать —</option>' +
-        expenseCats.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+        expenseCats.map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('');
     updatePlanSubcategoryOptions();
 }
 
@@ -56,7 +56,7 @@ window.updateMandatoryCategoryOptions = function() {
     const catSelect = document.getElementById('f-mp-category');
     const expenseCats = financeData.categories.filter(c => c.type === 'expense');
     catSelect.innerHTML = '<option value="">— выбрать —</option>' +
-        expenseCats.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+        expenseCats.map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('');
     updateMandatorySubcategoryOptions();
 }
 
@@ -66,7 +66,7 @@ window.updateMandatorySubcategoryOptions = function() {
     const cat = financeData.categories.find(c => c.id === catId);
     if(cat && cat.subcategories && cat.subcategories.length > 0) {
         subSelect.innerHTML = '<option value="">— выбрать —</option>' +
-            cat.subcategories.map(sc => `<option value="${sc}">${sc}</option>`).join('');
+            cat.subcategories.map(sc => `<option value="${esc(sc)}">${esc(sc)}</option>`).join('');
     } else {
         subSelect.innerHTML = '<option value="">— (нет подкатегорий) —</option>';
     }
@@ -78,7 +78,7 @@ window.updatePlanSubcategoryOptions = function() {
     const cat = financeData.categories.find(c => c.id === catId);
     if(cat && cat.subcategories && cat.subcategories.length > 0) {
         subSelect.innerHTML = '<option value="">— выбрать —</option>' +
-            cat.subcategories.map(sc => `<option value="${sc}">${sc}</option>`).join('');
+            cat.subcategories.map(sc => `<option value="${esc(sc)}">${esc(sc)}</option>`).join('');
     } else {
         subSelect.innerHTML = '<option value="">— (нет подкатегорий) —</option>';
     }
@@ -111,11 +111,11 @@ window.renderSubcategoryTags = function() {
     container.innerHTML = window._editingSubcategories.map((sc, i) => {
         const limitVal = window._editingSubcategoryLimits[sc] || '';
         return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
-            <span class="subcat-tag" style="margin:0;">${sc}</span>
+            <span class="subcat-tag" style="margin:0;">${esc(sc)}</span>
             <div style="display:flex;align-items:center;gap:4px;flex:1;min-width:120px;">
                 <label style="font-size:11px;color:#7e22ce;font-weight:600;white-space:nowrap;">Лимит:</label>
                 <input type="number" step="0.01" min="0" value="${limitVal}"
-                    onchange="updateSubcategoryLimit(this, '${sc.replace(/'/g, "\\'")}')"
+                    onchange="updateSubcategoryLimit(this, '${esc(sc)}')"
                     style="width:100%;padding:4px 8px;border:1px solid #d8b4fe;border-radius:4px;font-size:12px;background:white;font-family:inherit;">
             </div>
             <span class="remove-subcat" onclick="removeSubcategoryTag(this, ${i})" style="cursor:pointer;font-weight:700;color:#a855f7;font-size:14px;">✕</span>

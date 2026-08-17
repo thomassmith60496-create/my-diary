@@ -89,7 +89,7 @@ window.renderFinanceDashboard = function() {
         filteredTransactions = filteredTransactions.filter(t => t.date.startsWith(financeSelectedMonth));
     }
     if(filteredTransactions.length === 0) {
-        container.innerHTML += `<div class="empty-state">
+        container.innerHTML = `<div class="empty-state">
             <div class="empty-state-icon">📭</div>
             <div class="empty-state-title">Нет операций за выбранный период</div>
             <div class="empty-state-text">Попробуйте выбрать другой месяц</div>
@@ -172,7 +172,12 @@ window.renderFinanceDashboard = function() {
     if(hasCats) {
         const defaultColors = ['#7e22ce', '#a855f7', '#c084fc', '#d8b4fe', '#9333ea', '#6366f1', '#3b82f6', '#06b6d4', '#14b8a6', '#22c55e'];
         let cumulativeAngle = 0;
-        const sectors = catNames.slice(0, 7).map((name, i) => {
+        const maxVisible = 7;
+        const visibleCats = catNames.slice(0, maxVisible);
+        const otherCats = catNames.slice(maxVisible);
+        const otherValue = otherCats.reduce((sum, name) => sum + catTotals[name], 0);
+        
+        const sectors = visibleCats.map((name, i) => {
             const value = catTotals[name];
             const angle = (value / totalExpense) * 360;
             const startAngle = cumulativeAngle;
@@ -181,6 +186,11 @@ window.renderFinanceDashboard = function() {
             const color = (cat && cat.color) ? cat.color : defaultColors[i % defaultColors.length];
             return { name, value, angle, startAngle, color };
         });
+        
+        if (otherValue > 0) {
+            const angle = (otherValue / totalExpense) * 360;
+            sectors.push({ name: 'Прочие', value: otherValue, angle, startAngle: cumulativeAngle, color: '#94a3b8' });
+        }
         
         html += `<h3 class="finance-section-title">🥧 Расходы по категориям</h3>
         <div class="finance-donut-container">
@@ -383,14 +393,14 @@ window.renderFinanceTransactions = function() {
             <div class="finance-transaction-type ${isExpense ? 'expense' : 'income'}">${typeIcon}</div>
             <div class="finance-transaction-info">
                 <div class="finance-transaction-amount ${isExpense ? 'expense' : 'income'}">${isExpense ? '−' : '+'}${Math.abs(t.amount).toLocaleString('ru-RU')} ₽</div>
-                <div class="finance-transaction-category" style="color:${catColor};">${catName}${t.subcategory ? ' › ' + t.subcategory : ''}</div>
+                <div class="finance-transaction-category" style="color:${catColor};">${esc(catName)}${t.subcategory ? ' › ' + esc(t.subcategory) : ''}</div>
                 <div class="finance-transaction-date">${formatFinanceDate(t.date)}</div>
-                ${t.comment ? `<div class="finance-transaction-comment">${t.comment}</div>` : ''}
+                ${t.comment ? `<div class="finance-transaction-comment">${esc(t.comment)}</div>` : ''}
             </div>
             ${isReadOnlyActive() ? '' : `
             <div class="finance-transaction-actions">
-                <button class="action-btn edit" onclick="editFinanceTransaction('${t.id}')">✏️</button>
-                <button class="action-btn delete" onclick="deleteFinanceItem('transaction','${t.id}')">🗑</button>
+                <button class="action-btn edit" onclick="editFinanceTransaction('${esc(t.id)}')">✏️</button>
+                <button class="action-btn delete" onclick="deleteFinanceItem('transaction','${esc(t.id)}')">🗑</button>
             </div>`}
         </div>`;
     }).join('');
@@ -422,7 +432,7 @@ window.renderFinanceSavings = function() {
         const g = byGoal[goal];
         return `<div class="finance-savings-card">
             <div class="finance-savings-header">
-                <span class="finance-savings-title">🎯 ${goal}</span>
+                <span class="finance-savings-title">🎯 ${esc(goal)}</span>
                 <span class="finance-savings-total">${g.total.toLocaleString('ru-RU')} ₽</span>
             </div>
             <div class="finance-savings-entries">
@@ -430,7 +440,7 @@ window.renderFinanceSavings = function() {
                     <div class="finance-savings-entry">
                         <span style="color:#64748b;">${formatFinanceDate(e.date)}</span>
                         <span style="font-weight:600;color:${e.amount >= 0 ? '#16a34a' : '#dc2626'};">${e.amount >= 0 ? '+' : ''}${e.amount.toLocaleString('ru-RU')} ₽</span>
-                        ${isReadOnlyActive() ? '' : `<button class="action-btn delete" onclick="deleteFinanceItem('savings','${e.id}')">🗑</button>`}
+                        ${isReadOnlyActive() ? '' : `<button class="action-btn delete" onclick="deleteFinanceItem('savings','${esc(e.id)}')">🗑</button>`}
                     </div>
                 `).join('')}
             </div>
@@ -461,13 +471,13 @@ window.renderFinancePlanned = function() {
             <span class="finance-planned-date">${formatFinanceDate(p.date)}</span>
             <span class="finance-planned-amount">${p.amount.toLocaleString('ru-RU')} ₽</span>
             <div class="finance-planned-info">
-                <span class="finance-planned-category" style="color:#7e22ce;">${catName}${p.subcategory ? ' › ' + p.subcategory : ''}</span>
+                <span class="finance-planned-category" style="color:#7e22ce;">${esc(catName)}${p.subcategory ? ' › ' + esc(p.subcategory) : ''}</span>
             </div>
             <label class="finance-planned-done">
-                <input type="checkbox" ${p.done ? 'checked' : ''} onchange="togglePlannedDone('${p.id}')">
+                <input type="checkbox" ${p.done ? 'checked' : ''} onchange="togglePlannedDone('${esc(p.id)}')">
                 Выполнено
             </label>
-            ${isReadOnlyActive() ? '' : `<button class="action-btn delete" onclick="deleteFinanceItem('planned','${p.id}')">🗑</button>`}
+            ${isReadOnlyActive() ? '' : `<button class="action-btn delete" onclick="deleteFinanceItem('planned','${esc(p.id)}')">🗑</button>`}
         </div>`;
     }).join('');
 }
@@ -642,10 +652,10 @@ window.renderMandatoryDashboardTable = function(month) {
     
     tableHtml += rows.map(r => `
         <div class="finance-mandatory-row">
-            <span class="fm-col-name">${r.name}</span>
+            <span class="fm-col-name">${esc(r.name)}</span>
             <span class="fm-col-amount">${r.amount.toLocaleString('ru-RU')} ₽</span>
             <span class="fm-col-date">${r.formattedDate}</span>
-            <span class="fm-col-cat">${r.catName}</span>
+            <span class="fm-col-cat">${esc(r.catName)}</span>
             <span class="fm-col-status ${r.statusClass}">${r.statusIcon} ${r.statusText}</span>
         </div>
     `).join('');
@@ -679,17 +689,17 @@ window.renderFinanceMandatory = function() {
         
         html += `<div class="finance-mandatory-card${activeClass}">
             <div class="finance-mandatory-card-header">
-                <span class="finance-mandatory-card-name">${mp.name}</span>
+                <span class="finance-mandatory-card-name">${esc(mp.name)}</span>
                 <span class="finance-mandatory-card-amount">${mp.amount.toLocaleString('ru-RU')} ₽</span>
             </div>
             <div class="finance-mandatory-card-info">
-                <span style="color:#7e22ce;">${catName}${mp.subcategory ? ' › ' + mp.subcategory : ''}</span>
+                <span style="color:#7e22ce;">${esc(catName)}${mp.subcategory ? ' › ' + esc(mp.subcategory) : ''}</span>
                 <span style="color:#64748b;font-size:12px;">${scheduleText}</span>
             </div>
             ${isReadOnlyActive() ? '' : `
             <div class="finance-mandatory-card-actions">
-                <button class="action-btn edit" onclick="editMandatoryPayment('${mp.id}')">✏️</button>
-                <button class="action-btn delete" onclick="deleteFinanceItem('mandatory','${mp.id}')">🗑</button>
+                <button class="action-btn edit" onclick="editMandatoryPayment('${esc(mp.id)}')">✏️</button>
+                <button class="action-btn delete" onclick="deleteFinanceItem('mandatory','${esc(mp.id)}')">🗑</button>
             </div>`}
         </div>`;
     });
@@ -716,19 +726,19 @@ window.renderFinanceCategories = function() {
         const catColor = c.color || '#7e22ce';
         const subcats = c.subcategories || [];
         const subcatsHtml = subcats.length > 0 
-            ? subcats.map(sc => `<span class="subcat-tag" style="margin:2px;">${sc}</span>`).join('')
+            ? subcats.map(sc => `<span class="subcat-tag" style="margin:2px;">${esc(sc)}</span>`).join('')
             : '<span style="color:#94a3b8;font-size:11px;">Нет подкатегорий</span>';
         return `<div class="finance-category-card" style="border-left:4px solid ${catColor};">
             <div class="finance-category-header">
                 <div>
-                    <span class="finance-category-name" style="color:${catColor};">${c.name}</span>
+                    <span class="finance-category-name" style="color:${catColor};">${esc(c.name)}</span>
                     <span class="finance-category-type">${typeLabel}</span>
                 </div>
                 <div class="finance-category-actions">
                     <span class="finance-category-limit">💰 ${limitDisplay}</span>
                     ${isReadOnlyActive() ? '' : `
-                    <button class="action-btn edit" onclick="openCategoryModal('${c.id}')">✏️</button>
-                    <button class="action-btn delete" onclick="deleteFinanceItem('category','${c.id}')">🗑</button>`}
+                    <button class="action-btn edit" onclick="openCategoryModal('${esc(c.id)}')">✏️</button>
+                    <button class="action-btn delete" onclick="deleteFinanceItem('category','${esc(c.id)}')">🗑</button>`}
                 </div>
             </div>
             <div class="finance-subcategory-list">${subcatsHtml}</div>

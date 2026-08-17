@@ -1341,10 +1341,7 @@ function getExerciseNameByGif(gifFilename) {
 }
 
 // Функция для получения информации об упражнении по GIF
-function getExerciseInfoByGif(gifFilename) {
-    if (!gifFilename) return null;
-    return EXERCISE_GIF_NAMES[gifFilename] || null;
-}
+
 
 // Функция для поиска GIF файлов по названию упражнения
 function searchGifsByExerciseName(query) {
@@ -1364,7 +1361,7 @@ function getAllMappedGifs() {
 // Экспорт
 window.ExerciseGifNames = {
     getExerciseNameByGif: getExerciseNameByGif,
-    getExerciseInfoByGif: getExerciseInfoByGif,
+    
     searchGifsByExerciseName: searchGifsByExerciseName,
     getAllMappedGifs: getAllMappedGifs,
     EXERCISE_GIF_NAMES: EXERCISE_GIF_NAMES

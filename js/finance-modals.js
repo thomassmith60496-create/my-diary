@@ -4,7 +4,7 @@
 "use strict";
 
 window.openFinanceModal = function() {
-    document.getElementById('f-fin-date').value = new Date().toISOString().slice(0,10);
+    document.getElementById('f-fin-date').value = getLocalDateStr();
     document.getElementById('f-fin-amount').value = '';
     document.getElementById('f-fin-comment').value = '';
     document.getElementById('f-fin-type').value = 'expense';
@@ -14,7 +14,7 @@ window.openFinanceModal = function() {
 }
 
 window.openSavingsModal = function() {
-    document.getElementById('f-sav-date').value = new Date().toISOString().slice(0,10);
+    document.getElementById('f-sav-date').value = getLocalDateStr();
     document.getElementById('f-sav-amount').value = '';
     document.getElementById('f-sav-goal').value = 'Отпуск';
     document.getElementById('f-sav-goal-custom-wrap').style.display = 'none';
@@ -28,7 +28,7 @@ window.openMandatoryModal = function() {
     document.getElementById('f-mp-schedule-type').value = 'monthly';
     document.getElementById('f-mp-day').value = '1';
     document.getElementById('f-mp-interval').value = '30';
-    document.getElementById('f-mp-start-date').value = new Date().toISOString().slice(0,10);
+    document.getElementById('f-mp-start-date').value = getLocalDateStr();
     document.getElementById('mandatory-modal-title').textContent = '🔄 Добавить обязательный платёж';
     window._editingMandatoryId = null;
     updateMandatoryCategoryOptions();
@@ -36,7 +36,7 @@ window.openMandatoryModal = function() {
 }
 
 window.openPlannedModal = function() {
-    document.getElementById('f-plan-date').value = new Date().toISOString().slice(0,10);
+    document.getElementById('f-plan-date').value = getLocalDateStr();
     document.getElementById('f-plan-amount').value = '';
     document.getElementById('f-plan-done').value = 'false';
     updatePlanCategoryOptions();

@@ -4405,6 +4405,18 @@ header .macro-badge {
     margin-top: var(--spacing-lg);
 }
 
+@media (max-width: 768px) {
+    .finance-mandatory-table {
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+    .finance-mandatory-header,
+    .finance-mandatory-row {
+        grid-template-columns: 2fr 1fr 1fr 1.5fr 1.5fr;
+        min-width: 480px;
+    }
+}
+
 .finance-mandatory-header {
     display: grid;
     grid-template-columns: 2fr 1fr 1fr 1.5fr 1.5fr;
@@ -5789,8 +5801,8 @@ header .macro-badge {
         justify-content: center;
         padding: 8px 12px;
     }
-    .finance-chart-container { min-width: 520px; }
-    .finance-chart-container text { font-size: 14px !important; }
+    .finance-chart-container { min-width: 0; overflow-x: auto; }
+    .finance-chart-container text { font-size: 11px; }
 
     /* ---------- To-Do ---------- */
     .todo-app { padding: 12px 0 32px; }
@@ -5818,9 +5830,7 @@ header .macro-badge {
     .form-field { min-width: 0; }
 
     /* ---------- Хитмапы ---------- */
-    .hm-cell { width: 16px; height: 16px; }
-    .hm-daylabels span { height: 16px; line-height: 16px; }
-    .hm-grid { gap: 4px; }
+    .hm-daylabels span { height: 12px; line-height: 12px; }
     .hm-month { font-size: 9px; }
 
     /* ---------- Графики / дашборд ---------- */

@@ -11,8 +11,8 @@ window.openFinanceExportModal = function() {
     const today = new Date();
     const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
     
-    startInput.value = firstDay.toISOString().slice(0, 10);
-    endInput.value = today.toISOString().slice(0, 10);
+    startInput.value = getLocalDateStr(firstDay);
+    endInput.value = getLocalDateStr(today);
     
     document.getElementById('finance-export-modal').classList.add('visible');
 }

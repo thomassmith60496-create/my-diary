@@ -4,6 +4,7 @@
 "use strict";
 
 let customModalCallback = null;
+let customEscapeHandler = null;
 
 // === ОТОБРАЖЕНИЕ МОДАЛКИ ===
 
@@ -68,13 +69,12 @@ window.showCustomModal = function(options) {
     });
 
     // Закрытие по Escape
-    const escapeHandler = (e) => {
+    customEscapeHandler = (e) => {
         if (e.key === 'Escape') {
             closeCustomModal(null);
-            document.removeEventListener('keydown', escapeHandler);
         }
     };
-    document.addEventListener('keydown', escapeHandler);
+    document.addEventListener('keydown', customEscapeHandler);
 }
 
 // === ЗАКРЫТИЕ МОДАЛКИ ===
@@ -83,6 +83,11 @@ window.closeCustomModal = function(result) {
     const overlay = document.getElementById('custom-modal-overlay');
     if (overlay) {
         overlay.remove();
+    }
+    
+    if (customEscapeHandler) {
+        document.removeEventListener('keydown', customEscapeHandler);
+        customEscapeHandler = null;
     }
     
     if (customModalCallback) {

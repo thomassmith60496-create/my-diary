@@ -14,7 +14,7 @@ window.downloadMenuTemplate = function() {
         "menu": [
             {
                 "day": "Понедельник",
-                "date": formatDateWithYear(monday.toISOString().slice(0,10)),
+                "date": formatDateWithYear(getLocalDateStr(monday)),
                 "training": false,
                 "meals": [
                     {
@@ -64,7 +64,7 @@ window.downloadMenuTemplate = function() {
             },
             {
                 "day": "Вторник",
-                "date": formatDateWithYear(tuesday.toISOString().slice(0,10)),
+                "date": formatDateWithYear(getLocalDateStr(tuesday)),
                 "training": true,
                 "meals": [
                     {
@@ -162,11 +162,11 @@ window.createEmptyWeek = function() {
     const menu = days.map((day, i) => {
         const date = new Date(startOfWeek);
         date.setDate(startOfWeek.getDate() + i);
-        return { day, date: formatDateWithYear(date.toISOString().slice(0,10)), training: false, meals: [] };
+        return { day, date: formatDateWithYear(getLocalDateStr(date)), training: false, meals: [] };
     });
     nutritionData.weeks.push({
-        id: weekId, startDate: startOfWeek.toISOString().slice(0,10), endDate: endOfWeek.toISOString().slice(0,10),
-        title: `Неделя ${formatDateWithYear(startOfWeek.toISOString().slice(0,10))} – ${formatDateWithYear(endOfWeek.toISOString().slice(0,10))}`,
+        id: weekId, startDate: getLocalDateStr(startOfWeek), endDate: getLocalDateStr(endOfWeek),
+        title: `Неделя ${formatDateWithYear(getLocalDateStr(startOfWeek))} – ${formatDateWithYear(getLocalDateStr(endOfWeek))}`,
         menu, data: {}
     });
     nutritionData.currentWeekId = weekId;
@@ -180,23 +180,55 @@ window.migrateNutritionDates = function() {
     let needsUpdate = false;
     const currentYear = new Date().getFullYear();
     
+    function parseDateSafe(dateStr) {
+        if (!dateStr) return null;
+        // Try DD.MM.YYYY or DD.MM.YY
+        const parts = dateStr.split('.');
+        if (parts.length === 3) {
+            const d = parseInt(parts[0], 10);
+            const m = parseInt(parts[1], 10) - 1;
+            const y = parseInt(parts[2], 10);
+            if (!isNaN(d) && !isNaN(m) && !isNaN(y)) {
+                const year = y < 100 ? 2000 + y : y;
+                return new Date(year, m, d);
+            }
+        }
+        // Try YYYY-MM-DD
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+            const [y, m, d] = dateStr.split('-').map(Number);
+            return new Date(y, m - 1, d);
+        }
+        return null;
+    }
+    
+    function formatISO(dateObj) {
+        if (!dateObj || isNaN(dateObj.getTime())) return null;
+        const y = dateObj.getFullYear();
+        const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const d = String(dateObj.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    }
+    
     nutritionData.weeks.forEach(week => {
         // Update week title if it doesn't have year
         if (week.title && !week.title.match(/\d{4}/)) {
-            const startDate = new Date(week.startDate || week.menu[0]?.date + '.' + currentYear);
-            const endDate = new Date(week.endDate || week.menu[week.menu.length - 1]?.date + '.' + currentYear);
-            week.title = `Неделя ${formatDateWithYear(startDate.toISOString().slice(0,10))} – ${formatDateWithYear(endDate.toISOString().slice(0,10))}`;
-            needsUpdate = true;
+            const startDate = parseDateSafe(week.startDate) || parseDateSafe(week.menu?.[0]?.date) || new Date();
+            const endDate = parseDateSafe(week.endDate) || parseDateSafe(week.menu?.[week.menu.length - 1]?.date) || new Date();
+            const startISO = formatISO(startDate);
+            const endISO = formatISO(endDate);
+            if (startISO && endISO) {
+                week.title = `Неделя ${formatDateWithYear(startISO)} – ${formatDateWithYear(endISO)}`;
+                needsUpdate = true;
+            }
         }
         
         // Update menu dates if they don't have year
         if (week.menu) {
             week.menu.forEach(day => {
                 if (day.date && !day.date.match(/\.\d{4}$/)) {
-                    // Date is in format "DD.MM" without year, add current year
-                    const [dayPart, monthPart] = day.date.split('.');
-                    if (dayPart && monthPart) {
-                        day.date = `${dayPart}.${monthPart}.${currentYear}`;
+                    const parsed = parseDateSafe(day.date);
+                    if (parsed) {
+                        day.date = `${String(parsed.getDate()).padStart(2,'0')}.${String(parsed.getMonth()+1).padStart(2,'0')}.${parsed.getFullYear()}`;
                         needsUpdate = true;
                     }
                 }
@@ -261,7 +293,7 @@ window.renderDays = function() {
             ${week.menu.map((day, di) => {
                 const dayShort = { 'Понедельник': 'Пн', 'Вторник': 'Вт', 'Среда': 'Ср', 'Четверг': 'Чт', 'Пятница': 'Пт', 'Суббота': 'Сб', 'Воскресенье': 'Вс' };
                 const shortName = dayShort[day.day] || day.day.slice(0, 2);
-                return `<button class="day-nav-btn ${day.training?'training':''}" onclick="scrollToDay(${di})">${shortName} ${day.date}</button>`;
+                return `<button class="day-nav-btn ${day.training?'training':''}" onclick="scrollToDay(${di})">${esc(shortName)} ${esc(day.date)}</button>`;
             }).join('')}
             <div class="nav-actions">
                 <button class="nav-action-btn" onclick="toggleAllDays()">🔽 Все</button>
@@ -277,7 +309,7 @@ window.renderDays = function() {
             <div class="day-card" id="day-${di}">
                 <div class="day-title" onclick="toggleDay(${di})">
                     <span class="day-toggle">▼</span>
-                    <span class="day-date">${day.day} • ${day.date}</span>
+                    <span class="day-date">${esc(day.day)} • ${esc(day.date)}</span>
                     ${day.training?'<span class="day-tag training">💪 ТРЕНИРОВКА</span>':''}
                 </div>
                 <div class="day-content">
@@ -285,7 +317,7 @@ window.renderDays = function() {
                         <div class="day-section-title">🌅 Утренние показатели</div>
                         <div class="day-field">
                             <label>⚖️ Вес утром, кг:</label>
-                            <input type="number" step="0.1" data-week="${week.id}" data-key="weight-${di}" data-day="${di}" data-field="weight" oninput="debouncedSaveNutrition()" placeholder="65.4" value="${getWeekData(week.id, `weight-${di}`) !== '' ? getWeekData(week.id, `weight-${di}`) : ''}">
+                            <input type="number" step="0.1" data-week="${week.id}" data-key="weight-${di}" data-day="${di}" data-meal="" data-field="weight" oninput="debouncedSaveNutrition()" placeholder="65.4" value="${getWeekData(week.id, `weight-${di}`) !== '' ? getWeekData(week.id, `weight-${di}`) : ''}">
                         </div>
                     </div>
                     ${mealsHtml}
@@ -335,7 +367,7 @@ window.renderMeal = function(m, di, mi, weekId) {
         if (m.items) itemsList = m.items;
         else if (m.choices) {
             m.choices.forEach(c => {
-                c.items.forEach(item => itemsList.push(`[${c.label}] ${item}`));
+                c.items.forEach(item => itemsList.push(`[${esc(c.label)}] ${esc(item)}`));
             });
         }
         
@@ -353,7 +385,7 @@ window.renderMeal = function(m, di, mi, weekId) {
                                data-idx="${idx}"
                                ${eaten ? 'checked' : ''}
                                onchange="toggleMealItem(this, '${weekId}', ${di}, ${mi})">
-                        <span class="meal-item-text">${item}</span>
+                        <span class="meal-item-text">${esc(item)}</span>
                         ${!eaten ? `<input type="text" 
                             data-week="${weekId}" 
                             data-key="note-${di}-${mi}-${idx}"
@@ -369,8 +401,8 @@ window.renderMeal = function(m, di, mi, weekId) {
             content = `<div class="meal-items-empty">Список продуктов не указан</div>`;
         }
     } else {
-        if(m.items) content=`<ul>${m.items.map(i=>`<li>${i}</li>`).join('')}</ul>`;
-        else if(m.choices) content=m.choices.map(c=>`<div class="or-choice"><span class="or-label">${c.label}</span> ${c.items.join(', ')}</div>`).join('');
+        if(m.items) content=`<ul>${m.items.map(i=>`<li>${esc(i)}</li>`).join('')}</ul>`;
+        else if(m.choices) content=m.choices.map(c=>`<div class="or-choice"><span class="or-label">${esc(c.label)}</span> ${c.items.map(i => esc(i)).join(', ')}</div>`).join('');
     }
     
     const timeVal = getWeekData(weekId, `time-${di}-${mi}`) || '';
@@ -478,9 +510,12 @@ window.updateTotals = function(weekId, di) {
         const f = inp.dataset.field;
         const v = parseFloat(inp.value) || 0;
         if(s[f] !== undefined) s[f] += v;
-        const week = nutritionData.weeks.find(w => w.id === weekId);
-        if(week && week.data) {
-            week.data[`m-${inp.dataset.day}-${inp.dataset.meal}-${inp.dataset.field}`] = inp.value;
+        const meal = inp.dataset.meal;
+        if (meal !== undefined && meal !== '') {
+            const week = nutritionData.weeks.find(w => w.id === weekId);
+            if(week && week.data) {
+                week.data[`m-${inp.dataset.day}-${meal}-${inp.dataset.field}`] = inp.value;
+            }
         }
     });
     ['cal','prot','fat','carb'].forEach(f => {
@@ -564,22 +599,22 @@ window.printMenu = function() {
     if(!week) return;
     document.querySelectorAll('.day-card').forEach(c => c.classList.remove('collapsed'));
     const printArea = document.getElementById('print-area');
-    let html = `<h1 class="print-title">МЕНЮ: ${week.title}</h1>`;
+    let html = `<h1 class="print-title">МЕНЮ: ${esc(week.title)}</h1>`;
     html += `<p class="print-subtitle">Цель: 1250-1300 ккал | Б: 100-110г | Ж: 50-55г | У: 80-100г</p>`;
     week.menu.forEach(day => {
         html += `<div class="print-day">`;
-        html += `<h2 class="print-day-header">${day.day} • ${day.date}${day.training?' 💪':''}</h2>`;
+        html += `<h2 class="print-day-header">${esc(day.day)} • ${esc(day.date)}${day.training?' 💪':''}</h2>`;
         day.meals.forEach(meal => {
             const isPrep = ['prep','preworkout','postworkout'].includes(meal.type);
-            html += `<div class="print-meal ${isPrep ? 'print-meal-prep' : ''}"><strong>${meal.name}</strong><br>`;
+            html += `<div class="print-meal ${isPrep ? 'print-meal-prep' : ''}"><strong>${esc(meal.name)}</strong><br>`;
             if(meal.items) {
                 html += `<ul>`;
-                meal.items.forEach(item => { html += `<li>${item}</li>`; });
+                meal.items.forEach(item => { html += `<li>${esc(item)}</li>`; });
                 html += `</ul>`;
             } else if(meal.choices) {
                 meal.choices.forEach(c => {
                     html += `<div class="print-choice">`;
-                    html += `<span class="print-choice-label">${c.label}</span>${c.items.join(', ')}</div>`;
+                    html += `<span class="print-choice-label">${esc(c.label)}</span>${c.items.map(i => esc(i)).join(', ')}</div>`;
                 });
             }
             html += `</div>`;

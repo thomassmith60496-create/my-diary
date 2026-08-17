@@ -346,11 +346,7 @@ function _detectMeasurementType(parsedSets) {
     return 'reps_weight';
 }
 
-function _detectLoadType(mt) {
-    if (mt === 'cardio') return 'cardio';
-    if (mt === 'time') return 'static';
-    return 'weight';
-}
+
 
 // === UI ===
 

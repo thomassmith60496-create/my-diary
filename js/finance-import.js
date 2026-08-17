@@ -39,12 +39,12 @@ window.importFinanceExcel = function(input) {
                 let date = '';
                 
                 if(dateRaw instanceof Date && !isNaN(dateRaw.getTime())) {
-                    date = dateRaw.toISOString().slice(0,10);
+                    date = getLocalDateStr(dateRaw);
                 }
                 else if(typeof dateRaw === 'number' && dateRaw > 1 && dateRaw < 200000) {
                     const excelEpoch = new Date(1899, 11, 30);
                     const parsed = new Date(excelEpoch.getTime() + dateRaw * 86400000);
-                    date = parsed.toISOString().slice(0,10);
+                    date = getLocalDateStr(parsed);
                 }
                 else {
                     const dateStr = String(dateRaw).trim();
@@ -69,24 +69,24 @@ window.importFinanceExcel = function(input) {
                         const parts = dateStr.split('.');
                         date = `${new Date().getFullYear()}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
                     }
-                    else {
-                        const d = new Date(dateStr);
-                        if(!isNaN(d.getTime())) {
-                            date = d.toISOString().slice(0,10);
-                        }
+else {
+                    const d = new Date(dateStr);
+                    if(!isNaN(d.getTime())) {
+                        date = getLocalDateStr(d);
                     }
+                }
                 }
                 
                 if(!date) { errors++; continue; }
                 const dateObj = new Date(date);
                 if(isNaN(dateObj.getTime())) { errors++; continue; }
-                date = dateObj.toISOString().slice(0,10);
+                date = getLocalDateStr(dateObj);
                 
                 let amount = 0;
                 if(typeof amountRaw === 'number') {
                     amount = amountRaw;
                 } else {
-                    amount = parseFloat(String(amountRaw).replace(/[^\d.,\-]/g, '').replace(',', '.'));
+                    amount = parseFloat(String(amountRaw).replace(/[^\d.,\-]/g, '').replace(/,/g, '.'));
                 }
                 if(isNaN(amount) || amount === 0) { errors++; continue; }
                 

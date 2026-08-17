@@ -100,8 +100,8 @@ window.openNutritionModal = function() {
     startOfWeek.setDate(today.getDate() - today.getDay() + 1);
     const endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(startOfWeek.getDate() + 6);
-    document.getElementById('f-start-date').value = startOfWeek.toISOString().slice(0,10);
-    document.getElementById('f-end-date').value = endOfWeek.toISOString().slice(0,10);
+    document.getElementById('f-start-date').value = getLocalDateStr(startOfWeek);
+    document.getElementById('f-end-date').value = getLocalDateStr(endOfWeek);
     document.getElementById('f-menu-json').value = '';
     document.getElementById('nutrition-modal').classList.add('visible');
 }
@@ -248,7 +248,7 @@ function exportAllData() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `diary-${new Date().toISOString().slice(0,10)}.json`;
+    a.download = `diary-${getLocalDateStr()}.json`;
     a.click();
     URL.revokeObjectURL(url);
 }

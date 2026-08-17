@@ -135,10 +135,17 @@ const TrainingExerciseAPI = {
                         exercises: _data.exercises,
                         workouts: _data.workouts,
                         lastUpdated: Date.now()
-                    }).catch(function() {});
+                    }).catch(function(err) {
+                        console.error('Firebase sync failed:', err);
+                        if (typeof showSyncStatus === 'function') {
+                            showSyncStatus('⚠️ Синхронизация тренировок не удалась', 'error');
+                        }
+                    });
                 }
             }
-        } catch(e) {}
+        } catch(e) {
+            console.error('Training save error:', e);
+        }
         return this;
     },
 
@@ -164,10 +171,11 @@ const TrainingExerciseAPI = {
         if (!Array.isArray(data.workouts)) data.workouts = [];
         if (!Array.isArray(data.exercises)) data.exercises = [];
         _data = data;
-        // Если из Firebase пришли пустые упражнения — сидируем
+        // Если из Firebase пришли пустые упражнения — сидируем (с dedupe по имени как в load())
         if (_data.exercises.length === 0 && typeof SEED_EXERCISES !== 'undefined') {
             for (var fi = 0; fi < SEED_EXERCISES.length; fi++) {
                 var fg = SEED_EXERCISES[fi];
+                if (_data.exercises.some(function(e) { return _normalizeName(e.name) === _normalizeName(fg.name); })) continue;
                 var fe = { id: _generateId(), name: fg.name.trim(), variants: [] };
                 for (var fj = 0; fj < fg.variants.length; fj++) {
                     var fv = fg.variants[fj];
@@ -198,17 +206,6 @@ const TrainingExerciseAPI = {
             name: ex.name,
             variants: ex.variants.map(v => ({ ...v }))
         }));
-    },
-
-    /** Получить базовое упражнение по ID (копия) */
-    getExerciseById: function(id) {
-        const ex = _data.exercises.find(e => e.id === id);
-        return ex ? { ...ex, variants: ex.variants.map(v => ({ ...v })) } : null;
-    },
-
-    /** Получить версию данных */
-    getVersion: function() {
-        return _data.version || 1;
     },
 
     // -------------------------------------------------------
@@ -407,18 +404,6 @@ const TrainingWorkoutAPI = {
             if (v) return { ...v, baseExerciseId: ex.id, baseExerciseName: ex.name };
         }
         return null;
-    },
-
-    /** Получить все тренировки за указанную дату */
-    getWorkoutsByDate: function(dateStr) {
-        return _data.workouts
-            .filter(w => w.date === dateStr)
-            .map(w => ({
-                id: w.id,
-                date: w.date,
-                comment: w.comment || '',
-                exercises: (w.exercises || []).map(e => ({ ...e, sets: (e.sets || []).map(s => ({ ...s })) }))
-            }));
     },
 
     // -------------------------------------------------------
@@ -635,8 +620,10 @@ const TrainingWorkoutAPI = {
         if (!workout) return false;
         const exercise = workout.exercises.find(e => e.variantId === variantId);
         if (!exercise) return false;
+        // Generate a NEW variantId for the copy to avoid duplicate variantId issues
+        const newVariantId = 'copy-' + variantId + '-' + Date.now().toString(36);
         const newExercise = {
-            variantId: variantId,
+            variantId: newVariantId,
             sets: (exercise.sets || []).map(s => ({ ...s, id: _generateId() }))
         };
         // Вставляем после текущего
@@ -784,29 +771,4 @@ const TrainingWorkoutAPI = {
 TrainingExerciseAPI.load();
 
 // Ручной вызов seed (если нужно пересоздать)
-window.seedExercisesNow = function() {
-    var exs = TrainingExerciseAPI.getExercises();
-    if (exs.length > 0 && !confirm('База не пуста (' + exs.length + ' упр.). Пересоздать?')) return;
-    _data = { version: 2, exercises: [], workouts: [] };
-    if (typeof SEED_EXERCISES !== 'undefined') {
-        for (var wi = 0; wi < SEED_EXERCISES.length; wi++) {
-            var wg = SEED_EXERCISES[wi];
-            var we = { id: _generateId(), name: wg.name.trim(), variants: [] };
-            for (var wj = 0; wj < wg.variants.length; wj++) {
-                var wv = wg.variants[wj];
-                we.variants.push({
-                    id: _generateId(),
-                    name: wv.name.trim(),
-                    loadType: wv.loadType || 'weight',
-                    measurementType: wv.measurementType || 'reps_weight',
-                    equipment: wv.equipment || '',
-                    categories: wv.categories || [],
-                    aliases: wv.aliases || []
-                });
-            }
-            _data.exercises.push(we);
-        }
-    }
-    ExerciseStorage.save(_data);
-    renderTrainingExercises();
-};
+;

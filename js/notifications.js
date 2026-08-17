@@ -22,6 +22,11 @@ window.initTaskDeadlineNotifications = function() {
   notifiedTaskIds.clear();
   notifyAddLog('info', 'Инициализация уведомлений');
 
+  if (typeof Notification === 'undefined') {
+    notifyAddLog('err', 'Notification API не поддерживается в этом браузере');
+    return;
+  }
+
   if (Notification.permission === 'granted') {
     notifyAddLog('ok', 'Разрешение: granted — запуск проверки');
     checkAllDeadlines();
@@ -34,6 +39,7 @@ window.initTaskDeadlineNotifications = function() {
 };
 
 window.startDeadlineCheckLoop = function() {
+  if (typeof Notification === 'undefined') return;
   deadlineCheckInterval = setInterval(checkAllDeadlines, 10 * 60 * 1000);
   notifyAddLog('info', 'Запущена проверка каждые 10 минут');
 }
@@ -90,6 +96,10 @@ window.checkAllDeadlines = function() {
 }
 
 window.testDeadlineNotification = function() {
+  if (typeof Notification === 'undefined') {
+    customAlert('Notification API не поддерживается в этом браузере', 'Ошибка');
+    return;
+  }
   function sendTest() {
     new Notification('🧪 Тест уведомления', {
       body: 'Это тестовое уведомление системы дедлайнов',
@@ -106,7 +116,7 @@ window.testDeadlineNotification = function() {
   if (Notification.permission === 'granted') {
     sendTest();
   } else if (Notification.permission === 'denied') {
-    alert('Уведомления заблокированы браузером. Разрешите уведомления в настройках сайта.');
+    customAlert('Уведомления заблокированы браузером. Разрешите уведомления в настройках сайта.', 'Ошибка');
   } else {
     Notification.requestPermission().then(function(p) {
       if (p === 'granted') {
@@ -131,8 +141,8 @@ window.showNotifyLog = function() {
     var color = { ok: '#16a34a', sent: '#2563eb', skip: '#94a3b8', warn: '#ca8a04', err: '#dc2626', info: '#6b7280' }[entry.type] || '#6b7280';
     return '<div style="padding:4px 0;border-bottom:1px solid #f1f5f9;font-size:12px;">' +
       '<span style="color:' + color + ';margin-right:6px;">' + icon + '</span>' +
-      '<span style="color:#94a3b8;margin-right:6px;">' + entry.time + '</span>' +
-      '<span>' + entry.msg + '</span></div>';
+      '<span style="color:#94a3b8;margin-right:6px;">' + esc(entry.time) + '</span>' +
+      '<span>' + esc(entry.msg) + '</span></div>';
   }).join('');
 
   if (!logHtml) {
