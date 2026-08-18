@@ -73,7 +73,11 @@ function activateGlobalTab(tab) {
 window.switchGlobalTab = function(tab, event) {
     activateGlobalTab(tab);
     if (tab === 'work') {
-        if (typeof renderWorkPage === 'function') renderWorkPage();
+        try {
+            if (typeof renderWorkPage === 'function') renderWorkPage();
+        } catch (e) {
+            console.error('Ошибка при открытии вкладки Работа:', e);
+        }
     }
     setTimeout(() => applyReadOnlyState(), 50);
 };

@@ -332,7 +332,7 @@ function getFilterOptions() {
     if (!workState.currentSnapshot) return { sprints: [], projects: [], streams: [], priorities: [] };
     const { projects, tasks } = workState.currentSnapshot;
     
-    const sprints = [...new Set(tasks.map(t => t.sprint).filter(Boolean))].sort();
+    const sprints = [...new Set([...tasks, ...projects].map(x => x.sprint).filter(Boolean))].sort();
     const projectNames = [...new Set(tasks.map(t => t.project).filter(Boolean))].sort();
     const streams = [...new Set(projects.flatMap(p => p.stream).filter(Boolean))].sort();
     const priorities = [...new Set(tasks.map(t => t.priority).filter(Boolean))].sort();

@@ -112,9 +112,17 @@ function normalizeStatus(status) {
 function extractProjectName(projField) {
     if (!projField) return 'Без проекта';
     if (Array.isArray(projField)) projField = projField[0] || '';
-    const str = String(projField).trim();
-    // Убираем [[ и ]] и кавычки
-    return str.replace(/^["']?\[\[?/, '').replace(/\]?["']?$/, '');
+    let str = String(projField).trim();
+    // Убираем [[ и ]], кавычки, # и |alias
+    str = str.replace(/^\[\[/, '').replace(/\]\]$/, '');
+    str = str.replace(/^["']|["']$/g, '');
+    // Если есть |alias — берём alias
+    if (str.includes('|')) str = str.split('|').pop().trim();
+    // Если есть # — берём часть до #
+    if (str.includes('#')) str = str.split('#')[0].trim();
+    // Если путь вида 01 Projects/Name — берём последний сегмент
+    if (str.includes('/')) str = str.split('/').pop().trim();
+    return str;
 }
 
 /**
@@ -212,7 +220,7 @@ function parseWorkFiles(files, vaultName) {
                 participants: parseParticipants(sections['👥 Участники'] || sections['Участники'] || ''),
                 materials: parseMaterials(sections['🔗 Материалы'] || sections['Материалы'] || ''),
                 obsidianUrl,
-                sprint: fm.sprint || null
+                sprint: fm.sprint || fm.спринт || null
             };
             projects.push(project);
         }
@@ -237,7 +245,7 @@ function parseWorkFiles(files, vaultName) {
                 result: sections['Результат'] || '',
                 tags: parseTags(fm, parsed.body),
                 obsidianUrl,
-                sprint: fm.sprint || null
+                sprint: fm.sprint || fm.спринт || null
             };
             tasks.push(task);
         }
@@ -267,7 +275,7 @@ function parseWorkFiles(files, vaultName) {
                 stream: Array.isArray(fm.стрим) ? fm.стрим : (fm.стрим ? [fm.стрим] : []),
                 status: normalizeStatus(fm.статус) || 'запланирована',
                 obsidianUrl,
-                sprint: fm.sprint || null,
+                sprint: fm.sprint || fm.спринт || null,
                 // Для сортировки и отображения
                 dateTime: parseMeetingDateTime(fm)
             };

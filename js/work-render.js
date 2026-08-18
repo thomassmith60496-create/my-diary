@@ -7,15 +7,27 @@
  * Инициализация страницы Работы (загрузка snapshot из Firebase)
  */
 window.renderWorkPage = async function() {
-    const loaded = await WorkData.loadWorkSnapshot();
-    if (loaded) {
-        WorkImport.updateWorkSyncInfo();
-    }
-    // Рендерим активную подвкладку
-    const activeBtn = document.querySelector('#global-tab-work .work-sub-tab-btn.active');
-    if (activeBtn) {
-        const tab = activeBtn.getAttribute('onclick').match(/'([^']+)'/);
-        if (tab) renderWorkSubTab(tab[1]);
+    try {
+        if (typeof WorkData === 'undefined' || !WorkData.workState) {
+            console.error('WorkData не инициализирован');
+            renderWorkEmptyState();
+            return;
+        }
+        const loaded = await WorkData.loadWorkSnapshot();
+        if (loaded) {
+            if (typeof WorkImport !== 'undefined' && WorkImport.updateWorkSyncInfo) {
+                WorkImport.updateWorkSyncInfo();
+            }
+        }
+        // Рендерим активную подвкладку
+        const activeBtn = document.querySelector('#global-tab-work .work-sub-tab-btn.active');
+        if (activeBtn) {
+            const tab = activeBtn.getAttribute('onclick').match(/'([^']+)'/);
+            if (tab) renderWorkSubTab(tab[1]);
+        }
+    } catch (e) {
+        console.error('Ошибка при рендеринге страницы Работы:', e);
+        renderWorkEmptyState();
     }
 };
 
@@ -179,7 +191,12 @@ function renderWorkProjects() {
     const statusColors = { 'активен': '#16a34a', 'в работе': '#f59e0b', 'пауза': '#94a3b8', 'закрыт': '#dc2626', 'завершён': '#dc2626' };
     
     const cards = projects.map(p => {
-        const projTasks = tasks.filter(t => t.project === p.name);
+        const projTasks = tasks.filter(t => {
+            const tn = String(t.project || '').trim().toLowerCase();
+            const pn = String(p.name || '').trim().toLowerCase();
+            const pid = String(p.id || '').trim().toLowerCase();
+            return tn === pn || tn === pid || (p.id && tn === String(p.id).replace(/^01 Projects\//, '').replace(/\.md$/, '').trim().toLowerCase());
+        });
         const closedCount = projTasks.filter(t => WorkData.normalizeTaskStatus(t.status) === 'закрыт').length;
         const totalCount = projTasks.length;
         const progressPct = totalCount ? Math.round(closedCount / totalCount * 100) : 0;
