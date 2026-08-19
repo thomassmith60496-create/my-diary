@@ -218,6 +218,8 @@ function parseWorkFiles(files, vaultName) {
         }
         
         const type = fm.тип || fm.type;
+        // Регулярная встреча: type: recurring или есть startRecur, и это не задача
+        const isRecurringMeeting = (type === 'recurring' || fm.startRecur) && fm.isTask !== true;
         
         if (type === 'проект' || type === 'project') {
             // ПРОЕКТ
@@ -266,7 +268,7 @@ function parseWorkFiles(files, vaultName) {
             };
             tasks.push(task);
         }
-        else if (type === 'встреча' || type === 'meeting') {
+        else if (type === 'встреча' || type === 'meeting' || isRecurringMeeting) {
             // ВСТРЕЧА
             const meeting = {
                 id: relPath,
