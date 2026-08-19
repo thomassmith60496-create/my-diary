@@ -148,8 +148,12 @@ function renderWorkDashboard() {
         </div>`;
     }).join('') : '<div class="work-empty-mini">Нет изменений с прошлой синхронизации</div>';
     
+    // 🗓 Представление на день
+    const dayOverviewHtml = renderDayOverviewBlock();
+    
     container.innerHTML = `
         ${statCards}
+        ${dayOverviewHtml}
         <div class="work-dashboard-grid">
             <div class="work-dashboard-card">
                 <h3 class="work-card-title">📊 Задачи по статусам</h3>
@@ -166,6 +170,74 @@ function renderWorkDashboard() {
             <div class="work-dashboard-card">
                 <h3 class="work-card-title">🔄 Изменения с прошлой синхронизации</h3>
                 ${changesHtml}
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * 🗓 Представление на день — блок под карточками статистики на Dashboard
+ */
+function renderDayOverviewBlock() {
+    const overview = WorkData.getDayOverview();
+    if (!overview) return '';
+    
+    const today = new Date();
+    const dayNames = ['воскресенье', 'понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота'];
+    const monthNames = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+    const dateLabel = `${today.getDate()} ${monthNames[today.getMonth()]}, ${dayNames[today.getDay()]}`;
+    
+    // 📋 Задачи из дейли-ноута
+    const dailyTasks = (overview.dailyNote && overview.dailyNote.tasks) || [];
+    const tasksHtml = dailyTasks.length ? dailyTasks.map(t => `
+        <div class="work-day-task ${t.done ? 'done' : ''}">
+            <span class="work-day-check">${t.done ? '☑️' : '☐'}</span>
+            <span class="work-day-task-text">${esc(t.text)}</span>
+        </div>
+    `).join('') : '<div class="work-empty-mini">Нет задач на день</div>';
+    
+    const dailyLink = overview.dailyNote
+        ? `<a href="${overview.dailyNote.obsidianUrl}" class="work-open-link">📄 Открыть дейли в Obsidian</a>`
+        : '<div class="work-empty-mini">Дейли-ноут не найден</div>';
+    
+    // 🗓 Встречи на сегодня
+    const meetingsHtml = overview.meetings.length ? overview.meetings.map(m => `
+        <div class="work-day-meeting">
+            <span class="work-day-meeting-time">${esc(m.startTime || '—')}</span>
+            <span class="work-day-meeting-title">${esc(m.title)} ${m.type === 'recurring' ? '<span class="work-chip small orange">🔁</span>' : ''}</span>
+            <a href="${m.obsidianUrl}" class="work-open-link" onclick="event.stopPropagation()">📄</a>
+        </div>
+    `).join('') : '<div class="work-empty-mini">Встреч нет</div>';
+    
+    // ⏰ Дедлайны на сегодня
+    const deadlinesHtml = overview.deadlines.length ? overview.deadlines.map(d => `
+        <div class="work-day-deadline">
+            <span class="work-day-deadline-icon">${d.kind === 'project' ? '📁' : '✅'}</span>
+            <span class="work-day-deadline-name">${esc(d.name)}</span>
+            ${d.project ? `<span class="work-chip small blue">${esc(d.project)}</span>` : ''}
+            <a href="${d.obsidianUrl}" class="work-open-link" onclick="event.stopPropagation()">📄</a>
+        </div>
+    `).join('') : '<div class="work-empty-mini">Дедлайнов нет</div>';
+    
+    return `
+        <div class="work-day-overview">
+            <div class="work-day-overview-header">
+                <div class="work-day-date">📍 Сегодня · ${dateLabel}</div>
+                <div class="work-day-header-links">${dailyLink}</div>
+            </div>
+            <div class="work-day-grid">
+                <div class="work-day-column">
+                    <h4 class="work-day-title">📋 Задачи на день</h4>
+                    <div class="work-day-column-body">${tasksHtml}</div>
+                </div>
+                <div class="work-day-column">
+                    <h4 class="work-day-title">🗓 Встречи сегодня</h4>
+                    <div class="work-day-column-body">${meetingsHtml}</div>
+                </div>
+                <div class="work-day-column">
+                    <h4 class="work-day-title">⏰ Дедлайны сегодня</h4>
+                    <div class="work-day-column-body">${deadlinesHtml}</div>
+                </div>
             </div>
         </div>
     `;

@@ -191,6 +191,7 @@ function parseWorkFiles(files, vaultName) {
     const tasks = [];
     const meetings = [];
     const ideas = [];
+    const dailyNotes = [];
     
     for (const file of files) {
         const parsed = parseMarkdownFile(file.content, file.path);
@@ -199,6 +200,22 @@ function parseWorkFiles(files, vaultName) {
         const sections = parsed.sections;
         const relPath = file.path;
         const obsidianUrl = `obsidian://open?vault=${encodeURIComponent(vaultName)}&file=${encodeURIComponent(relPath)}`;
+        
+        // Дейли-ноут из папки 06 Daily/
+        if (relPath.startsWith('06 Daily/')) {
+            const fileName = relPath.replace(/^06 Daily\//, '').replace(/\.md$/, '');
+            const date = fm.date || (/\d{4}-\d{2}-\d{2}/.test(fileName) ? fileName.match(/\d{4}-\d{2}-\d{2}/)[0] : null);
+            dailyNotes.push({
+                id: relPath,
+                date,
+                tasks: parseSubtasks(sections['Задачи'] || ''),
+                doneText: sections['Что сделано за день'] || '',
+                ideas: sections['Идеи и мысли'] || '',
+                path: relPath,
+                obsidianUrl
+            });
+            continue;
+        }
         
         const type = fm.тип || fm.type;
         
@@ -285,7 +302,7 @@ function parseWorkFiles(files, vaultName) {
         // Будут обработаны отдельно в import
     }
     
-    return { projects, tasks, meetings, ideas };
+    return { projects, tasks, meetings, ideas, dailyNotes };
 }
 
 function parseParticipants(text) {

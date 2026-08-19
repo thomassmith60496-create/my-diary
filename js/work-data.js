@@ -180,8 +180,89 @@ function buildSnapshot(entities, vaultName) {
         tasks: entities.tasks || [],
         meetings: entities.meetings || [],
         ideas: entities.ideas || [],
+        dailyNotes: entities.dailyNotes || [],
         syncedAt: new Date().toISOString(),
         vaultName
+    };
+}
+
+/**
+ * Возвращает встречи на конкретную дату (разовые и регулярные)
+ * @param {Array} meetings — все встречи из snapshot
+ * @param {string} dateStr — дата в формате YYYY-MM-DD
+ */
+function getMeetingsForDate(meetings, dateStr) {
+    if (!meetings) return [];
+    return meetings.filter(m => {
+        if (m.type === 'recurring') {
+            return isRecurringOnDate(m, dateStr);
+        }
+        return m.date === dateStr;
+    });
+}
+
+/**
+ * Проверяет, попадает ли регулярная встреча на дату
+ */
+function isRecurringOnDate(mtg, dateStr) {
+    if (mtg.startRecur && dateStr < mtg.startRecur) return false;
+    if (mtg.skipDates && Array.isArray(mtg.skipDates) && mtg.skipDates.includes(dateStr)) return false;
+    
+    const daysOfWeek = mtg.daysOfWeek || [];
+    if (daysOfWeek.length) {
+        const date = new Date(dateStr + 'T00:00:00');
+        const jsDay = date.getDay();
+        const letterForJsDay = ['S', 'M', 'T', 'W', 'T', 'F', 'S'][jsDay];
+        const match = daysOfWeek.some(d => {
+            const dNorm = String(d).trim().toUpperCase()[0];
+            if (dNorm === letterForJsDay) return true;
+            // T = вторник(2) или четверг(4), S = суббота(6) или воскресенье(0)
+            if (dNorm === 'T' && (jsDay === 2 || jsDay === 4)) return true;
+            if (dNorm === 'S' && (jsDay === 0 || jsDay === 6)) return true;
+            return false;
+        });
+        if (!match) return false;
+    }
+    
+    // Если задан repeatInterval > 1 — проверяем недельную кратность от startRecur
+    if (mtg.startRecur && mtg.repeatInterval && mtg.repeatInterval > 1) {
+        const start = new Date(mtg.startRecur + 'T00:00:00');
+        const current = new Date(dateStr + 'T00:00:00');
+        const diffWeeks = Math.round((current - start) / (7 * 86400000));
+        if (diffWeeks < 0) return false;
+        if (diffWeeks % mtg.repeatInterval !== 0) return false;
+    }
+    
+    return true;
+}
+
+/**
+ * Собирает представление дня: задачи из дейли-ноута, встречи, дедлайны
+ * @param {string} dateStr — дата в формате YYYY-MM-DD (по умолчанию сегодня)
+ */
+function getDayOverview(dateStr) {
+    if (!workState.currentSnapshot) return null;
+    const snapshot = workState.currentSnapshot;
+    const targetDate = dateStr || getLocalDateStr();
+    
+    const dailyNote = (snapshot.dailyNotes || []).find(n => n.date === targetDate) || null;
+    
+    const meetings = getMeetingsForDate(snapshot.meetings || [], targetDate)
+        .sort((a, b) => (a.startTime || '00:00').localeCompare(b.startTime || '00:00'));
+    
+    const taskDeadlines = (snapshot.tasks || [])
+        .filter(t => normalizeTaskStatus(t.status) !== 'закрыт' && t.deadline === targetDate)
+        .map(t => ({ kind: 'task', name: t.name, project: t.project, obsidianUrl: t.obsidianUrl }));
+    
+    const projectDeadlines = (snapshot.projects || [])
+        .filter(p => p.status && p.status !== 'закрыт' && p.status !== 'завершён' && p.deadline === targetDate)
+        .map(p => ({ kind: 'project', name: p.name, deadline: p.deadline, obsidianUrl: p.obsidianUrl }));
+    
+    return {
+        date: targetDate,
+        dailyNote,
+        meetings,
+        deadlines: [...taskDeadlines, ...projectDeadlines]
     };
 }
 
@@ -356,5 +437,7 @@ window.WorkData = {
     groupTasksByStatus,
     computeDashboardStats,
     getFilterOptions,
-    normalizeTaskStatus
+    normalizeTaskStatus,
+    getMeetingsForDate,
+    getDayOverview
 };

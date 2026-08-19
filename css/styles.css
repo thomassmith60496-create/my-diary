@@ -7823,6 +7823,125 @@ header .macro-badge {
     border-radius: var(--radius-md);
 }
 
+/* === Day overview (Представление на день) === */
+.work-day-overview {
+    background: linear-gradient(135deg, #f0f9ff 0%, #eff6ff 50%, #f5f3ff 100%);
+    border: 1px solid var(--color-primary-light);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    margin-bottom: var(--spacing-lg);
+    box-shadow: var(--shadow-sm);
+}
+
+.work-day-overview-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-md);
+}
+
+.work-day-date {
+    font-size: var(--font-size-lg);
+    font-weight: 700;
+    color: var(--color-gray-900);
+}
+
+.work-day-header-links {
+    font-size: var(--font-size-sm);
+}
+
+.work-day-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--spacing-md);
+}
+
+.work-day-column {
+    background: white;
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md);
+    border: 1px solid var(--color-gray-200);
+}
+
+.work-day-title {
+    font-size: var(--font-size-sm);
+    font-weight: 700;
+    color: var(--color-gray-700);
+    margin: 0 0 var(--spacing-sm) 0;
+    padding-bottom: var(--spacing-sm);
+    border-bottom: 1px solid var(--color-gray-100);
+}
+
+.work-day-column-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+}
+
+.work-day-task {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--spacing-sm);
+    font-size: var(--font-size-sm);
+    color: var(--color-gray-800);
+    padding: var(--spacing-xs) 0;
+}
+
+.work-day-task.done .work-day-task-text {
+    text-decoration: line-through;
+    color: var(--color-gray-400);
+}
+
+.work-day-check {
+    flex-shrink: 0;
+    font-size: var(--font-size-sm);
+}
+
+.work-day-task-text {
+    line-height: 1.4;
+}
+
+.work-day-meeting {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    font-size: var(--font-size-sm);
+    padding: var(--spacing-xs) 0;
+}
+
+.work-day-meeting-time {
+    flex-shrink: 0;
+    font-weight: 700;
+    color: var(--color-primary);
+    min-width: 44px;
+}
+
+.work-day-meeting-title {
+    flex: 1;
+    color: var(--color-gray-800);
+    line-height: 1.4;
+}
+
+.work-day-deadline {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    font-size: var(--font-size-sm);
+    padding: var(--spacing-xs) 0;
+}
+
+.work-day-deadline-icon {
+    flex-shrink: 0;
+}
+
+.work-day-deadline-name {
+    flex: 1;
+    color: var(--color-gray-800);
+    line-height: 1.4;
+}
+
 /* === Diff badge === */
 .work-diff-badge {
     display: inline-block;
@@ -7839,6 +7958,9 @@ header .macro-badge {
 @media (max-width: 900px) {
     .work-kanban {
         grid-template-columns: repeat(2, 1fr);
+    }
+    .work-day-grid {
+        grid-template-columns: 1fr;
     }
 }
 
