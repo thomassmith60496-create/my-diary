@@ -397,9 +397,11 @@ window.resetWorkFilters = function() {
 function renderWorkMeetings() {
     const container = document.getElementById('work-sub-meetings');
     // Разворачиваем recurring встречи на даты (прошлая неделя + следующий месяц),
-    // чтобы сегодняшние и ближайшие регулярные встречи отображались в списке
+    // чтобы сегодняшние и ближайшие регулярные встречи отображались в списке.
+    // Показываем только сегодня и будущие даты (прошедшие отфильтровываем)
+    const today = new Date(); today.setHours(0,0,0,0);
     const meetings = WorkData.filterMeetings(WorkData.expandRecurringMeetings(WorkData.workState.currentSnapshot.meetings))
-        .filter(m => m.dateTime)
+        .filter(m => m.dateTime && new Date(m.dateTime) >= today)
         .sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
     
     if (!meetings.length) {
@@ -418,8 +420,6 @@ function renderWorkMeetings() {
         if (!byDate[dateKey]) byDate[dateKey] = [];
         byDate[dateKey].push(m);
     });
-    
-    const today = new Date(); today.setHours(0,0,0,0);
     
     const html = Object.entries(byDate).map(([date, dayMeetings]) => {
         const d = new Date(date);
