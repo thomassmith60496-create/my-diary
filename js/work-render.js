@@ -396,7 +396,9 @@ window.resetWorkFilters = function() {
 // ============================================
 function renderWorkMeetings() {
     const container = document.getElementById('work-sub-meetings');
-    const meetings = WorkData.filterMeetings(WorkData.workState.currentSnapshot.meetings)
+    // Разворачиваем recurring встречи на даты (прошлая неделя + следующий месяц),
+    // чтобы сегодняшние и ближайшие регулярные встречи отображались в списке
+    const meetings = WorkData.filterMeetings(WorkData.expandRecurringMeetings(WorkData.workState.currentSnapshot.meetings))
         .filter(m => m.dateTime)
         .sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
     
@@ -514,7 +516,7 @@ function renderWorkAnalytics() {
     
     container.innerHTML = `
         ${sprintFilter}
-        <div class="work-dashboard-grid">
+        <div class="work-dashboard-grid work-analytics-grid">
             <div class="work-dashboard-card">
                 <h3 class="work-card-title">📈 Completion rate</h3>
                 <div class="work-donut-wrap">${donutHtml}</div>

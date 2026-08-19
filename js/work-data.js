@@ -315,6 +315,40 @@ function filterMeetings(meetings) {
 }
 
 /**
+ * Разворачивает recurring встречи на конкретные даты в диапазоне
+ * (прошлая неделя + следующий месяц), чтобы они отображались в списке.
+ * Одноразовые встречи возвращаются как есть.
+ * @param {Array} meetings — все встречи из snapshot
+ * @param {number} futureDays — сколько дней вперёд разворачивать (default 30)
+ * @returns {Array} встречи с заполненным date/dateTime
+ */
+function expandRecurringMeetings(meetings, futureDays = 30) {
+    if (!meetings) return [];
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const start = new Date(today.getTime() - 7 * 86400000);
+    const end = new Date(today.getTime() + futureDays * 86400000);
+    const expanded = [];
+    
+    for (const m of meetings) {
+        if (m.type === 'recurring') {
+            for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+                const dateStr = getLocalDateStr(d);
+                if (isRecurringOnDate(m, dateStr)) {
+                    expanded.push({
+                        ...m,
+                        date: dateStr,
+                        dateTime: `${dateStr}T${m.startTime || '00:00'}`
+                    });
+                }
+            }
+        } else {
+            expanded.push(m);
+        }
+    }
+    return expanded;
+}
+
+/**
  * Фильтрует идеи
  */
 function filterIdeas(ideas) {
@@ -439,5 +473,7 @@ window.WorkData = {
     getFilterOptions,
     normalizeTaskStatus,
     getMeetingsForDate,
-    getDayOverview
+    getDayOverview,
+    expandRecurringMeetings,
+    isRecurringOnDate
 };
