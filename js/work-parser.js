@@ -85,14 +85,22 @@ function parseMarkdownFile(content, relPath) {
     }
     
     // Парсим секции тела: ## Заголовок ... контент до следующего ##
+    // Построчно (надёжнее regex с lookahead: m-флаг ломает $ перед каждым \n)
     const sections = {};
-    const sectionRegex = /^##\s+(.+?)\n([\s\S]*?)(?=\n##\s+|\n*$)/gm;
-    let match;
-    while ((match = sectionRegex.exec(body)) !== null) {
-        const title = match[1].trim();
-        const text = match[2].trim();
-        sections[title] = text;
+    const bodyLines = body.split('\n');
+    let currentTitle = null;
+    let currentLines = [];
+    for (const line of bodyLines) {
+        const headerMatch = line.match(/^##\s+(.+?)\s*$/);
+        if (headerMatch) {
+            if (currentTitle) sections[currentTitle] = currentLines.join('\n').trim();
+            currentTitle = headerMatch[1].trim();
+            currentLines = [];
+        } else {
+            currentLines.push(line);
+        }
     }
+    if (currentTitle) sections[currentTitle] = currentLines.join('\n').trim();
     
     return { frontmatter, body, sections, path: relPath };
 }
