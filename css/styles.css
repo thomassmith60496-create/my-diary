@@ -7672,6 +7672,13 @@ header .macro-badge {
     margin-bottom: var(--spacing-sm);
 }
 
+.work-kanban-card-sprint {
+    font-size: var(--font-size-xs);
+    color: var(--color-orange);
+    font-weight: 600;
+    margin-bottom: var(--spacing-sm);
+}
+
 .work-open-link {
     display: inline-block;
     font-size: var(--font-size-xs);

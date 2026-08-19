@@ -41,8 +41,8 @@ function parseFrontmatter(fmText) {
                         }
                     }
                 }
-            } else if (val.startsWith('[') && val.endsWith(']')) {
-                // Inline массив: [a, b, c]
+            } else if (val.startsWith('[') && val.endsWith(']') && !val.startsWith('[[')) {
+                // Inline массив: [a, b, c] (но не wikilink [[...]])
                 val = val.slice(1, -1).split(',').map(s => s.trim()).filter(Boolean);
             } else if (val.startsWith('"') && val.endsWith('"') || val.startsWith("'") && val.endsWith("'")) {
                 // Квадратичные/одинарные кавычки
@@ -113,8 +113,8 @@ function extractProjectName(projField) {
     if (!projField) return 'Без проекта';
     if (Array.isArray(projField)) projField = projField[0] || '';
     let str = String(projField).trim();
-    // Убираем [[ и ]], кавычки, # и |alias
-    str = str.replace(/^\[\[/, '').replace(/\]\]$/, '');
+    // Убираем все [ и ] (wikilinks [[Name]], одинарные скобки и т.д.)
+    str = str.replace(/\[|\]/g, '');
     str = str.replace(/^["']|["']$/g, '');
     // Если есть |alias — берём alias
     if (str.includes('|')) str = str.split('|').pop().trim();
@@ -226,7 +226,7 @@ function parseWorkFiles(files, vaultName) {
         }
         else if (type === 'задача' || type === 'task') {
             // ЗАДАЧА
-            const projectName = extractProjectName(fm.проект);
+            const projectName = extractProjectName(fm.проект || fm.project);
             const task = {
                 id: relPath,
                 name: relPath.replace(/^03 Tasks\//, '').replace(/^\[.+?\]\s*/, '').replace(/\.md$/, ''),

@@ -226,7 +226,7 @@ function renderWorkProjects() {
                 ${p.result ? `<div class="work-detail-section"><b>✅ Результат:</b> ${esc(p.result)}</div>` : ''}
                 ${p.tracker ? `<div class="work-detail-section"><b>📊 Трекер:</b> ${esc(p.tracker)}</div>` : ''}
                 ${p.sprint ? `<div class="work-detail-section"><b>🏃 Спринт:</b> ${esc(p.sprint)}</div>` : ''}
-                ${projTasks.length ? `<div class="work-detail-section"><b>📋 Задачи:</b><ul>${projTasks.slice(0, 10).map(t => `<li>${esc(t.name)} <span class="work-chip small">${esc(t.status)}</span></li>`).join('')}</ul></div>` : ''}
+                ${projTasks.length ? `<div class="work-detail-section"><b>📋 Задачи:</b><ul>${projTasks.slice(0, 10).map(t => `<li>${esc(t.name)} ${t.sprint ? `<span class="work-chip small orange">🏃 ${esc(t.sprint)}</span>` : ''} <span class="work-chip small">${esc(t.status)}</span></li>`).join('')}</ul></div>` : ''}
                 <a href="${p.obsidianUrl}" class="btn small" onclick="event.stopPropagation()">📄 Открыть в Obsidian</a>
             </div>
         </div>`;
@@ -290,6 +290,7 @@ function renderWorkTasks() {
                     <span class="work-chip small blue">${esc(t.project)}</span>
                     <span class="work-chip small" style="background:${prioColor};color:white">${esc(t.priority)}</span>
                 </div>
+                ${t.sprint ? `<div class="work-kanban-card-sprint">🏃 ${esc(t.sprint)}</div>` : ''}
                 ${t.deadline ? `<div class="work-kanban-card-deadline">⏰ ${formatDateShort(t.deadline)}</div>` : ''}
                 ${tags}
                 <a href="${t.obsidianUrl}" class="work-open-link" onclick="event.stopPropagation()">📄 Открыть в Obsidian</a>

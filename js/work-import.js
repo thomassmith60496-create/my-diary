@@ -33,7 +33,7 @@ async function handleWorkFolderSelected(input) {
         
         // Читаем только нужные .md файлы
         const relevantFiles = [];
-        const allowedPrefixes = ['01 Projects/', '02 Meetings/', '03 Tasks/', '04 Knowledge/Ideas/'];
+        const allowedPrefixes = ['01 Projects/', '02 Meetings/', '03 Tasks/', '04 Knowledge/Ideas/', '06 Daily/'];
         
         for (let i = 0; i < files.length; i++) {
             const file = files[i];
