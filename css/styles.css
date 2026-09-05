@@ -2631,6 +2631,7 @@ header .macro-badge {
 .train-workout-meta {
     display: flex;
     gap: var(--spacing-xl);
+    flex-wrap: wrap;
     font-size: var(--font-size-sm);
     color: var(--color-gray-600);
 }
@@ -5973,6 +5974,14 @@ header .macro-badge {
     .dashboard-grid-item { min-width: 0; }
     .dashboard-grid-row { gap: var(--spacing-md); }
     .chart-svg { min-width: 0; }
+
+    /* ---------- Дополнительно: карточки статистики и защита форм ---------- */
+    .dashboard-stats { flex-wrap: wrap; }
+    .stat-card { flex: 1 1 45%; }
+    .finance-mandatory-header,
+    .finance-mandatory-row { min-width: 0; }
+    .finance-mandatory-table { white-space: normal; }
+    input, select, textarea { max-width: 100%; }
 }
 
 /* === SLEEP BLOCK === */
@@ -7265,7 +7274,7 @@ header .macro-badge {
 .todo-app .ht-md-last { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-2); }
 
 @media (max-width: 640px) {
-    .ht-week { grid-template-columns: 116px repeat(7, minmax(32px, 1fr)); gap: 4px; }
+    .ht-week { overflow-x: auto; grid-template-columns: 116px repeat(7, minmax(32px, 1fr)); gap: 4px; }
     .ht-cell { min-height: 52px; padding: 4px 2px; }
     .ht-corner, .ht-habit-name { padding: 6px 7px; }
     .ht-step { width: 20px; height: 20px; font-size: 12px; }
@@ -8002,4 +8011,25 @@ header .macro-badge {
         flex-direction: column;
         gap: var(--spacing-sm);
     }
+}
+/* === Узкие телефоны (≤480px) — корректировки поверх остальных медиа-запросов === */
+@media (max-width: 480px) {
+    /* Хабит-неделя: компактнее + горизонтальный скролл */
+    .ht-week {
+        grid-template-columns: 100px repeat(7, minmax(28px, 1fr));
+        gap: 3px;
+    }
+    .ht-corner, .ht-habit-name { padding: 5px 6px; font-size: 12px; }
+    .ht-daycol { padding: 4px 1px; }
+
+    /* Таблица сравнения периодов в Обзоре: скролл вместо сжатия */
+    .review-compare-table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+
+    /* Операции финансов: перенос кнопок на новую строку на узких экранах */
+    .finance-transaction-item { flex-wrap: wrap; }
+    .finance-transaction-actions { margin-left: auto; }
 }
