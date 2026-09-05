@@ -11,7 +11,7 @@
 <!-- SheetJS for Excel import -->
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <!-- Styles -->
-<link rel="stylesheet" href="css/styles.css?v=8">
+<link rel="stylesheet" href="css/styles.css?v=9">
 <!-- Favicon -->
 <link rel="icon" type="image/png" href="favicon.png">
 </head>
@@ -247,9 +247,11 @@
            <div class="toolbar toolbar-no-margin">
                <button class="btn primary btn-finance-primary" onclick="openFinanceModal()">➕ Добавить операцию</button>
                <button class="btn" onclick="document.getElementById('import-excel-file').click()">📂 Импорт из Excel</button>
+               <button class="btn" onclick="downloadFinanceImportTemplate()">📋 Скачать пример таблицы</button>
                <button class="btn" onclick="renderFinanceDashboard()">🔄 Обновить</button>
     <input type="file" id="import-excel-file" accept=".xlsx,.xls,.csv" style="display:none;" onchange="importFinanceExcel(this)">
            </div>
+        <div class="finance-import-hint">📥 Импорт <b>ДОБАВЛЯЕТ</b> операции — история не перезаписывается. Файл (xlsx/xls/csv) должен содержать колонки: <b>Дата, Тип, Сумма, Категория, Подкатегория, Комментарий</b>. Дубли — полное совпадение по категории, подкатегории, дате, сумме и комментарию — пропускаются автоматически.</div>
 <div id="finance-dashboard-content">
                 <div class="empty-state">
                     <div class="empty-state-icon">💰</div>
@@ -269,9 +271,12 @@
         <div class="sub-tab-content" id="fin-sub-transactions">
             <div class="toolbar">
                 <button class="btn primary btn-finance-primary" onclick="openFinanceModal()">➕ Добавить операцию</button>
+                <button class="btn" onclick="document.getElementById('import-excel-file').click()">📂 Импорт из Excel</button>
+                <button class="btn" onclick="downloadFinanceImportTemplate()">📋 Пример таблицы</button>
                 <button class="btn" onclick="openFinanceExportModal()">📤 Экспорт операций</button>
                 <button class="btn danger" onclick="deleteAllFinanceTransactions()">🗑 Очистить все</button>
             </div>
+            <div class="finance-import-hint">📥 Импорт <b>ДОБАВЛЯЕТ</b> операции — история не перезаписывается. Файл (xlsx/xls/csv) должен содержать колонки: <b>Дата, Тип, Сумма, Категория, Подкатегория, Комментарий</b>. Дубли пропускаются автоматически.</div>
             <div id="finance-transactions-list">
                 <div class="empty-state">
                     <div class="empty-state-icon">💸</div>
@@ -590,7 +595,7 @@
         <div id="shopModal" class="backdrop" hidden>
             <div class="modal shop-modal">
                 <div class="modal-head">
-                    <h3><span id="shopTitle">🛒 Список продуктов</span></h3>
+                    <h3><span id="shopTitle">🛒 Список покупок</span></h3>
                     <button class="icon-btn" type="button" data-act="shop-close" title="Закрыть">
                         <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="m3.2 3.2 7.6 7.6M10.8 3.2l-7.6 7.6"/></svg>
                     </button>
@@ -948,7 +953,7 @@
 <script src="js/finance-modals.js?v=3"></script>
 <script src="js/finance-save.js?v=3"></script>
 <script src="js/finance-render.js?v=4"></script>
-    <script src="js/finance-import.js?v=3"></script>
+    <script src="js/finance-import.js?v=4"></script>
     <script src="js/finance-export.js?v=3"></script>
     <script src="js/dashboard.js?v=4"></script>
     <script src="js/review.js?v=6"></script>

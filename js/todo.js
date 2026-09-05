@@ -1917,7 +1917,8 @@ function closeTodoStats(){
 
 /* ================= список покупок ================= */
 function isShoppingTask(t){
-  return !!t && !!t.title && String(t.title).trim().toLowerCase() === 'список продуктов';
+  const title = (!!t && t.title) ? String(t.title).trim().toLowerCase() : '';
+  return title === 'список покупок' || title === 'список продуктов'; // 'список продуктов' — старые задачи
 }
 
 function shoppingTasks(){
@@ -1942,7 +1943,7 @@ function renderPinnedShop(){
     return `<div class="shop-pinned">
       <button type="button" class="shop-pin-btn" data-act="open-shop" data-id="${esc(t.id)}" title="Открыть список покупок">${ICON.cart}</button>\r
       <div class="shop-pin-body">
-        <div class="shop-pin-title">Список продуктов<span class="shop-pin-date">${fmtShortDate(t.date)}</span></div>
+        <div class="shop-pin-title">Список покупок<span class="shop-pin-date">${fmtShortDate(t.date)}</span></div>
         <div class="shop-pin-bar"><i style="width:${pct}%"></i></div>
         <div class="shop-pin-sub">${doneN} из ${totalN}${totalN ? ' · ' + pct + '%' : ''}</div>
       </div>
@@ -1986,7 +1987,8 @@ function renderShopContent(t){
   const totalN = t.subtasks.length;
   const pct = totalN ? Math.round(doneN/totalN*100) : 0;
 
-  $('#shopTitle').textContent = (isRec ? '🔁 ' : '🛒 ') + t.title;
+  const title = isShoppingTask(t) ? 'Список покупок' : t.title;
+  $('#shopTitle').textContent = (isRec ? '🔁 ' : '🛒 ') + title;
   $('#shopProgress').innerHTML = `
     <div class="shop-progress-bar"><i style="width:${pct}%"></i></div>
     <div class="shop-progress-text">${doneN} из ${totalN}${totalN ? ' · ' + pct + '%' : ''}</div>`;

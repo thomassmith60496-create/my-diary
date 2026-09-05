@@ -3834,6 +3834,17 @@ header .macro-badge {
     margin-top: var(--spacing-xs);
 }
 
+.finance-import-hint {
+    font-size: 11px;
+    line-height: 1.5;
+    color: #64748b;
+    background: #faf5ff;
+    border: 1px dashed #e9d5ff;
+    border-radius: 8px;
+    padding: 8px 10px;
+    margin: 4px 0 12px;
+}
+
 .finance-hint-small {
     font-size: var(--font-size-xs);
     color: var(--color-purple);
