@@ -132,7 +132,7 @@ window.showNotifyLog = function() {
   var old = document.getElementById('notify-log-modal');
   if (old) old.remove();
 
-  var perm = Notification.permission;
+  var perm = (typeof Notification !== 'undefined') ? Notification.permission : 'unsupported';
   var permColor = perm === 'granted' ? '#16a34a' : (perm === 'denied' ? '#dc2626' : '#ca8a04');
   var isRunning = !!deadlineCheckInterval;
 

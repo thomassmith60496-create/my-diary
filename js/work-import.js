@@ -57,7 +57,7 @@ async function handleWorkFolderSelected(input) {
         
         if (relevantFiles.length === 0) {
             showSyncStatus('⚠️ Не найдено подходящих .md файлов в выбранных папках', 'warning');
-            customAlert('В выбранной папке не найдено заметок в папках:\n01 Projects/, 02 Meetings/, 03 Tasks/, 04 Knowledge/Ideas/', 'Ошибка');
+            customAlert('В выбранной папке не найдено заметок в папках:\n01 Projects/, 02 Meetings/, 03 Tasks/, 04 Knowledge/Ideas/, 06 Daily/', 'Ошибка');
             return;
         }
         

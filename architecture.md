@@ -184,7 +184,7 @@
 
 #### 3.3 Финансы (Finance)
 
-Хранится в Firebase: `lera_finance_v1/{uid}` (отдельный path, но в `syncToCloud` используется `lera_diary_v1/{uid}` с ключом `financeData`)
+Хранится в Firebase: `lera_finance_v1/{uid}` (пишется через `saveFinance()`)
 
 ```json
 {
@@ -408,14 +408,14 @@
 | Path | Описание |
 |---|---|
 | `lera_diary_users/{uid}` | Пользователи (email, role, ownerUid, readers, createdAt) |
-| `lera_diary_v1/{uid}` | Питание + финансы (в одном объекте) |
-| `lera_finance_v1/{uid}` | Финансы (отдельный path, но в syncToCloud НЕ используется — финансы сохраняются в `lera_diary_v1`) |
+| `lera_diary_v1/{uid}` | Питание (отдельный path) |
+| `lera_finance_v1/{uid}` | Финансы (отдельный path, пишется через `saveFinance()`) |
 | `lera_training_v1/{uid}` | Тренировки (отдельный path) |
 | `lera_todo_v1/{uid}` | Задачи + теги + регулярные + сон (отдельный path) |
 | `lera_habit_v1/{uid}` | Привычки (отдельный path) |
 | `lera_work_v1/{uid}` | Работа/Obsidian (отдельный path) |
 
-> **Важно:** В `syncToCloud()` (app.js) данные питания и финансы сохраняются вместе в `lera_diary_v1/{uid}`, а тренировки и задачи — в отдельные paths. В `resetAllData()` удаляются все 4 paths: `lera_diary_v1`, `lera_finance_v1`, `lera_training_v1`, `lera_todo_v1`.
+> **Важно:** В `syncToCloud()` (app.js) сохраняется только питание в `lera_diary_v1/{uid}`; финансы пишет `saveFinance()` в `lera_finance_v1/{uid}`, тренировки/задачи/привычки/работа — в свои paths. В `resetAllData()` удаляются все 6 paths: `lera_diary_v1`, `lera_finance_v1`, `lera_training_v1`, `lera_todo_v1`, `lera_habit_v1`, `lera_work_v1`.
 
 ---
 
@@ -432,7 +432,7 @@ saveNutrition() — собирает данные из DOM в week.data
     ↓
 syncToCloud() — 5000ms debounce
     ↓
-db.ref('lera_diary_v1/{uid}').set({ nutrition, financeData, lastUpdated })
+db.ref('lera_diary_v1/{uid}').set({ nutrition, lastUpdated })
     ↓
 Firebase Realtime Database
     ↓ (onAuthStateChanged → loadDataForUser)
@@ -454,9 +454,7 @@ saveFinanceTransaction() / saveSavingsEntry() / savePlannedEntry() / saveMandato
     ↓
 financeData обновляется в памяти
     ↓
-syncToCloud() (5000ms debounce)
-    ↓
-db.ref('lera_diary_v1/{uid}').set({ nutrition, financeData, lastUpdated })
+saveFinance() — сохраняет финансы в lera_finance_v1/{uid}
     ↓
 Firebase Realtime Database
 ```
@@ -478,9 +476,9 @@ Firebase Realtime Database
 ```
 Пользователь добавляет/отмечает задачу
     ↓
-window.saveTodoState() / setTodoState()
+window.save() (внутренний, todo.js)
     ↓
-syncToCloud() → db.ref('lera_todo_v1/{uid}').set({ tasks, tags, recurring, lastUpdated })
+db.ref('lera_todo_v1/{uid}').set({ tasks, tags, recurring, sleep, lastUpdated })
     ↓
 Firebase Realtime Database
 ```
@@ -614,7 +612,7 @@ setInterval(checkAllDeadlines, 10 мин)
 | **finance-save.js** | financeData | saveFinanceTransaction(), saveSavingsEntry(), savePlannedEntry(), saveMandatoryPayment(), saveCategory() |
 | **finance-import.js** | financeData | importFinanceExcel() (через SheetJS) |
 | **finance-export.js** | financeData | exportFinanceOperations() |
-| **todo.js** | (собственное состояние) | getTodoState(), loadTodoFromFirebase(), saveTodoState() |
+| **todo.js** | (собственное состояние) | getTodoState(), loadTodoFromFirebase(), внутренний save() |
 | **habit.js** | (собственное состояние) | getHabitDayHabits(), loadHabitsFromFirebase() |
 | **activity.js** | nutritionData, financeData, getTodoState(), habitData | renderActivityStreaks(), renderActivityHeatmap() |
 | **training-ui.js** | TrainingExerciseAPI | renderTrainingExercises(), renderTrainingWorkouts(), renderTrainingProgress() |
@@ -762,7 +760,7 @@ setInterval(checkAllDeadlines, 10 мин)
 - **Nutrition:** `debouncedSaveNutrition()` — 300ms debounce → `saveNutrition()` → `syncToCloud()`
 - **Sync to Cloud:** `syncToCloud()` — 5000ms debounce → запись в Firebase
 - **Тренировки:** `TrainingExerciseAPI.save()` → прямой вызов `db.ref().set()` (без debounce)
-- **Todo:** `saveTodoState()` → прямой вызов `db.ref().set()` (без debounce)
+- **Todo:** внутренний `save()` в todo.js → прямой вызов `db.ref().set()` (без debounce)
 - **Habits:** аналогично — прямая запись в Firebase
 
 ### Модульность
@@ -873,12 +871,12 @@ setInterval(checkAllDeadlines, 10 мин)
 
 ### Специфические реализации
 
-- **`esc()` функция определена дважды:** в `utils.js` (через replace) и в `dashboard.js` (через div.createTextNode). Вторая версия в dashboard.js переопределяет первую на `window.esc`.
+- **`esc()` определена один раз в `utils.js`** (экранирует `&`, `<`, `>`, `"`, `'`, `` ` ``). Дубль в `dashboard.js` был удалён.
 - **`formatDateWithYear()` в utils.js** просто делегирует `formatDateShort()` — обе возвращают `DD.MM.YY` (2 цифры года).
-- **В `syncToCloud()`** финансы сохраняются в `lera_diary_v1/{uid}` (вместе с питанием), но в `resetAllData()` также удаляется `lera_finance_v1/{uid}` — этот path существует в rules, но не используется для записи.
-- **`loadDataForUser()`** загружает 5 источников параллельно через `Promise.all`, но финансы загружаются из `lera_finance_v1/{uid}`, а не из `lera_diary_v1/{uid}` (где они на самом деле сохраняются в syncToCloud). Это **противоречие**: запись в `lera_diary_v1`, чтение из `lera_finance_v1`.
+- **Финансы пишутся только в `lera_finance_v1/{uid}`** через `saveFinance()`. В `syncToCloud()` финансы НЕ пишутся (ранее дублировались в `lera_diary_v1` — устранено).
+- **`loadDataForUser()`** загружает 5 источников параллельно через `Promise.all`; финансы загружаются из `lera_finance_v1/{uid}` — путь записи и чтения единый (противоречие устранено).
 - **Work модуль** использует `WorkData.workState` и `WorkData.buildSnapshot()` — состояние хранится в `work-data.js`, а не в `globals.js`.
-- **Todo модуль** использует собственное состояние внутри `todo.js` (не в globals.js), с функциями `getTodoState()`, `loadTodoFromFirebase()`, `saveTodoState()`.
+- **Todo модуль** использует собственное состояние внутри `todo.js` (не в globals.js), с функциями `getTodoState()`, `loadTodoFromFirebase()`, внутренним `save()`.
 - **Habits модуль** использует собственное состояние внутри `habit.js` с функциями `getHabitDayHabits()`, `loadHabitsFromFirebase()`.
 - **Activity модуль** (`activity.js`) агрегирует данные из всех модулей для построения хитмапов и стриков.
 - **SheetJS** используется только для импорта Excel в финансы (`finance-import.js`).

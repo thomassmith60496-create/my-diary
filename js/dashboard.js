@@ -404,10 +404,6 @@ window.fmtDeadline = function(dl){
     return `${d}.${m}.${y}` + (tp ? ' ' + tp.slice(0,5) : '');
 }
 
-window.esc = function(s) {
-    return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'\u0026amp;','<':'\u0026lt;','>':'\u0026gt;','"':'\u0026quot;',"'":'&#39;'}[c]));
-}
-
 window.todayKey = function() {
     return keyOf(new Date());
 }

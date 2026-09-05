@@ -160,6 +160,9 @@ window.registerUser = function() {
     btn.disabled = true;
     btn.textContent = '⏳ Регистрация...';
     
+    // Защита от двойного вызова initUserSession (через onAuthStateChanged и напрямую ниже)
+    window._authInitInProgress = true;
+    
     firebase.auth().createUserWithEmailAndPassword(email, password)
         .then((cred) => {
             const uid = cred.user.uid;
@@ -185,6 +188,7 @@ window.registerUser = function() {
         .catch((error) => {
             errorEl.textContent = '❌ ' + translateFirebaseError(error.code);
             errorEl.style.display = 'block';
+            window._authInitInProgress = false;
             btn.disabled = false;
             btn.textContent = 'Зарегистрироваться';
         });
@@ -314,9 +318,6 @@ window.initUserSession = function(uid) {
 }
 
 window.switchDataContext = function(uid) {
-    window._activeDiaryRef = db.ref('lera_diary_v1/' + uid);
-    window._activeFinanceRef = db.ref('lera_finance_v1/' + uid);
-    window._activeTodoRef = db.ref('lera_todo_v1/' + uid);
     loadDataForUser(uid);
 }
 

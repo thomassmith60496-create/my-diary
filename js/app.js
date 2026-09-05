@@ -222,48 +222,65 @@ function syncToCloud() {
         showSyncStatus('💾 Сохранение...', 'syncing');
     }
     syncTimeout = setTimeout(() => {
-        const targetUid = getTargetUid();
-        if (!targetUid) return;
-        const data = {
-            nutrition: nutritionData,
-            financeData: financeData,
-            lastUpdated: Date.now()
-        };
-        
-        db.ref(`lera_diary_v1/${targetUid}`).set(data).catch(() => {});
-        
-        // Также сохраняем тренировки отдельным ключом
-        try {
-            if (typeof TrainingExerciseAPI !== 'undefined') {
-                var td = TrainingExerciseAPI.getRawData();
-                if (td) {
-                    db.ref('lera_training_v1/' + targetUid).set({
-                        version: td.version,
-                        exercises: td.exercises,
-                        workouts: td.workouts,
-                        lastUpdated: Date.now()
-                    }).catch(() => {});
-                }
-            }
-        } catch(e) {}
-        
-        // Также сохраняем задачи отдельным ключом
-        try {
-            if (typeof window.getTodoState === 'function') {
-                var todoState = window.getTodoState();
-                if (todoState) {
-                    db.ref('lera_todo_v1/' + targetUid).set({
-                        tasks: todoState.tasks,
-                        tags: todoState.tags,
-                        recurring: todoState.recurring,
-                        lastUpdated: Date.now()
-                    }).catch(() => {});
-                }
-            }
-        } catch(e) {}
-        
+        syncTimeout = null;
+        performSyncToCloud();
         showSyncStatus('✅ Сохранено!', 'success');
     }, 5000);
+}
+
+/** Немедленная запись без debounce (используется syncToCloud и flushSyncToCloud) */
+function performSyncToCloud() {
+    if (isReadOnlyActive()) return;
+    const targetUid = getTargetUid();
+    if (!targetUid) return;
+    
+    // Питание (финансы пишет отдельно saveFinance() в lera_finance_v1)
+    const data = {
+        nutrition: nutritionData,
+        lastUpdated: Date.now()
+    };
+    db.ref(`lera_diary_v1/${targetUid}`).set(data).catch(() => {});
+    
+    // Тренировки отдельным ключом
+    try {
+        if (typeof TrainingExerciseAPI !== 'undefined') {
+            var td = TrainingExerciseAPI.getRawData();
+            if (td) {
+                db.ref('lera_training_v1/' + targetUid).set({
+                    version: td.version,
+                    exercises: td.exercises,
+                    workouts: td.workouts,
+                    lastUpdated: Date.now()
+                }).catch(() => {});
+            }
+        }
+    } catch(e) {}
+    
+    // Задачи отдельным ключом
+    try {
+        if (typeof window.getTodoState === 'function') {
+            var todoState = window.getTodoState();
+            if (todoState) {
+                db.ref('lera_todo_v1/' + targetUid).set({
+                    tasks: todoState.tasks,
+                    tags: todoState.tags,
+                    recurring: todoState.recurring,
+                    sleep: todoState.sleep || {},
+                    lastUpdated: Date.now()
+                }).catch(() => {});
+            }
+        }
+    } catch(e) {}
+}
+
+/** Сброс debounce и немедленная запись (вызывается при закрытии вкладки) */
+function flushSyncToCloud() {
+    if (syncTimeout) {
+        clearTimeout(syncTimeout);
+        syncTimeout = null;
+        performSyncToCloud();
+        showSyncStatus('✅ Сохранено!', 'success');
+    }
 }
 
 // === ЭКСПОРТ/ИМПОРТ ===
@@ -370,6 +387,7 @@ function importAllData(input) {
                     TrainingExerciseAPI.save();
                 }
             }
+            saveFinance();
             syncToCloud();
             renderNutritionAll();
             renderFinanceDashboard();
@@ -385,7 +403,7 @@ function importAllData(input) {
 
 function resetAllData() {
     if (isReadOnlyActive()) { customAlert('❌ Очистка недоступна в режиме просмотра', 'Ошибка'); return; }
-    customConfirm('Удалить ВСЕ данные (питание + финансы + тренировки)? Это нельзя отменить.', 'Подтверждение удаления')
+    customConfirm('Удалить ВСЕ данные (питание, финансы, тренировки, задачи, привычки, работа)? Это нельзя отменить.', 'Подтверждение удаления')
         .then(confirmed => {
             if (!confirmed) return;
             const targetUid = getTargetUid();
@@ -393,21 +411,48 @@ function resetAllData() {
             db.ref(`lera_finance_v1/${targetUid}`).remove();
             db.ref(`lera_training_v1/${targetUid}`).remove();
             db.ref(`lera_todo_v1/${targetUid}`).remove();
+            db.ref(`lera_habit_v1/${targetUid}`).remove();
+            db.ref(`lera_work_v1/${targetUid}`).remove();
             nutritionData = { weeks: [], currentWeekId: null };
-            financeData = { transactions: [], savings: [], planned: [], mandatoryPayments: [], categories: [] };
-            // Сброс задач
+            financeData = {
+                transactions: [],
+                savings: [],
+                planned: [],
+                mandatoryPayments: [],
+                categories: cloneDefaultFinanceCategories()
+            };
+            // Сброс задач (включая серии и сон)
             if (typeof window.loadTodoFromFirebase === 'function') {
-                window.loadTodoFromFirebase({ tasks: [], tags: [] });
+                window.loadTodoFromFirebase({ tasks: [], tags: [], recurring: [], sleep: {} });
             }
             // Сброс тренировок
             if (typeof TrainingExerciseAPI !== 'undefined' && TrainingExerciseAPI.loadFromFirebase) {
                 TrainingExerciseAPI.loadFromFirebase({ version: 2, exercises: [], workouts: [] });
+            }
+            // Сброс привычек
+            if (typeof window.loadHabitsFromFirebase === 'function') {
+                window.loadHabitsFromFirebase({ habits: [], completions: {} });
+            }
+            // Сброс данных работы
+            if (typeof WorkData !== 'undefined' && WorkData.workState) {
+                WorkData.workState.currentSnapshot = null;
+                WorkData.workState.previousSnapshot = null;
+                WorkData.workState.lastSyncTime = null;
             }
             renderNutritionAll();
             renderCurrentFinanceTab();
             updateFinanceStats();
         });
 }
+
+// === FLUSH ПРИ УХОДЕ СО СТРАНИЦЫ ===
+// Сбрасываем debounce и пишем в Firebase немедленно при закрытии вкладки,
+// чтобы не терять последние правки (syncToCloud использует 5s debounce).
+
+window.addEventListener('beforeunload', flushSyncToCloud);
+document.addEventListener('visibilitychange', function() {
+    if (document.visibilityState === 'hidden') flushSyncToCloud();
+});
 
 // === ИНИЦИАЛИЗАЦИЯ ===
 

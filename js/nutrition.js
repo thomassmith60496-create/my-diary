@@ -537,6 +537,7 @@ window.debouncedSaveNutrition = function() {
 };
 
 window.saveNutrition = function() {
+    if (typeof isReadOnlyActive === 'function' && isReadOnlyActive()) return;
     const week = nutritionData.weeks.find(w => w.id === nutritionData.currentWeekId);
     if(!week) return;
     
